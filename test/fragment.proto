@@ -16,7 +16,7 @@ message SquaredErrorsTable {
 //Mgard reconstr
 //store buffer metadata
 //data tier->fragment
-//Variable
+//send fragments separately
 message Variable {
   string name = 1;
   repeated uint32 dimensions = 2;
@@ -28,7 +28,7 @@ message Variable {
   SquaredErrorsTable squared_errors = 8;
 //  repeated uint32 squared_errors_shape = 8;
   uint32 tiers = 9;
-  repeated Tier tier = 10;
+  //repeated Tier tier = 10;
 }
 
 message Tier {
@@ -39,7 +39,7 @@ message Tier {
   int32 hd = 5;
   string ec_backend_name = 6;
   uint64 encoded_fragment_length = 7;
-  repeated Fragment fragment = 8;
+  //repeated Fragment fragment = 8;
 }
 
 //Fragment

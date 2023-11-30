@@ -548,7 +548,6 @@ class Variable PROTOBUF_FINAL :
     kDimensionsFieldNumber = 2,
     kLevelErrorBoundsFieldNumber = 5,
     kStoppingIndicesFieldNumber = 6,
-    kTierFieldNumber = 10,
     kNameFieldNumber = 1,
     kTypeFieldNumber = 3,
     kTableContentFieldNumber = 7,
@@ -621,24 +620,6 @@ class Variable PROTOBUF_FINAL :
       stopping_indices() const;
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
       mutable_stopping_indices();
-
-  // repeated .DATA.Tier tier = 10;
-  int tier_size() const;
-  private:
-  int _internal_tier_size() const;
-  public:
-  void clear_tier();
-  ::DATA::Tier* mutable_tier(int index);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::Tier >*
-      mutable_tier();
-  private:
-  const ::DATA::Tier& _internal_tier(int index) const;
-  ::DATA::Tier* _internal_add_tier();
-  public:
-  const ::DATA::Tier& tier(int index) const;
-  ::DATA::Tier* add_tier();
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::Tier >&
-      tier() const;
 
   // string name = 1;
   void clear_name();
@@ -757,7 +738,6 @@ class Variable PROTOBUF_FINAL :
   mutable std::atomic<int> _level_error_bounds_cached_byte_size_;
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 > stopping_indices_;
   mutable std::atomic<int> _stopping_indices_cached_byte_size_;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::Tier > tier_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr name_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr type_;
   ::DATA::QueryTable* table_content_;
@@ -882,7 +862,6 @@ class Tier PROTOBUF_FINAL :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kFragmentFieldNumber = 8,
     kEcBackendNameFieldNumber = 6,
     kIdFieldNumber = 1,
     kKFieldNumber = 2,
@@ -891,24 +870,6 @@ class Tier PROTOBUF_FINAL :
     kEncodedFragmentLengthFieldNumber = 7,
     kHdFieldNumber = 5,
   };
-  // repeated .DATA.Fragment fragment = 8;
-  int fragment_size() const;
-  private:
-  int _internal_fragment_size() const;
-  public:
-  void clear_fragment();
-  ::DATA::Fragment* mutable_fragment(int index);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::Fragment >*
-      mutable_fragment();
-  private:
-  const ::DATA::Fragment& _internal_fragment(int index) const;
-  ::DATA::Fragment* _internal_add_fragment();
-  public:
-  const ::DATA::Fragment& fragment(int index) const;
-  ::DATA::Fragment* add_fragment();
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::Fragment >&
-      fragment() const;
-
   // string ec_backend_name = 6;
   void clear_ec_backend_name();
   const std::string& ec_backend_name() const;
@@ -995,7 +956,6 @@ class Tier PROTOBUF_FINAL :
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::Fragment > fragment_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr ec_backend_name_;
   ::PROTOBUF_NAMESPACE_ID::int32 id_;
   ::PROTOBUF_NAMESPACE_ID::int32 k_;
@@ -2162,45 +2122,6 @@ inline void Variable::set_tiers(::PROTOBUF_NAMESPACE_ID::uint32 value) {
   // @@protoc_insertion_point(field_set:DATA.Variable.tiers)
 }
 
-// repeated .DATA.Tier tier = 10;
-inline int Variable::_internal_tier_size() const {
-  return tier_.size();
-}
-inline int Variable::tier_size() const {
-  return _internal_tier_size();
-}
-inline void Variable::clear_tier() {
-  tier_.Clear();
-}
-inline ::DATA::Tier* Variable::mutable_tier(int index) {
-  // @@protoc_insertion_point(field_mutable:DATA.Variable.tier)
-  return tier_.Mutable(index);
-}
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::Tier >*
-Variable::mutable_tier() {
-  // @@protoc_insertion_point(field_mutable_list:DATA.Variable.tier)
-  return &tier_;
-}
-inline const ::DATA::Tier& Variable::_internal_tier(int index) const {
-  return tier_.Get(index);
-}
-inline const ::DATA::Tier& Variable::tier(int index) const {
-  // @@protoc_insertion_point(field_get:DATA.Variable.tier)
-  return _internal_tier(index);
-}
-inline ::DATA::Tier* Variable::_internal_add_tier() {
-  return tier_.Add();
-}
-inline ::DATA::Tier* Variable::add_tier() {
-  // @@protoc_insertion_point(field_add:DATA.Variable.tier)
-  return _internal_add_tier();
-}
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::Tier >&
-Variable::tier() const {
-  // @@protoc_insertion_point(field_list:DATA.Variable.tier)
-  return tier_;
-}
-
 // -------------------------------------------------------------------
 
 // Tier
@@ -2404,45 +2325,6 @@ inline void Tier::_internal_set_encoded_fragment_length(::PROTOBUF_NAMESPACE_ID:
 inline void Tier::set_encoded_fragment_length(::PROTOBUF_NAMESPACE_ID::uint64 value) {
   _internal_set_encoded_fragment_length(value);
   // @@protoc_insertion_point(field_set:DATA.Tier.encoded_fragment_length)
-}
-
-// repeated .DATA.Fragment fragment = 8;
-inline int Tier::_internal_fragment_size() const {
-  return fragment_.size();
-}
-inline int Tier::fragment_size() const {
-  return _internal_fragment_size();
-}
-inline void Tier::clear_fragment() {
-  fragment_.Clear();
-}
-inline ::DATA::Fragment* Tier::mutable_fragment(int index) {
-  // @@protoc_insertion_point(field_mutable:DATA.Tier.fragment)
-  return fragment_.Mutable(index);
-}
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::Fragment >*
-Tier::mutable_fragment() {
-  // @@protoc_insertion_point(field_mutable_list:DATA.Tier.fragment)
-  return &fragment_;
-}
-inline const ::DATA::Fragment& Tier::_internal_fragment(int index) const {
-  return fragment_.Get(index);
-}
-inline const ::DATA::Fragment& Tier::fragment(int index) const {
-  // @@protoc_insertion_point(field_get:DATA.Tier.fragment)
-  return _internal_fragment(index);
-}
-inline ::DATA::Fragment* Tier::_internal_add_fragment() {
-  return fragment_.Add();
-}
-inline ::DATA::Fragment* Tier::add_fragment() {
-  // @@protoc_insertion_point(field_add:DATA.Tier.fragment)
-  return _internal_add_fragment();
-}
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::Fragment >&
-Tier::fragment() const {
-  // @@protoc_insertion_point(field_list:DATA.Tier.fragment)
-  return fragment_;
 }
 
 // -------------------------------------------------------------------

@@ -10,6 +10,10 @@ int main() {
     zmq::socket_t socket{context, zmq::socket_type::req};
     socket.connect("tcp://localhost:5555");
     int k = 0;
+    //add udp
+    //try to run zeromq on server
+    //frag is a pointer, add repeated to the structure, buffer
+    //delete k, leave m, add the size of the fragment
     
     while(true) {
         // send the request message

@@ -14,11 +14,9 @@
 #include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
-extern PROTOBUF_INTERNAL_EXPORT_fragment_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_Fragment_fragment_2eproto;
 extern PROTOBUF_INTERNAL_EXPORT_fragment_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_QueryTable_fragment_2eproto;
 extern PROTOBUF_INTERNAL_EXPORT_fragment_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_SquaredErrorsTable_fragment_2eproto;
-extern PROTOBUF_INTERNAL_EXPORT_fragment_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<1> scc_info_Tier_fragment_2eproto;
-extern PROTOBUF_INTERNAL_EXPORT_fragment_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<3> scc_info_Variable_fragment_2eproto;
+extern PROTOBUF_INTERNAL_EXPORT_fragment_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<2> scc_info_Variable_fragment_2eproto;
 namespace DATA {
 class QueryTableDefaultTypeInternal {
  public:
@@ -98,9 +96,8 @@ static void InitDefaultsscc_info_Tier_fragment_2eproto() {
   ::DATA::Tier::InitAsDefaultInstance();
 }
 
-::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<1> scc_info_Tier_fragment_2eproto =
-    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 1, 0, InitDefaultsscc_info_Tier_fragment_2eproto}, {
-      &scc_info_Fragment_fragment_2eproto.base,}};
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_Tier_fragment_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, 0, InitDefaultsscc_info_Tier_fragment_2eproto}, {}};
 
 static void InitDefaultsscc_info_Variable_fragment_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -113,11 +110,10 @@ static void InitDefaultsscc_info_Variable_fragment_2eproto() {
   ::DATA::Variable::InitAsDefaultInstance();
 }
 
-::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<3> scc_info_Variable_fragment_2eproto =
-    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 3, 0, InitDefaultsscc_info_Variable_fragment_2eproto}, {
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<2> scc_info_Variable_fragment_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 2, 0, InitDefaultsscc_info_Variable_fragment_2eproto}, {
       &scc_info_QueryTable_fragment_2eproto.base,
-      &scc_info_SquaredErrorsTable_fragment_2eproto.base,
-      &scc_info_Tier_fragment_2eproto.base,}};
+      &scc_info_SquaredErrorsTable_fragment_2eproto.base,}};
 
 static void InitDefaultsscc_info_VariableCollection_fragment_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -169,7 +165,6 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_fragment_2eproto::offsets[] PR
   PROTOBUF_FIELD_OFFSET(::DATA::Variable, table_content_),
   PROTOBUF_FIELD_OFFSET(::DATA::Variable, squared_errors_),
   PROTOBUF_FIELD_OFFSET(::DATA::Variable, tiers_),
-  PROTOBUF_FIELD_OFFSET(::DATA::Variable, tier_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::DATA::Tier, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -182,7 +177,6 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_fragment_2eproto::offsets[] PR
   PROTOBUF_FIELD_OFFSET(::DATA::Tier, hd_),
   PROTOBUF_FIELD_OFFSET(::DATA::Tier, ec_backend_name_),
   PROTOBUF_FIELD_OFFSET(::DATA::Tier, encoded_fragment_length_),
-  PROTOBUF_FIELD_OFFSET(::DATA::Tier, fragment_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -213,9 +207,9 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 0, -1, sizeof(::DATA::QueryTable)},
   { 8, -1, sizeof(::DATA::SquaredErrorsTable)},
   { 16, -1, sizeof(::DATA::Variable)},
-  { 31, -1, sizeof(::DATA::Tier)},
-  { 44, -1, sizeof(::DATA::Fragment)},
-  { 63, -1, sizeof(::DATA::VariableCollection)},
+  { 30, -1, sizeof(::DATA::Tier)},
+  { 42, -1, sizeof(::DATA::Fragment)},
+  { 61, -1, sizeof(::DATA::VariableCollection)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -231,26 +225,24 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "\n\016fragment.proto\022\004DATA\"9\n\nQueryTable\022\014\n\004"
   "rows\030\001 \001(\005\022\014\n\004cols\030\002 \001(\005\022\017\n\007content\030\003 \003("
   "\004\"A\n\022SquaredErrorsTable\022\014\n\004rows\030\001 \001(\005\022\014\n"
-  "\004cols\030\002 \001(\005\022\017\n\007content\030\003 \003(\001\"\204\002\n\010Variabl"
+  "\004cols\030\002 \001(\005\022\017\n\007content\030\003 \003(\001\"\352\001\n\010Variabl"
   "e\022\014\n\004name\030\001 \001(\t\022\022\n\ndimensions\030\002 \003(\r\022\014\n\004t"
   "ype\030\003 \001(\t\022\016\n\006levels\030\004 \001(\r\022\032\n\022level_error"
   "_bounds\030\005 \003(\001\022\030\n\020stopping_indices\030\006 \003(\r\022"
   "\'\n\rtable_content\030\007 \001(\0132\020.DATA.QueryTable"
   "\0220\n\016squared_errors\030\010 \001(\0132\030.DATA.SquaredE"
-  "rrorsTable\022\r\n\005tiers\030\t \001(\r\022\030\n\004tier\030\n \003(\0132"
-  "\n.DATA.Tier\"\233\001\n\004Tier\022\n\n\002id\030\001 \001(\005\022\t\n\001k\030\002 "
-  "\001(\005\022\t\n\001m\030\003 \001(\005\022\t\n\001w\030\004 \001(\005\022\n\n\002hd\030\005 \001(\005\022\027\n"
-  "\017ec_backend_name\030\006 \001(\t\022\037\n\027encoded_fragme"
-  "nt_length\030\007 \001(\004\022 \n\010fragment\030\010 \003(\0132\016.DATA"
-  ".Fragment\"\201\002\n\010Fragment\022\t\n\001k\030\001 \001(\005\022\t\n\001m\030\002"
-  " \001(\005\022\t\n\001w\030\003 \001(\005\022\n\n\002hd\030\004 \001(\005\022\027\n\017ec_backen"
-  "d_name\030\005 \001(\t\022\037\n\027encoded_fragment_length\030"
-  "\006 \001(\r\022\013\n\003idx\030\007 \001(\r\022\014\n\004size\030\010 \001(\r\022\026\n\016orig"
-  "_data_size\030\t \001(\004\022\027\n\017chksum_mismatch\030\n \001("
-  "\r\022\022\n\nbackend_id\030\013 \001(\r\022\014\n\004frag\030\014 \001(\t\022\017\n\007i"
-  "s_data\030\r \001(\010\022\017\n\007tier_id\030\016 \001(\r\"7\n\022Variabl"
-  "eCollection\022!\n\tvariables\030\001 \003(\0132\016.DATA.Va"
-  "riableb\006proto3"
+  "rrorsTable\022\r\n\005tiers\030\t \001(\r\"y\n\004Tier\022\n\n\002id\030"
+  "\001 \001(\005\022\t\n\001k\030\002 \001(\005\022\t\n\001m\030\003 \001(\005\022\t\n\001w\030\004 \001(\005\022\n"
+  "\n\002hd\030\005 \001(\005\022\027\n\017ec_backend_name\030\006 \001(\t\022\037\n\027e"
+  "ncoded_fragment_length\030\007 \001(\004\"\201\002\n\010Fragmen"
+  "t\022\t\n\001k\030\001 \001(\005\022\t\n\001m\030\002 \001(\005\022\t\n\001w\030\003 \001(\005\022\n\n\002hd"
+  "\030\004 \001(\005\022\027\n\017ec_backend_name\030\005 \001(\t\022\037\n\027encod"
+  "ed_fragment_length\030\006 \001(\r\022\013\n\003idx\030\007 \001(\r\022\014\n"
+  "\004size\030\010 \001(\r\022\026\n\016orig_data_size\030\t \001(\004\022\027\n\017c"
+  "hksum_mismatch\030\n \001(\r\022\022\n\nbackend_id\030\013 \001(\r"
+  "\022\014\n\004frag\030\014 \001(\t\022\017\n\007is_data\030\r \001(\010\022\017\n\007tier_"
+  "id\030\016 \001(\r\"7\n\022VariableCollection\022!\n\tvariab"
+  "les\030\001 \003(\0132\016.DATA.Variableb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_fragment_2eproto_deps[1] = {
 };
@@ -264,7 +256,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_fra
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_fragment_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_fragment_2eproto = {
-  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 894,
+  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 833,
   &descriptor_table_fragment_2eproto_once, descriptor_table_fragment_2eproto_sccs, descriptor_table_fragment_2eproto_deps, 6, 0,
   schemas, file_default_instances, TableStruct_fragment_2eproto::offsets,
   file_level_metadata_fragment_2eproto, 6, file_level_enum_descriptors_fragment_2eproto, file_level_service_descriptors_fragment_2eproto,
@@ -836,8 +828,7 @@ Variable::Variable(::PROTOBUF_NAMESPACE_ID::Arena* arena)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena),
   dimensions_(arena),
   level_error_bounds_(arena),
-  stopping_indices_(arena),
-  tier_(arena) {
+  stopping_indices_(arena) {
   SharedCtor();
   RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:DATA.Variable)
@@ -846,8 +837,7 @@ Variable::Variable(const Variable& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
       dimensions_(from.dimensions_),
       level_error_bounds_(from.level_error_bounds_),
-      stopping_indices_(from.stopping_indices_),
-      tier_(from.tier_) {
+      stopping_indices_(from.stopping_indices_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (!from._internal_name().empty()) {
@@ -922,7 +912,6 @@ void Variable::Clear() {
   dimensions_.Clear();
   level_error_bounds_.Clear();
   stopping_indices_.Clear();
-  tier_.Clear();
   name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   type_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   if (GetArena() == nullptr && table_content_ != nullptr) {
@@ -1021,18 +1010,6 @@ const char* Variable::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::i
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 72)) {
           tiers_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
-        } else goto handle_unusual;
-        continue;
-      // repeated .DATA.Tier tier = 10;
-      case 10:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 82)) {
-          ptr -= 1;
-          do {
-            ptr += 1;
-            ptr = ctx->ParseMessage(_internal_add_tier(), ptr);
-            CHK_(ptr);
-            if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<82>(ptr));
         } else goto handle_unusual;
         continue;
       default: {
@@ -1134,14 +1111,6 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(9, this->_internal_tiers(), target);
   }
 
-  // repeated .DATA.Tier tier = 10;
-  for (unsigned int i = 0,
-      n = static_cast<unsigned int>(this->_internal_tier_size()); i < n; i++) {
-    target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(10, this->_internal_tier(i), target, stream);
-  }
-
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -1201,13 +1170,6 @@ size_t Variable::ByteSizeLong() const {
     _stopping_indices_cached_byte_size_.store(cached_size,
                                     std::memory_order_relaxed);
     total_size += data_size;
-  }
-
-  // repeated .DATA.Tier tier = 10;
-  total_size += 1UL * this->_internal_tier_size();
-  for (const auto& msg : this->tier_) {
-    total_size +=
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
 
   // string name = 1;
@@ -1286,7 +1248,6 @@ void Variable::MergeFrom(const Variable& from) {
   dimensions_.MergeFrom(from.dimensions_);
   level_error_bounds_.MergeFrom(from.level_error_bounds_);
   stopping_indices_.MergeFrom(from.stopping_indices_);
-  tier_.MergeFrom(from.tier_);
   if (from.name().size() > 0) {
     _internal_set_name(from._internal_name());
   }
@@ -1331,7 +1292,6 @@ void Variable::InternalSwap(Variable* other) {
   dimensions_.InternalSwap(&other->dimensions_);
   level_error_bounds_.InternalSwap(&other->level_error_bounds_);
   stopping_indices_.InternalSwap(&other->stopping_indices_);
-  tier_.InternalSwap(&other->tier_);
   name_.Swap(&other->name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   type_.Swap(&other->type_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
@@ -1356,15 +1316,13 @@ class Tier::_Internal {
 };
 
 Tier::Tier(::PROTOBUF_NAMESPACE_ID::Arena* arena)
-  : ::PROTOBUF_NAMESPACE_ID::Message(arena),
-  fragment_(arena) {
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena) {
   SharedCtor();
   RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:DATA.Tier)
 }
 Tier::Tier(const Tier& from)
-  : ::PROTOBUF_NAMESPACE_ID::Message(),
-      fragment_(from.fragment_) {
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   ec_backend_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (!from._internal_ec_backend_name().empty()) {
@@ -1417,7 +1375,6 @@ void Tier::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  fragment_.Clear();
   ec_backend_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::memset(&id_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&hd_) -
@@ -1482,18 +1439,6 @@ const char* Tier::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::inter
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 56)) {
           encoded_fragment_length_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
-        } else goto handle_unusual;
-        continue;
-      // repeated .DATA.Fragment fragment = 8;
-      case 8:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 66)) {
-          ptr -= 1;
-          do {
-            ptr += 1;
-            ptr = ctx->ParseMessage(_internal_add_fragment(), ptr);
-            CHK_(ptr);
-            if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<66>(ptr));
         } else goto handle_unusual;
         continue;
       default: {
@@ -1570,14 +1515,6 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(7, this->_internal_encoded_fragment_length(), target);
   }
 
-  // repeated .DATA.Fragment fragment = 8;
-  for (unsigned int i = 0,
-      n = static_cast<unsigned int>(this->_internal_fragment_size()); i < n; i++) {
-    target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(8, this->_internal_fragment(i), target, stream);
-  }
-
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -1593,13 +1530,6 @@ size_t Tier::ByteSizeLong() const {
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
-
-  // repeated .DATA.Fragment fragment = 8;
-  total_size += 1UL * this->_internal_fragment_size();
-  for (const auto& msg : this->fragment_) {
-    total_size +=
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
-  }
 
   // string ec_backend_name = 6;
   if (this->ec_backend_name().size() > 0) {
@@ -1681,7 +1611,6 @@ void Tier::MergeFrom(const Tier& from) {
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  fragment_.MergeFrom(from.fragment_);
   if (from.ec_backend_name().size() > 0) {
     _internal_set_ec_backend_name(from._internal_ec_backend_name());
   }
@@ -1726,7 +1655,6 @@ bool Tier::IsInitialized() const {
 void Tier::InternalSwap(Tier* other) {
   using std::swap;
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
-  fragment_.InternalSwap(&other->fragment_);
   ec_backend_name_.Swap(&other->ec_backend_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(Tier, hd_)
