@@ -36,7 +36,7 @@ using namespace ROCKSDB_NAMESPACE;
 
 #include <adios2.h>
 #include <zmq.hpp>
-
+#include <typeinfo>
 
 struct UnitErrorGain{
     double unit_error_gain;
@@ -282,17 +282,64 @@ std::vector<int> calculateNumberOfChunks(std::vector<std::vector<uint8_t>> dataT
     return divisionResults;
 }
 
-std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& originalVector, size_t splitSize) {
+// std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& originalVector, size_t splitSize) {
+//     std::vector<std::vector<uint8_t>> splitVectors;
+
+//     for (size_t i = 0; i < originalVector.size(); i += splitSize) {
+//         splitVectors.push_back(std::vector<uint8_t>(
+//             originalVector.begin() + i,
+//             originalVector.begin() + std::min(i + splitSize, originalVector.size())
+//         ));
+//     }
+
+//     return splitVectors;
+// }
+std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& originalVector, size_t numberOfChunks) {
     std::vector<std::vector<uint8_t>> splitVectors;
 
-    for (size_t i = 0; i < originalVector.size(); i += splitSize) {
+    // Calculate the approximate chunk size
+    size_t chunkSize = originalVector.size() / numberOfChunks;
+    size_t remainder = originalVector.size() % numberOfChunks; // To distribute any remainder
+
+    size_t startIndex = 0;
+
+    for (size_t i = 0; i < numberOfChunks; ++i) {
+        size_t endIndex = startIndex + chunkSize + (i < remainder ? 1 : 0);
+
         splitVectors.push_back(std::vector<uint8_t>(
-            originalVector.begin() + i,
-            originalVector.begin() + std::min(i + splitSize, originalVector.size())
+            originalVector.begin() + startIndex,
+            originalVector.begin() + endIndex
         ));
+
+        startIndex = endIndex;
     }
 
     return splitVectors;
+}
+
+template <typename T>
+std::vector<std::vector<T>> split(const std::vector<T>& input, size_t chunkSize) {
+  if (chunkSize == 0) {
+    throw std::runtime_error("chunkSize must be greater than 0");
+  }
+
+  std::vector<std::vector<T>> chunks;
+  size_t numChunks = std::ceil(static_cast<double>(input.size()) / chunkSize);
+
+  for (size_t i = 0; i < numChunks; ++i) {
+    size_t startIndex = i * chunkSize;
+    size_t endIndex = std::min((i + 1) * chunkSize, input.size());
+
+    std::vector<T> chunk;
+
+    for (size_t j = startIndex; j < endIndex; ++j) {
+      chunk.push_back(input[j]);
+    }
+
+    chunks.push_back(chunk);
+  }
+
+  return chunks;
 }
 
 // void sendDataZmq(const DATA::VariableCollection& variableCollection) {
@@ -786,18 +833,19 @@ int main(int argc, char *argv[])
             std::cout << "Number of chunks: " << std::endl;
             for (size_t i = 0; i < numberOfChunks.size(); i++)
             {
-                std::cout << numberOfChunks[i] << std::endl;
+                std::cout << "Tier: " << i << " Chunks: " << numberOfChunks[i] << std::endl;
             }
 
-            std::vector<std::vector<uint8_t>> splitDataTiers;
+            std::vector<std::vector<std::vector<uint8_t>>> splitDataTiers;
             int chunkCnt = 0;
 
             for (const auto& vec : dataTiersValues) {
                 std::vector<std::vector<uint8_t>> splitResult = splitVector(vec, numberOfChunks[chunkCnt]);
-                splitDataTiers.insert(splitDataTiers.end(), splitResult.begin(), splitResult.end());
+                splitDataTiers.push_back(splitResult);
                 chunkCnt++;
+                std::cout << "splitting by " << numberOfChunks[chunkCnt] << " chunks" << std::endl;
             }
-
+            // splitDataTiers.push_back(dataTiersValues);
             
                               
             std::cout << "query table content: " << std::endl;
@@ -1050,8 +1098,8 @@ int main(int argc, char *argv[])
             std::unique_ptr<uint32_t> pVarTiersResult = UnpackSingleElement<uint32_t>(varTiersResult);
             std::cout << varTiersName << ", " << *pVarTiersResult << std::endl;   
 
-
-            for (size_t i = 0; i < dataTiersValues.size(); i++)
+            std::cout << "split data tiers size " << splitDataTiers.size() << std::endl;
+            for (size_t i = 0; i < splitDataTiers.size(); i++)
             {
                 struct ec_args args = {
                     .k = dataTiersECParam_k[i],
@@ -1129,189 +1177,319 @@ int main(int argc, char *argv[])
                 assert(s.ok()); 
                 std::cout << varECBackendName << ", " << varECBackendResult << std::endl;  
 
-                int desc = -1;
-                int rc = 0;
-                //std::cout << "backendID: " << backendID << std::endl;
-                desc = liberasurecode_instance_create(backendID, &args);
-                std::cout << desc << std::endl;
-                std::cout << "Max elements: " << EC_MAX_FRAGMENTS << std::endl;
-                std::cout << args.k << " " << args.m << std::endl;
-                if (-EBACKENDNOTAVAIL == desc) 
+                
+                
+
+                std::cout << "Encoding tier chunks" << std::endl;
+                for (size_t k = 0; k < splitDataTiers[i].size(); k++)
                 {
-                    std::cerr << "backend library not available!" << std::endl;
-                    return 1;
-                } else if ((args.k + args.m) > EC_MAX_FRAGMENTS) 
-                {
-                    assert(-EINVALIDPARAMS == desc);
-                    std::cerr << "invalid parameters!" << std::endl;
-                    return 1;
-                } else
-                {
-                    assert(desc > 0);
-                }   
-                char **encoded_data = NULL, **encoded_parity = NULL;
-                uint64_t encoded_fragment_len = 0;
-                char *orig_data = NULL;
-                int orig_data_size = dataTiersValues[i].size();
-                std::cout << "orig_data_size: " << orig_data_size << std::endl;
-                orig_data = static_cast<char*>(static_cast<void *>(dataTiersValues[i].data()));
-                // for (size_t j = 0; j < 10; j++)
-                // {
-                //     std::cout << storageTiersValues[i][j] << " ";
-                // }
-                // std::cout << std::endl;
-                // for (size_t j = 0; j < 10; j++)
-                // {
-                //     std::cout << orig_data[j] << " ";
-                // }
-                // std::cout << std::endl;                
-                rc = liberasurecode_encode(desc, orig_data, orig_data_size,
-                        &encoded_data, &encoded_parity, &encoded_fragment_len);    
-                assert(0 == rc);
-                std::cout << "encoded_fragment_len: " << encoded_fragment_len << std::endl;
-                std::string varECParam_EncodedFragLen_Name = variableName+":Tier:"+std::to_string(i)+":EncodedFragmentLength";
-                //adios2::Variable<uint64_t> varECParam_EncodedFragLen = writer_io.DefineVariable<uint64_t>(varECParam_EncodedFragLen_Name);
-                //metadata_writer_engine.Put(varECParam_EncodedFragLen, encoded_fragment_len, adios2::Mode::Sync);
-                s = db->Put(WriteOptions(), varECParam_EncodedFragLen_Name, PackSingleElement(&encoded_fragment_len));
-                // std::cout << "Key: " << varECParam_EncodedFragLen_Name << "; Value: " << PackSingleElement(&encoded_fragment_len) << std::endl;
-                //baryon_density:Tier:i:EncodedFragmentLength : PackSingleElement(26996)
-                assert(s.ok()); 
-                std::string varECParam_EncodedFragLen_Result;
-                s = db->Get(ReadOptions(), varECParam_EncodedFragLen_Name, &varECParam_EncodedFragLen_Result);
-                assert(s.ok());  
-                std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = UnpackSingleElement<uint64_t>(varECParam_EncodedFragLen_Result);
-                std::cout << varECParam_EncodedFragLen_Name << ", " << *pVarECParam_EncodedFragLen_Result << std::endl;  
+                    int desc = -1;
+                    int rc = 0;
+                    //std::cout << "backendID: " << backendID << std::endl;
+                    desc = liberasurecode_instance_create(backendID, &args);
+                    
+                    if (-EBACKENDNOTAVAIL == desc) 
+                    {
+                        std::cerr << "backend library not available!" << std::endl;
+                        return 1;
+                    } else if ((args.k + args.m) > EC_MAX_FRAGMENTS) 
+                    {
+                        assert(-EINVALIDPARAMS == desc);
+                        std::cerr << "invalid parameters!" << std::endl;
+                        return 1;
+                    } else
+                    {
+                        assert(desc > 0);
+                    }   
 
-                //Setting protobuf parameters
-                DATA::Tier protoTier;
-                protoTier.set_id(i);
-                protoTier.set_k(ec_k);
-                protoTier.set_m(ec_m);
-                protoTier.set_w(ec_w);
-                protoTier.set_hd(ec_hd);
-                protoTier.set_ec_backend_name(ECBackendName);
-                protoTier.set_encoded_fragment_length(encoded_fragment_len);
+                    std::cout << "split data tiers size: " << splitDataTiers.size() << " k: " << k << std::endl;
+                    char **encoded_data = NULL, **encoded_parity = NULL;
+                    uint64_t encoded_fragment_len = 0;
+                    char *orig_data = NULL;
+                    int orig_data_size = splitDataTiers[i][k].size();
+                    std::cout << "orig_data_size: " << orig_data_size << std::endl;
+                    orig_data = static_cast<char*>(static_cast<void *>(splitDataTiers[i][k].data()));
 
-                size_t frag_header_size =  sizeof(fragment_header_t);
-                for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
-                {
-                    char *frag = NULL;
-                    frag = encoded_data[j];
-                    assert(frag != NULL);
-                    fragment_header_t *header = (fragment_header_t*)frag;
-                    assert(header != NULL);
-                    //std::vector<char> fragment_data(frag, frag + fragment_size);
-                    // Copy data explicitly
-                    std::vector<char> fragment_data(encoded_fragment_len);
-                    std::copy(frag, frag + encoded_fragment_len, fragment_data.begin());
-
-                    fragment_metadata_t metadata = header->meta;
-                    assert(metadata.idx == j);
-                    assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
-                    assert(metadata.orig_data_size == orig_data_size);
-                    assert(metadata.backend_id == backendID);
-                    assert(metadata.chksum_mismatch == 0);     
-
-                    std::string varDataValuesName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j);   
-                    adios2::Variable<char> varDataValues = writer_io.DefineVariable<char>(varDataValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});
-                    std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
-                    //commented to test protobuf
-                    // data_writer_engines[idxStr].Put(varDataValues, frag, adios2::Mode::Sync);
-                    std::string varDataLocationName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j)+":Location";
-                    //adios2::Variable<std::string> varDataLocation = writer_io.DefineVariable<std::string>(varDataLocationName); 
-
-                    // std::string fullDataPath = dataTiersPaths[i];
-                    // if (!fullDataPath.empty() && fullDataPath.back() != '/')
-                    // {
-                    //     fullDataPath += '/';
-                    // }
-                    // std::string refactoredDataFileName = inputFileNamePrefix+".refactored.tier."+std::to_string(i)+".data."+std::to_string(j)+".bp";
-                    // std::string dataPath = fullDataPath + refactoredDataFileName;    
-                    // //metadata_writer_engine.Put(varDataLocation, dataPath, adios2::Mode::Sync);    
-                    // s = db->Put(WriteOptions(), varDataLocationName, dataPath);
-                    // std::cout << "Key: " << varDataLocationName << "; Value: " << dataPath << std::endl;
-                    //baryon_density:Tier:0:Data:0:Location : /home/vesaulov1/Documents/research/Multiprecision-data-refactoring/tiers/tier-0/NYX.refactored.tier.0.data.0.bp
+                    // std::cout << "split data tiers size" << splitDataTiers[i][k].size() << std::endl;
+                    // std::cout << "split data tiers data" << splitDataTiers[i][k].data() << std::endl;
+                    // std::cout << "split data tiers type" << typeid(splitDataTiers[i][k]).name() << std::endl;
+                    // std::cout << "split data tiers type data" << typeid(splitDataTiers[i][k].data()).name() << std::endl;
+                                 
+                    rc = liberasurecode_encode(desc, orig_data, orig_data_size,
+                            &encoded_data, &encoded_parity, &encoded_fragment_len);          
+                    assert(0 == rc);
+                    std::cout << "encoded_fragment_len: " << encoded_fragment_len << std::endl;
+                    // std::string varECParam_EncodedFragLen_Name = variableName+":Tier:"+std::to_string(i)+":EncodedFragmentLength";
+                    
+                    // s = db->Put(WriteOptions(), varECParam_EncodedFragLen_Name, PackSingleElement(&encoded_fragment_len));
+                    
                     // assert(s.ok()); 
-                    // std::string varDataLocationResult;
-                    // s = db->Get(ReadOptions(), varDataLocationName, &varDataLocationResult);
-                    // assert(s.ok()); 
-                    // std::cout << varDataLocationName << ", " << varDataLocationResult << std::endl;
+                    // std::string varECParam_EncodedFragLen_Result;
+                    // s = db->Get(ReadOptions(), varECParam_EncodedFragLen_Name, &varECParam_EncodedFragLen_Result);
+                    // assert(s.ok());  
+                    // std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = UnpackSingleElement<uint64_t>(varECParam_EncodedFragLen_Result);
+                    // std::cout << varECParam_EncodedFragLen_Name << ", " << *pVarECParam_EncodedFragLen_Result << std::endl;  
+
+                    //Setting protobuf parameters
+                    DATA::Tier protoTier;
+                    protoTier.set_id(i);
+                    protoTier.set_k(ec_k);
+                    protoTier.set_m(ec_m);
+                    protoTier.set_w(ec_w);
+                    protoTier.set_hd(ec_hd);
+                    protoTier.set_ec_backend_name(ECBackendName);
+                    protoTier.set_encoded_fragment_length(encoded_fragment_len);
+
+                    size_t frag_header_size =  sizeof(fragment_header_t);
+                    for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
+                    {
+                        char *frag = NULL;
+                        frag = encoded_data[j];
+                        assert(frag != NULL);
+                        fragment_header_t *header = (fragment_header_t*)frag;
+                        assert(header != NULL);
+                        //std::vector<char> fragment_data(frag, frag + fragment_size);
+                        // Copy data explicitly
+                        std::vector<char> fragment_data(encoded_fragment_len);
+                        std::copy(frag, frag + encoded_fragment_len, fragment_data.begin());
+
+                        fragment_metadata_t metadata = header->meta;
+                        assert(metadata.idx == j);
+                        assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
+                        assert(metadata.orig_data_size == orig_data_size);
+                        assert(metadata.backend_id == backendID);
+                        assert(metadata.chksum_mismatch == 0);     
+
+                        std::string varDataValuesName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j);   
+                        // adios2::Variable<char> varDataValues = writer_io.DefineVariable<char>(varDataValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});
+                        std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
+
+                        std::string varDataLocationName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j)+":Location";
+
+                        DATA::Fragment protoFragment1;
+                        protoFragment1.set_k(ec_k);
+                        protoFragment1.set_m(ec_m);
+                        protoFragment1.set_w(ec_w);
+                        protoFragment1.set_hd(ec_hd);
+                        protoFragment1.set_ec_backend_name(ECBackendName);
+                        protoFragment1.set_idx(j);
+                        protoFragment1.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
+                        protoFragment1.set_orig_data_size(orig_data_size);
+                        protoFragment1.set_chksum_mismatch(0);
+                        protoFragment1.set_frag(fragment_data.data(), fragment_data.size());
+                        protoFragment1.set_is_data(true);
+                        protoFragment1.set_tier_id(i);
+                        protoFragment1.set_chunk_id(k);
+                        protoFragment1.set_fragment_id(j);
+                        // *protoTier.add_fragment() = protoFragment1;
+                    }
+                    for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
+                    {
+                        char *frag = NULL;
+                        frag = encoded_parity[j];
+                        assert(frag != NULL);
+                        fragment_header_t *header = (fragment_header_t*)frag;
+                        assert(header != NULL);
+
+                        fragment_metadata_t metadata = header->meta;
+                        assert(metadata.idx == args.k+j);
+                        assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
+                        assert(metadata.orig_data_size == orig_data_size);
+                        assert(metadata.backend_id == backendID);
+                        assert(metadata.chksum_mismatch == 0);     
+
+                        std::string varParityValuesName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j);        
+                        // adios2::Variable<char> varParityValues = writer_io.DefineVariable<char>(varParityValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});  
+                        std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
+
+                        std::string varParityLocationName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j)+":Location";
+
+                        DATA::Fragment protoFragment2;
+                        protoFragment2.set_k(ec_k);
+                        protoFragment2.set_m(ec_m);
+                        protoFragment2.set_w(ec_w);
+                        protoFragment2.set_hd(ec_hd);
+                        protoFragment2.set_ec_backend_name(ECBackendName);
+                        protoFragment2.set_idx(args.k+j);
+                        protoFragment2.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
+                        protoFragment2.set_orig_data_size(orig_data_size);
+                        protoFragment2.set_chksum_mismatch(0);
+                        protoFragment2.set_frag(frag);
+                        protoFragment2.set_is_data(false);
+                        protoFragment2.set_tier_id(i);
+                        // *protoTier.add_fragment() = protoFragment2;
+                    }
+                    // *protoVariable.add_tier() = protoTier;
+
+                    rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
+                    assert(rc == 0);    
+                    assert(0 == liberasurecode_instance_destroy(desc));   
+                } //end
+                std::cout << "Encoded tier: " << i << std::endl;
+
+                // char **encoded_data = NULL, **encoded_parity = NULL;
+                // uint64_t encoded_fragment_len = 0;
+                // char *orig_data = NULL;
+                // int orig_data_size = dataTiersValues[i].size();
+                // std::cout << "orig_data_size: " << orig_data_size << std::endl;
+                // orig_data = static_cast<char*>(static_cast<void *>(dataTiersValues[i].data()));
+                // // for (size_t j = 0; j < 10; j++)
+                // // {
+                // //     std::cout << storageTiersValues[i][j] << " ";
+                // // }
+                // // std::cout << std::endl;
+                // // for (size_t j = 0; j < 10; j++)
+                // // {
+                // //     std::cout << orig_data[j] << " ";
+                // // }
+                // // std::cout << std::endl;                
+                // rc = liberasurecode_encode(desc, orig_data, orig_data_size,
+                //         &encoded_data, &encoded_parity, &encoded_fragment_len);    
+                // assert(0 == rc);
+                // std::cout << "encoded_fragment_len: " << encoded_fragment_len << std::endl;
+                // std::string varECParam_EncodedFragLen_Name = variableName+":Tier:"+std::to_string(i)+":EncodedFragmentLength";
+                // //adios2::Variable<uint64_t> varECParam_EncodedFragLen = writer_io.DefineVariable<uint64_t>(varECParam_EncodedFragLen_Name);
+                // //metadata_writer_engine.Put(varECParam_EncodedFragLen, encoded_fragment_len, adios2::Mode::Sync);
+                // s = db->Put(WriteOptions(), varECParam_EncodedFragLen_Name, PackSingleElement(&encoded_fragment_len));
+                // // std::cout << "Key: " << varECParam_EncodedFragLen_Name << "; Value: " << PackSingleElement(&encoded_fragment_len) << std::endl;
+                // //baryon_density:Tier:i:EncodedFragmentLength : PackSingleElement(26996)
+                // assert(s.ok()); 
+                // std::string varECParam_EncodedFragLen_Result;
+                // s = db->Get(ReadOptions(), varECParam_EncodedFragLen_Name, &varECParam_EncodedFragLen_Result);
+                // assert(s.ok());  
+                // std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = UnpackSingleElement<uint64_t>(varECParam_EncodedFragLen_Result);
+                // std::cout << varECParam_EncodedFragLen_Name << ", " << *pVarECParam_EncodedFragLen_Result << std::endl;  
+
+                // //Setting protobuf parameters
+                // DATA::Tier protoTier;
+                // protoTier.set_id(i);
+                // protoTier.set_k(ec_k);
+                // protoTier.set_m(ec_m);
+                // protoTier.set_w(ec_w);
+                // protoTier.set_hd(ec_hd);
+                // protoTier.set_ec_backend_name(ECBackendName);
+                // protoTier.set_encoded_fragment_length(encoded_fragment_len);
+
+                // size_t frag_header_size =  sizeof(fragment_header_t);
+                // for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
+                // {
+                //     char *frag = NULL;
+                //     frag = encoded_data[j];
+                //     assert(frag != NULL);
+                //     fragment_header_t *header = (fragment_header_t*)frag;
+                //     assert(header != NULL);
+                //     //std::vector<char> fragment_data(frag, frag + fragment_size);
+                //     // Copy data explicitly
+                //     std::vector<char> fragment_data(encoded_fragment_len);
+                //     std::copy(frag, frag + encoded_fragment_len, fragment_data.begin());
+
+                //     fragment_metadata_t metadata = header->meta;
+                //     assert(metadata.idx == j);
+                //     assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
+                //     assert(metadata.orig_data_size == orig_data_size);
+                //     assert(metadata.backend_id == backendID);
+                //     assert(metadata.chksum_mismatch == 0);     
+
+                //     std::string varDataValuesName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j);   
+                //     adios2::Variable<char> varDataValues = writer_io.DefineVariable<char>(varDataValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});
+                //     std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
+                //     //commented to test protobuf
+                //     // data_writer_engines[idxStr].Put(varDataValues, frag, adios2::Mode::Sync);
+                //     std::string varDataLocationName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j)+":Location";
+                //     //adios2::Variable<std::string> varDataLocation = writer_io.DefineVariable<std::string>(varDataLocationName); 
+
+                //     // std::string fullDataPath = dataTiersPaths[i];
+                //     // if (!fullDataPath.empty() && fullDataPath.back() != '/')
+                //     // {
+                //     //     fullDataPath += '/';
+                //     // }
+                //     // std::string refactoredDataFileName = inputFileNamePrefix+".refactored.tier."+std::to_string(i)+".data."+std::to_string(j)+".bp";
+                //     // std::string dataPath = fullDataPath + refactoredDataFileName;    
+                //     // //metadata_writer_engine.Put(varDataLocation, dataPath, adios2::Mode::Sync);    
+                //     // s = db->Put(WriteOptions(), varDataLocationName, dataPath);
+                //     // std::cout << "Key: " << varDataLocationName << "; Value: " << dataPath << std::endl;
+                //     //baryon_density:Tier:0:Data:0:Location : /home/vesaulov1/Documents/research/Multiprecision-data-refactoring/tiers/tier-0/NYX.refactored.tier.0.data.0.bp
+                //     // assert(s.ok()); 
+                //     // std::string varDataLocationResult;
+                //     // s = db->Get(ReadOptions(), varDataLocationName, &varDataLocationResult);
+                //     // assert(s.ok()); 
+                //     // std::cout << varDataLocationName << ", " << varDataLocationResult << std::endl;
                     
 
-                    DATA::Fragment protoFragment1;
-                    protoFragment1.set_k(ec_k);
-                    protoFragment1.set_m(ec_m);
-                    protoFragment1.set_w(ec_w);
-                    protoFragment1.set_hd(ec_hd);
-                    protoFragment1.set_ec_backend_name(ECBackendName);
-                    protoFragment1.set_idx(j);
-                    protoFragment1.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
-                    protoFragment1.set_orig_data_size(orig_data_size);
-                    protoFragment1.set_chksum_mismatch(0);
-                    protoFragment1.set_frag(fragment_data.data(), fragment_data.size());
-                    protoFragment1.set_is_data(true);
-                    protoFragment1.set_tier_id(i);
-                    // *protoTier.add_fragment() = protoFragment1;
-                }
-                for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
-                {
-                    char *frag = NULL;
-                    frag = encoded_parity[j];
-                    assert(frag != NULL);
-                    fragment_header_t *header = (fragment_header_t*)frag;
-                    assert(header != NULL);
+                //     DATA::Fragment protoFragment1;
+                //     protoFragment1.set_k(ec_k);
+                //     protoFragment1.set_m(ec_m);
+                //     protoFragment1.set_w(ec_w);
+                //     protoFragment1.set_hd(ec_hd);
+                //     protoFragment1.set_ec_backend_name(ECBackendName);
+                //     protoFragment1.set_idx(j);
+                //     protoFragment1.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
+                //     protoFragment1.set_orig_data_size(orig_data_size);
+                //     protoFragment1.set_chksum_mismatch(0);
+                //     protoFragment1.set_frag(fragment_data.data(), fragment_data.size());
+                //     protoFragment1.set_is_data(true);
+                //     protoFragment1.set_tier_id(i);
+                //     // *protoTier.add_fragment() = protoFragment1;
+                // }
+                // for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
+                // {
+                //     char *frag = NULL;
+                //     frag = encoded_parity[j];
+                //     assert(frag != NULL);
+                //     fragment_header_t *header = (fragment_header_t*)frag;
+                //     assert(header != NULL);
 
-                    fragment_metadata_t metadata = header->meta;
-                    assert(metadata.idx == args.k+j);
-                    assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
-                    assert(metadata.orig_data_size == orig_data_size);
-                    assert(metadata.backend_id == backendID);
-                    assert(metadata.chksum_mismatch == 0);     
+                //     fragment_metadata_t metadata = header->meta;
+                //     assert(metadata.idx == args.k+j);
+                //     assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
+                //     assert(metadata.orig_data_size == orig_data_size);
+                //     assert(metadata.backend_id == backendID);
+                //     assert(metadata.chksum_mismatch == 0);     
 
-                    std::string varParityValuesName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j);        
-                    adios2::Variable<char> varParityValues = writer_io.DefineVariable<char>(varParityValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});  
-                    std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
-                    //commented to test protobuf
-                    // parity_writer_engines[idxStr].Put(varParityValues, frag, adios2::Mode::Sync);     
-                    std::string varParityLocationName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j)+":Location";
-                    //adios2::Variable<std::string> varParityLocation = writer_io.DefineVariable<std::string>(varParityLocationName); 
-                    // std::string fullParityPath = dataTiersPaths[i];
-                    // if (!fullParityPath.empty() && fullParityPath.back() != '/')
-                    // {
-                    //     fullParityPath += '/';
-                    // }
-                    // std::string refactoredParityFileName = inputFileNamePrefix+".refactored.tier."+std::to_string(i)+".parity."+std::to_string(j)+".bp";
-                    // std::string parityPath = fullParityPath + refactoredParityFileName;    
-                    // //metadata_writer_engine.Put(varParityLocation, parityPath, adios2::Mode::Sync);  
-                    // s = db->Put(WriteOptions(), varParityLocationName, parityPath);
-                    // std::cout << "Key: " << varParityLocationName << "; Value: " << parityPath << std::endl;
-                    //baryon_density:Tier:0:Parity:0:Location : /home/vesaulov1/Documents/research/Multiprecision-data-refactoring/tiers/tier-0/NYX.refactored.tier.0.parity.0.bp
-                    // assert(s.ok()); 
-                    // std::string varParityLocationResult;
-                    // s = db->Get(ReadOptions(), varParityLocationName, &varParityLocationResult);
-                    // assert(s.ok()); 
-                    // std::cout << varParityLocationName << ", " << varParityLocationResult << std::endl;
+                //     std::string varParityValuesName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j);        
+                //     adios2::Variable<char> varParityValues = writer_io.DefineVariable<char>(varParityValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});  
+                //     std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
+                //     //commented to test protobuf
+                //     // parity_writer_engines[idxStr].Put(varParityValues, frag, adios2::Mode::Sync);     
+                //     std::string varParityLocationName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j)+":Location";
+                //     //adios2::Variable<std::string> varParityLocation = writer_io.DefineVariable<std::string>(varParityLocationName); 
+                //     // std::string fullParityPath = dataTiersPaths[i];
+                //     // if (!fullParityPath.empty() && fullParityPath.back() != '/')
+                //     // {
+                //     //     fullParityPath += '/';
+                //     // }
+                //     // std::string refactoredParityFileName = inputFileNamePrefix+".refactored.tier."+std::to_string(i)+".parity."+std::to_string(j)+".bp";
+                //     // std::string parityPath = fullParityPath + refactoredParityFileName;    
+                //     // //metadata_writer_engine.Put(varParityLocation, parityPath, adios2::Mode::Sync);  
+                //     // s = db->Put(WriteOptions(), varParityLocationName, parityPath);
+                //     // std::cout << "Key: " << varParityLocationName << "; Value: " << parityPath << std::endl;
+                //     //baryon_density:Tier:0:Parity:0:Location : /home/vesaulov1/Documents/research/Multiprecision-data-refactoring/tiers/tier-0/NYX.refactored.tier.0.parity.0.bp
+                //     // assert(s.ok()); 
+                //     // std::string varParityLocationResult;
+                //     // s = db->Get(ReadOptions(), varParityLocationName, &varParityLocationResult);
+                //     // assert(s.ok()); 
+                //     // std::cout << varParityLocationName << ", " << varParityLocationResult << std::endl;
 
-                    DATA::Fragment protoFragment2;
-                    protoFragment2.set_k(ec_k);
-                    protoFragment2.set_m(ec_m);
-                    protoFragment2.set_w(ec_w);
-                    protoFragment2.set_hd(ec_hd);
-                    protoFragment2.set_ec_backend_name(ECBackendName);
-                    protoFragment2.set_idx(args.k+j);
-                    protoFragment2.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
-                    protoFragment2.set_orig_data_size(orig_data_size);
-                    protoFragment2.set_chksum_mismatch(0);
-                    protoFragment2.set_frag(frag);
-                    protoFragment2.set_is_data(false);
-                    protoFragment2.set_tier_id(i);
-                    // *protoTier.add_fragment() = protoFragment2;
-                }
-                // *protoVariable.add_tier() = protoTier;
+                //     DATA::Fragment protoFragment2;
+                //     protoFragment2.set_k(ec_k);
+                //     protoFragment2.set_m(ec_m);
+                //     protoFragment2.set_w(ec_w);
+                //     protoFragment2.set_hd(ec_hd);
+                //     protoFragment2.set_ec_backend_name(ECBackendName);
+                //     protoFragment2.set_idx(args.k+j);
+                //     protoFragment2.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
+                //     protoFragment2.set_orig_data_size(orig_data_size);
+                //     protoFragment2.set_chksum_mismatch(0);
+                //     protoFragment2.set_frag(frag);
+                //     protoFragment2.set_is_data(false);
+                //     protoFragment2.set_tier_id(i);
+                //     // *protoTier.add_fragment() = protoFragment2;
+                // }
+                // // *protoVariable.add_tier() = protoTier;
 
-                rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
-                assert(rc == 0);    
-                assert(0 == liberasurecode_instance_destroy(desc));                 
+                // rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
+                // assert(rc == 0);    
+                // assert(0 == liberasurecode_instance_destroy(desc));                 
             }
             *variableCollection.add_variables() = protoVariable;
         } 

@@ -1095,6 +1095,8 @@ class Fragment PROTOBUF_FINAL :
     kBackendIdFieldNumber = 11,
     kIsDataFieldNumber = 13,
     kTierIdFieldNumber = 14,
+    kChunkIdFieldNumber = 15,
+    kFragmentIdFieldNumber = 16,
   };
   // string ec_backend_name = 5;
   void clear_ec_backend_name();
@@ -1254,6 +1256,24 @@ class Fragment PROTOBUF_FINAL :
   void _internal_set_tier_id(::PROTOBUF_NAMESPACE_ID::uint32 value);
   public:
 
+  // uint32 chunk_id = 15;
+  void clear_chunk_id();
+  ::PROTOBUF_NAMESPACE_ID::uint32 chunk_id() const;
+  void set_chunk_id(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_chunk_id() const;
+  void _internal_set_chunk_id(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  public:
+
+  // uint32 fragment_id = 16;
+  void clear_fragment_id();
+  ::PROTOBUF_NAMESPACE_ID::uint32 fragment_id() const;
+  void set_fragment_id(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_fragment_id() const;
+  void _internal_set_fragment_id(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  public:
+
   // @@protoc_insertion_point(class_scope:DATA.Fragment)
  private:
   class _Internal;
@@ -1275,6 +1295,8 @@ class Fragment PROTOBUF_FINAL :
   ::PROTOBUF_NAMESPACE_ID::uint32 backend_id_;
   bool is_data_;
   ::PROTOBUF_NAMESPACE_ID::uint32 tier_id_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 chunk_id_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 fragment_id_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_fragment_2eproto;
 };
@@ -2731,6 +2753,46 @@ inline void Fragment::_internal_set_tier_id(::PROTOBUF_NAMESPACE_ID::uint32 valu
 inline void Fragment::set_tier_id(::PROTOBUF_NAMESPACE_ID::uint32 value) {
   _internal_set_tier_id(value);
   // @@protoc_insertion_point(field_set:DATA.Fragment.tier_id)
+}
+
+// uint32 chunk_id = 15;
+inline void Fragment::clear_chunk_id() {
+  chunk_id_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::_internal_chunk_id() const {
+  return chunk_id_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::chunk_id() const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.chunk_id)
+  return _internal_chunk_id();
+}
+inline void Fragment::_internal_set_chunk_id(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  chunk_id_ = value;
+}
+inline void Fragment::set_chunk_id(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_set_chunk_id(value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.chunk_id)
+}
+
+// uint32 fragment_id = 16;
+inline void Fragment::clear_fragment_id() {
+  fragment_id_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::_internal_fragment_id() const {
+  return fragment_id_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::fragment_id() const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.fragment_id)
+  return _internal_fragment_id();
+}
+inline void Fragment::_internal_set_fragment_id(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  fragment_id_ = value;
+}
+inline void Fragment::set_fragment_id(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_set_fragment_id(value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.fragment_id)
 }
 
 // -------------------------------------------------------------------

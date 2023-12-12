@@ -196,6 +196,8 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_fragment_2eproto::offsets[] PR
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, frag_),
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, is_data_),
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, tier_id_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, chunk_id_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, fragment_id_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::DATA::VariableCollection, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -209,7 +211,7 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 16, -1, sizeof(::DATA::Variable)},
   { 30, -1, sizeof(::DATA::Tier)},
   { 42, -1, sizeof(::DATA::Fragment)},
-  { 61, -1, sizeof(::DATA::VariableCollection)},
+  { 63, -1, sizeof(::DATA::VariableCollection)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -234,15 +236,16 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "rrorsTable\022\r\n\005tiers\030\t \001(\r\"y\n\004Tier\022\n\n\002id\030"
   "\001 \001(\005\022\t\n\001k\030\002 \001(\005\022\t\n\001m\030\003 \001(\005\022\t\n\001w\030\004 \001(\005\022\n"
   "\n\002hd\030\005 \001(\005\022\027\n\017ec_backend_name\030\006 \001(\t\022\037\n\027e"
-  "ncoded_fragment_length\030\007 \001(\004\"\201\002\n\010Fragmen"
+  "ncoded_fragment_length\030\007 \001(\004\"\250\002\n\010Fragmen"
   "t\022\t\n\001k\030\001 \001(\005\022\t\n\001m\030\002 \001(\005\022\t\n\001w\030\003 \001(\005\022\n\n\002hd"
   "\030\004 \001(\005\022\027\n\017ec_backend_name\030\005 \001(\t\022\037\n\027encod"
   "ed_fragment_length\030\006 \001(\r\022\013\n\003idx\030\007 \001(\r\022\014\n"
   "\004size\030\010 \001(\r\022\026\n\016orig_data_size\030\t \001(\004\022\027\n\017c"
   "hksum_mismatch\030\n \001(\r\022\022\n\nbackend_id\030\013 \001(\r"
   "\022\014\n\004frag\030\014 \001(\t\022\017\n\007is_data\030\r \001(\010\022\017\n\007tier_"
-  "id\030\016 \001(\r\"7\n\022VariableCollection\022!\n\tvariab"
-  "les\030\001 \003(\0132\016.DATA.Variableb\006proto3"
+  "id\030\016 \001(\r\022\020\n\010chunk_id\030\017 \001(\r\022\023\n\013fragment_i"
+  "d\030\020 \001(\r\"7\n\022VariableCollection\022!\n\tvariabl"
+  "es\030\001 \003(\0132\016.DATA.Variableb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_fragment_2eproto_deps[1] = {
 };
@@ -256,7 +259,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_fra
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_fragment_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_fragment_2eproto = {
-  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 833,
+  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 872,
   &descriptor_table_fragment_2eproto_once, descriptor_table_fragment_2eproto_sccs, descriptor_table_fragment_2eproto_deps, 6, 0,
   schemas, file_default_instances, TableStruct_fragment_2eproto::offsets,
   file_level_metadata_fragment_2eproto, 6, file_level_enum_descriptors_fragment_2eproto, file_level_service_descriptors_fragment_2eproto,
@@ -1697,8 +1700,8 @@ Fragment::Fragment(const Fragment& from)
       GetArena());
   }
   ::memcpy(&k_, &from.k_,
-    static_cast<size_t>(reinterpret_cast<char*>(&tier_id_) -
-    reinterpret_cast<char*>(&k_)) + sizeof(tier_id_));
+    static_cast<size_t>(reinterpret_cast<char*>(&fragment_id_) -
+    reinterpret_cast<char*>(&k_)) + sizeof(fragment_id_));
   // @@protoc_insertion_point(copy_constructor:DATA.Fragment)
 }
 
@@ -1707,8 +1710,8 @@ void Fragment::SharedCtor() {
   ec_backend_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   frag_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   ::memset(&k_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&tier_id_) -
-      reinterpret_cast<char*>(&k_)) + sizeof(tier_id_));
+      reinterpret_cast<char*>(&fragment_id_) -
+      reinterpret_cast<char*>(&k_)) + sizeof(fragment_id_));
 }
 
 Fragment::~Fragment() {
@@ -1747,8 +1750,8 @@ void Fragment::Clear() {
   ec_backend_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   frag_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::memset(&k_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&tier_id_) -
-      reinterpret_cast<char*>(&k_)) + sizeof(tier_id_));
+      reinterpret_cast<char*>(&fragment_id_) -
+      reinterpret_cast<char*>(&k_)) + sizeof(fragment_id_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -1859,6 +1862,20 @@ const char* Fragment::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::i
       case 14:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 112)) {
           tier_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint32 chunk_id = 15;
+      case 15:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 120)) {
+          chunk_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint32 fragment_id = 16;
+      case 16:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 128)) {
+          fragment_id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -1982,6 +1999,18 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(14, this->_internal_tier_id(), target);
   }
 
+  // uint32 chunk_id = 15;
+  if (this->chunk_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(15, this->_internal_chunk_id(), target);
+  }
+
+  // uint32 fragment_id = 16;
+  if (this->fragment_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(16, this->_internal_fragment_id(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -2094,6 +2123,20 @@ size_t Fragment::ByteSizeLong() const {
         this->_internal_tier_id());
   }
 
+  // uint32 chunk_id = 15;
+  if (this->chunk_id() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt32Size(
+        this->_internal_chunk_id());
+  }
+
+  // uint32 fragment_id = 16;
+  if (this->fragment_id() != 0) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt32Size(
+        this->_internal_fragment_id());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
         _internal_metadata_, total_size, &_cached_size_);
@@ -2167,6 +2210,12 @@ void Fragment::MergeFrom(const Fragment& from) {
   if (from.tier_id() != 0) {
     _internal_set_tier_id(from._internal_tier_id());
   }
+  if (from.chunk_id() != 0) {
+    _internal_set_chunk_id(from._internal_chunk_id());
+  }
+  if (from.fragment_id() != 0) {
+    _internal_set_fragment_id(from._internal_fragment_id());
+  }
 }
 
 void Fragment::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -2193,8 +2242,8 @@ void Fragment::InternalSwap(Fragment* other) {
   ec_backend_name_.Swap(&other->ec_backend_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   frag_.Swap(&other->frag_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(Fragment, tier_id_)
-      + sizeof(Fragment::tier_id_)
+      PROTOBUF_FIELD_OFFSET(Fragment, fragment_id_)
+      + sizeof(Fragment::fragment_id_)
       - PROTOBUF_FIELD_OFFSET(Fragment, k_)>(
           reinterpret_cast<char*>(&k_),
           reinterpret_cast<char*>(&other->k_));
