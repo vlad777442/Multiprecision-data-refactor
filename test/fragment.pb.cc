@@ -242,7 +242,7 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "ed_fragment_length\030\006 \001(\r\022\013\n\003idx\030\007 \001(\r\022\014\n"
   "\004size\030\010 \001(\r\022\026\n\016orig_data_size\030\t \001(\004\022\027\n\017c"
   "hksum_mismatch\030\n \001(\r\022\022\n\nbackend_id\030\013 \001(\r"
-  "\022\014\n\004frag\030\014 \001(\t\022\017\n\007is_data\030\r \001(\010\022\017\n\007tier_"
+  "\022\014\n\004frag\030\014 \003(\014\022\017\n\007is_data\030\r \001(\010\022\017\n\007tier_"
   "id\030\016 \001(\r\022\020\n\010chunk_id\030\017 \001(\r\022\023\n\013fragment_i"
   "d\030\020 \001(\r\"7\n\022VariableCollection\022!\n\tvariabl"
   "es\030\001 \003(\0132\016.DATA.Variableb\006proto3"
@@ -1681,22 +1681,19 @@ class Fragment::_Internal {
 };
 
 Fragment::Fragment(::PROTOBUF_NAMESPACE_ID::Arena* arena)
-  : ::PROTOBUF_NAMESPACE_ID::Message(arena) {
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena),
+  frag_(arena) {
   SharedCtor();
   RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:DATA.Fragment)
 }
 Fragment::Fragment(const Fragment& from)
-  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  : ::PROTOBUF_NAMESPACE_ID::Message(),
+      frag_(from.frag_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   ec_backend_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (!from._internal_ec_backend_name().empty()) {
     ec_backend_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_ec_backend_name(),
-      GetArena());
-  }
-  frag_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (!from._internal_frag().empty()) {
-    frag_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_frag(),
       GetArena());
   }
   ::memcpy(&k_, &from.k_,
@@ -1708,7 +1705,6 @@ Fragment::Fragment(const Fragment& from)
 void Fragment::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_Fragment_fragment_2eproto.base);
   ec_backend_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  frag_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   ::memset(&k_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&fragment_id_) -
       reinterpret_cast<char*>(&k_)) + sizeof(fragment_id_));
@@ -1723,7 +1719,6 @@ Fragment::~Fragment() {
 void Fragment::SharedDtor() {
   GOOGLE_DCHECK(GetArena() == nullptr);
   ec_backend_name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  frag_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 void Fragment::ArenaDtor(void* object) {
@@ -1747,8 +1742,8 @@ void Fragment::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
+  frag_.Clear();
   ec_backend_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-  frag_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::memset(&k_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&fragment_id_) -
       reinterpret_cast<char*>(&k_)) + sizeof(fragment_id_));
@@ -1842,13 +1837,17 @@ const char* Fragment::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::i
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // string frag = 12;
+      // repeated bytes frag = 12;
       case 12:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 98)) {
-          auto str = _internal_mutable_frag();
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
-          CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "DATA.Fragment.frag"));
-          CHK_(ptr);
+          ptr -= 1;
+          do {
+            ptr += 1;
+            auto str = _internal_add_frag();
+            ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<98>(ptr));
         } else goto handle_unusual;
         continue;
       // bool is_data = 13;
@@ -1977,14 +1976,10 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(11, this->_internal_backend_id(), target);
   }
 
-  // string frag = 12;
-  if (this->frag().size() > 0) {
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->_internal_frag().data(), static_cast<int>(this->_internal_frag().length()),
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "DATA.Fragment.frag");
-    target = stream->WriteStringMaybeAliased(
-        12, this->_internal_frag(), target);
+  // repeated bytes frag = 12;
+  for (int i = 0, n = this->_internal_frag_size(); i < n; i++) {
+    const auto& s = this->_internal_frag(i);
+    target = stream->WriteBytes(12, s, target);
   }
 
   // bool is_data = 13;
@@ -2027,18 +2022,19 @@ size_t Fragment::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
+  // repeated bytes frag = 12;
+  total_size += 1 *
+      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(frag_.size());
+  for (int i = 0, n = frag_.size(); i < n; i++) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
+      frag_.Get(i));
+  }
+
   // string ec_backend_name = 5;
   if (this->ec_backend_name().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
         this->_internal_ec_backend_name());
-  }
-
-  // string frag = 12;
-  if (this->frag().size() > 0) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->_internal_frag());
   }
 
   // int32 k = 1;
@@ -2168,11 +2164,9 @@ void Fragment::MergeFrom(const Fragment& from) {
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
+  frag_.MergeFrom(from.frag_);
   if (from.ec_backend_name().size() > 0) {
     _internal_set_ec_backend_name(from._internal_ec_backend_name());
-  }
-  if (from.frag().size() > 0) {
-    _internal_set_frag(from._internal_frag());
   }
   if (from.k() != 0) {
     _internal_set_k(from._internal_k());
@@ -2239,8 +2233,8 @@ bool Fragment::IsInitialized() const {
 void Fragment::InternalSwap(Fragment* other) {
   using std::swap;
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
+  frag_.InternalSwap(&other->frag_);
   ec_backend_name_.Swap(&other->ec_backend_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-  frag_.Swap(&other->frag_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(Fragment, fragment_id_)
       + sizeof(Fragment::fragment_id_)

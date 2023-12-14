@@ -64,12 +64,13 @@ message Fragment {
   uint32 chksum_mismatch = 10;
   uint32 backend_id = 11;
 //  string var_data_value_name = 12;
-  string frag = 12;
+  repeated bytes frag = 12;
   bool is_data = 13;
   uint32 tier_id= 14;
   uint32 chunk_id= 15;
   uint32 fragment_id= 16;
 }
+//add chunk or add to fragment
 message VariableCollection {
   repeated Variable variables = 1;
 }

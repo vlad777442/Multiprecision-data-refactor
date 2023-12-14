@@ -35,8 +35,15 @@
 using namespace ROCKSDB_NAMESPACE;
 
 #include <adios2.h>
-#include <zmq.hpp>
-#include <typeinfo>
+#include <boost/asio.hpp>
+#include <iostream>
+
+#define IPADDRESS "127.0.0.1" // "192.168.1.64"
+#define UDP_PORT 13251
+
+using boost::asio::ip::udp;
+using boost::asio::ip::address;
+
 
 struct UnitErrorGain{
     double unit_error_gain;
@@ -180,7 +187,7 @@ void outputFragment(const DATA::Fragment& fragment) {
     std::cout << "size: " << fragment.size() << std::endl;
     std::cout << "orig_data_size: " << fragment.orig_data_size() << std::endl;
     std::cout << "chksum_mismatch: " << fragment.chksum_mismatch() << std::endl;
-    std::cout << "frag: " << fragment.frag() << std::endl;
+    //std::cout << "frag: " << fragment.frag() << std::endl;
     std::cout << "is_data: " << fragment.is_data() << std::endl;
     std::cout << "tier_id: " << fragment.tier_id() << std::endl;
 }
@@ -282,18 +289,6 @@ std::vector<int> calculateNumberOfChunks(std::vector<std::vector<uint8_t>> dataT
     return divisionResults;
 }
 
-// std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& originalVector, size_t splitSize) {
-//     std::vector<std::vector<uint8_t>> splitVectors;
-
-//     for (size_t i = 0; i < originalVector.size(); i += splitSize) {
-//         splitVectors.push_back(std::vector<uint8_t>(
-//             originalVector.begin() + i,
-//             originalVector.begin() + std::min(i + splitSize, originalVector.size())
-//         ));
-//     }
-
-//     return splitVectors;
-// }
 std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& originalVector, size_t numberOfChunks) {
     std::vector<std::vector<uint8_t>> splitVectors;
 
@@ -340,6 +335,24 @@ std::vector<std::vector<T>> split(const std::vector<T>& input, size_t chunkSize)
   }
 
   return chunks;
+}
+
+void sender(const DATA::Fragment& message) {
+    std::string serialized_data;
+    if (!message.SerializeToString(&serialized_data)) {
+        std::cerr << "Failed to serialize the protobuf message." << std::endl;
+        return;
+    }
+
+    boost::asio::io_service io_service;
+    udp::socket socket(io_service);
+    udp::endpoint remote_endpoint = udp::endpoint(address::from_string(IPADDRESS), UDP_PORT);
+    socket.open(udp::v4());
+
+    boost::system::error_code err;
+    auto sent = socket.send_to(boost::asio::buffer(serialized_data), remote_endpoint, 0, err);
+    socket.close();
+    std::cout << "Sent Payload --- " << sent << "\n";
 }
 
 // void sendDataZmq(const DATA::VariableCollection& variableCollection) {
@@ -1250,8 +1263,8 @@ int main(int argc, char *argv[])
                         assert(header != NULL);
                         //std::vector<char> fragment_data(frag, frag + fragment_size);
                         // Copy data explicitly
-                        std::vector<char> fragment_data(encoded_fragment_len);
-                        std::copy(frag, frag + encoded_fragment_len, fragment_data.begin());
+                        //std::vector<char> fragment_data(encoded_fragment_len);
+                        //std::copy(frag, frag + encoded_fragment_len, fragment_data.begin());
 
                         fragment_metadata_t metadata = header->meta;
                         assert(metadata.idx == j);
@@ -1276,12 +1289,13 @@ int main(int argc, char *argv[])
                         protoFragment1.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
                         protoFragment1.set_orig_data_size(orig_data_size);
                         protoFragment1.set_chksum_mismatch(0);
-                        protoFragment1.set_frag(fragment_data.data(), fragment_data.size());
+                        protoFragment1.add_frag(frag, strlen(frag));
                         protoFragment1.set_is_data(true);
                         protoFragment1.set_tier_id(i);
                         protoFragment1.set_chunk_id(k);
                         protoFragment1.set_fragment_id(j);
                         // *protoTier.add_fragment() = protoFragment1;
+                        sender(protoFragment1);
                     }
                     for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
                     {
@@ -1314,10 +1328,11 @@ int main(int argc, char *argv[])
                         protoFragment2.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
                         protoFragment2.set_orig_data_size(orig_data_size);
                         protoFragment2.set_chksum_mismatch(0);
-                        protoFragment2.set_frag(frag);
+                        protoFragment2.add_frag(frag, strlen(frag));
                         protoFragment2.set_is_data(false);
                         protoFragment2.set_tier_id(i);
                         // *protoTier.add_fragment() = protoFragment2;
+                        sender(protoFragment2);
                     }
                     // *protoVariable.add_tier() = protoTier;
 
