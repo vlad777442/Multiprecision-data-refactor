@@ -54,8 +54,10 @@ static void InitDefaultsscc_info_Fragment_fragment_2eproto() {
   ::DATA::Fragment::InitAsDefaultInstance();
 }
 
-::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_Fragment_fragment_2eproto =
-    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, 0, InitDefaultsscc_info_Fragment_fragment_2eproto}, {}};
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<2> scc_info_Fragment_fragment_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 2, 0, InitDefaultsscc_info_Fragment_fragment_2eproto}, {
+      &scc_info_QueryTable_fragment_2eproto.base,
+      &scc_info_SquaredErrorsTable_fragment_2eproto.base,}};
 
 static void InitDefaultsscc_info_QueryTable_fragment_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -198,6 +200,15 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_fragment_2eproto::offsets[] PR
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, tier_id_),
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, chunk_id_),
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, fragment_id_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_name_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_dimensions_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_type_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_levels_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_level_error_bounds_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_stopping_indices_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_table_content_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_squared_errors_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_tiers_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::DATA::VariableCollection, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -211,7 +222,7 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 16, -1, sizeof(::DATA::Variable)},
   { 30, -1, sizeof(::DATA::Tier)},
   { 42, -1, sizeof(::DATA::Fragment)},
-  { 63, -1, sizeof(::DATA::VariableCollection)},
+  { 72, -1, sizeof(::DATA::VariableCollection)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -236,7 +247,7 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "rrorsTable\022\r\n\005tiers\030\t \001(\r\"y\n\004Tier\022\n\n\002id\030"
   "\001 \001(\005\022\t\n\001k\030\002 \001(\005\022\t\n\001m\030\003 \001(\005\022\t\n\001w\030\004 \001(\005\022\n"
   "\n\002hd\030\005 \001(\005\022\027\n\017ec_backend_name\030\006 \001(\t\022\037\n\027e"
-  "ncoded_fragment_length\030\007 \001(\004\"\250\002\n\010Fragmen"
+  "ncoded_fragment_length\030\007 \001(\004\"\254\004\n\010Fragmen"
   "t\022\t\n\001k\030\001 \001(\005\022\t\n\001m\030\002 \001(\005\022\t\n\001w\030\003 \001(\005\022\n\n\002hd"
   "\030\004 \001(\005\022\027\n\017ec_backend_name\030\005 \001(\t\022\037\n\027encod"
   "ed_fragment_length\030\006 \001(\r\022\013\n\003idx\030\007 \001(\r\022\014\n"
@@ -244,8 +255,15 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "hksum_mismatch\030\n \001(\r\022\022\n\nbackend_id\030\013 \001(\r"
   "\022\014\n\004frag\030\014 \003(\014\022\017\n\007is_data\030\r \001(\010\022\017\n\007tier_"
   "id\030\016 \001(\r\022\020\n\010chunk_id\030\017 \001(\r\022\023\n\013fragment_i"
-  "d\030\020 \001(\r\"7\n\022VariableCollection\022!\n\tvariabl"
-  "es\030\001 \003(\0132\016.DATA.Variableb\006proto3"
+  "d\030\020 \001(\r\022\020\n\010var_name\030\021 \001(\t\022\026\n\016var_dimensi"
+  "ons\030\022 \003(\r\022\020\n\010var_type\030\023 \001(\t\022\022\n\nvar_level"
+  "s\030\024 \001(\r\022\036\n\026var_level_error_bounds\030\025 \003(\001\022"
+  "\034\n\024var_stopping_indices\030\026 \003(\r\022+\n\021var_tab"
+  "le_content\030\027 \001(\0132\020.DATA.QueryTable\0224\n\022va"
+  "r_squared_errors\030\030 \001(\0132\030.DATA.SquaredErr"
+  "orsTable\022\021\n\tvar_tiers\030\031 \001(\r\"7\n\022VariableC"
+  "ollection\022!\n\tvariables\030\001 \003(\0132\016.DATA.Vari"
+  "ableb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_fragment_2eproto_deps[1] = {
 };
@@ -259,7 +277,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_fra
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_fragment_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_fragment_2eproto = {
-  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 872,
+  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 1132,
   &descriptor_table_fragment_2eproto_once, descriptor_table_fragment_2eproto_sccs, descriptor_table_fragment_2eproto_deps, 6, 0,
   schemas, file_default_instances, TableStruct_fragment_2eproto::offsets,
   file_level_metadata_fragment_2eproto, 6, file_level_enum_descriptors_fragment_2eproto, file_level_service_descriptors_fragment_2eproto,
@@ -1675,39 +1693,81 @@ void Tier::InternalSwap(Tier* other) {
 // ===================================================================
 
 void Fragment::InitAsDefaultInstance() {
+  ::DATA::_Fragment_default_instance_._instance.get_mutable()->var_table_content_ = const_cast< ::DATA::QueryTable*>(
+      ::DATA::QueryTable::internal_default_instance());
+  ::DATA::_Fragment_default_instance_._instance.get_mutable()->var_squared_errors_ = const_cast< ::DATA::SquaredErrorsTable*>(
+      ::DATA::SquaredErrorsTable::internal_default_instance());
 }
 class Fragment::_Internal {
  public:
+  static const ::DATA::QueryTable& var_table_content(const Fragment* msg);
+  static const ::DATA::SquaredErrorsTable& var_squared_errors(const Fragment* msg);
 };
 
+const ::DATA::QueryTable&
+Fragment::_Internal::var_table_content(const Fragment* msg) {
+  return *msg->var_table_content_;
+}
+const ::DATA::SquaredErrorsTable&
+Fragment::_Internal::var_squared_errors(const Fragment* msg) {
+  return *msg->var_squared_errors_;
+}
 Fragment::Fragment(::PROTOBUF_NAMESPACE_ID::Arena* arena)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena),
-  frag_(arena) {
+  frag_(arena),
+  var_dimensions_(arena),
+  var_level_error_bounds_(arena),
+  var_stopping_indices_(arena) {
   SharedCtor();
   RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:DATA.Fragment)
 }
 Fragment::Fragment(const Fragment& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
-      frag_(from.frag_) {
+      frag_(from.frag_),
+      var_dimensions_(from.var_dimensions_),
+      var_level_error_bounds_(from.var_level_error_bounds_),
+      var_stopping_indices_(from.var_stopping_indices_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   ec_backend_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (!from._internal_ec_backend_name().empty()) {
     ec_backend_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_ec_backend_name(),
       GetArena());
   }
+  var_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (!from._internal_var_name().empty()) {
+    var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_var_name(),
+      GetArena());
+  }
+  var_type_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (!from._internal_var_type().empty()) {
+    var_type_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_var_type(),
+      GetArena());
+  }
+  if (from._internal_has_var_table_content()) {
+    var_table_content_ = new ::DATA::QueryTable(*from.var_table_content_);
+  } else {
+    var_table_content_ = nullptr;
+  }
+  if (from._internal_has_var_squared_errors()) {
+    var_squared_errors_ = new ::DATA::SquaredErrorsTable(*from.var_squared_errors_);
+  } else {
+    var_squared_errors_ = nullptr;
+  }
   ::memcpy(&k_, &from.k_,
-    static_cast<size_t>(reinterpret_cast<char*>(&fragment_id_) -
-    reinterpret_cast<char*>(&k_)) + sizeof(fragment_id_));
+    static_cast<size_t>(reinterpret_cast<char*>(&var_tiers_) -
+    reinterpret_cast<char*>(&k_)) + sizeof(var_tiers_));
   // @@protoc_insertion_point(copy_constructor:DATA.Fragment)
 }
 
 void Fragment::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_Fragment_fragment_2eproto.base);
   ec_backend_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  ::memset(&k_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&fragment_id_) -
-      reinterpret_cast<char*>(&k_)) + sizeof(fragment_id_));
+  var_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  var_type_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  ::memset(&var_table_content_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&var_tiers_) -
+      reinterpret_cast<char*>(&var_table_content_)) + sizeof(var_tiers_));
 }
 
 Fragment::~Fragment() {
@@ -1719,6 +1779,10 @@ Fragment::~Fragment() {
 void Fragment::SharedDtor() {
   GOOGLE_DCHECK(GetArena() == nullptr);
   ec_backend_name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  var_name_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  var_type_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (this != internal_default_instance()) delete var_table_content_;
+  if (this != internal_default_instance()) delete var_squared_errors_;
 }
 
 void Fragment::ArenaDtor(void* object) {
@@ -1743,10 +1807,23 @@ void Fragment::Clear() {
   (void) cached_has_bits;
 
   frag_.Clear();
+  var_dimensions_.Clear();
+  var_level_error_bounds_.Clear();
+  var_stopping_indices_.Clear();
   ec_backend_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  var_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  var_type_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  if (GetArena() == nullptr && var_table_content_ != nullptr) {
+    delete var_table_content_;
+  }
+  var_table_content_ = nullptr;
+  if (GetArena() == nullptr && var_squared_errors_ != nullptr) {
+    delete var_squared_errors_;
+  }
+  var_squared_errors_ = nullptr;
   ::memset(&k_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&fragment_id_) -
-      reinterpret_cast<char*>(&k_)) + sizeof(fragment_id_));
+      reinterpret_cast<char*>(&var_tiers_) -
+      reinterpret_cast<char*>(&k_)) + sizeof(var_tiers_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -1878,6 +1955,82 @@ const char* Fragment::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::i
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
+      // string var_name = 17;
+      case 17:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 138)) {
+          auto str = _internal_mutable_var_name();
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "DATA.Fragment.var_name"));
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // repeated uint32 var_dimensions = 18;
+      case 18:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 146)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt32Parser(_internal_mutable_var_dimensions(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 144) {
+          _internal_add_var_dimensions(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr));
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // string var_type = 19;
+      case 19:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 154)) {
+          auto str = _internal_mutable_var_type();
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "DATA.Fragment.var_type"));
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint32 var_levels = 20;
+      case 20:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 160)) {
+          var_levels_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // repeated double var_level_error_bounds = 21;
+      case 21:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 170)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedDoubleParser(_internal_mutable_var_level_error_bounds(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 169) {
+          _internal_add_var_level_error_bounds(::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr));
+          ptr += sizeof(double);
+        } else goto handle_unusual;
+        continue;
+      // repeated uint32 var_stopping_indices = 22;
+      case 22:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 178)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt32Parser(_internal_mutable_var_stopping_indices(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 176) {
+          _internal_add_var_stopping_indices(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr));
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // .DATA.QueryTable var_table_content = 23;
+      case 23:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 186)) {
+          ptr = ctx->ParseMessage(_internal_mutable_var_table_content(), ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // .DATA.SquaredErrorsTable var_squared_errors = 24;
+      case 24:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 194)) {
+          ptr = ctx->ParseMessage(_internal_mutable_var_squared_errors(), ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint32 var_tiers = 25;
+      case 25:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 200)) {
+          var_tiers_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
       default: {
       handle_unusual:
         if ((tag & 7) == 4 || tag == 0) {
@@ -2006,6 +2159,77 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(16, this->_internal_fragment_id(), target);
   }
 
+  // string var_name = 17;
+  if (this->var_name().size() > 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_var_name().data(), static_cast<int>(this->_internal_var_name().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "DATA.Fragment.var_name");
+    target = stream->WriteStringMaybeAliased(
+        17, this->_internal_var_name(), target);
+  }
+
+  // repeated uint32 var_dimensions = 18;
+  {
+    int byte_size = _var_dimensions_cached_byte_size_.load(std::memory_order_relaxed);
+    if (byte_size > 0) {
+      target = stream->WriteUInt32Packed(
+          18, _internal_var_dimensions(), byte_size, target);
+    }
+  }
+
+  // string var_type = 19;
+  if (this->var_type().size() > 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_var_type().data(), static_cast<int>(this->_internal_var_type().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "DATA.Fragment.var_type");
+    target = stream->WriteStringMaybeAliased(
+        19, this->_internal_var_type(), target);
+  }
+
+  // uint32 var_levels = 20;
+  if (this->var_levels() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(20, this->_internal_var_levels(), target);
+  }
+
+  // repeated double var_level_error_bounds = 21;
+  if (this->_internal_var_level_error_bounds_size() > 0) {
+    target = stream->WriteFixedPacked(21, _internal_var_level_error_bounds(), target);
+  }
+
+  // repeated uint32 var_stopping_indices = 22;
+  {
+    int byte_size = _var_stopping_indices_cached_byte_size_.load(std::memory_order_relaxed);
+    if (byte_size > 0) {
+      target = stream->WriteUInt32Packed(
+          22, _internal_var_stopping_indices(), byte_size, target);
+    }
+  }
+
+  // .DATA.QueryTable var_table_content = 23;
+  if (this->has_var_table_content()) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(
+        23, _Internal::var_table_content(this), target, stream);
+  }
+
+  // .DATA.SquaredErrorsTable var_squared_errors = 24;
+  if (this->has_var_squared_errors()) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(
+        24, _Internal::var_squared_errors(this), target, stream);
+  }
+
+  // uint32 var_tiers = 25;
+  if (this->var_tiers() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(25, this->_internal_var_tiers(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -2030,11 +2254,84 @@ size_t Fragment::ByteSizeLong() const {
       frag_.Get(i));
   }
 
+  // repeated uint32 var_dimensions = 18;
+  {
+    size_t data_size = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      UInt32Size(this->var_dimensions_);
+    if (data_size > 0) {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+            static_cast<::PROTOBUF_NAMESPACE_ID::int32>(data_size));
+    }
+    int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(data_size);
+    _var_dimensions_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
+  }
+
+  // repeated double var_level_error_bounds = 21;
+  {
+    unsigned int count = static_cast<unsigned int>(this->_internal_var_level_error_bounds_size());
+    size_t data_size = 8UL * count;
+    if (data_size > 0) {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+            static_cast<::PROTOBUF_NAMESPACE_ID::int32>(data_size));
+    }
+    int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(data_size);
+    _var_level_error_bounds_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
+  }
+
+  // repeated uint32 var_stopping_indices = 22;
+  {
+    size_t data_size = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      UInt32Size(this->var_stopping_indices_);
+    if (data_size > 0) {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+            static_cast<::PROTOBUF_NAMESPACE_ID::int32>(data_size));
+    }
+    int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(data_size);
+    _var_stopping_indices_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
+  }
+
   // string ec_backend_name = 5;
   if (this->ec_backend_name().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
         this->_internal_ec_backend_name());
+  }
+
+  // string var_name = 17;
+  if (this->var_name().size() > 0) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_var_name());
+  }
+
+  // string var_type = 19;
+  if (this->var_type().size() > 0) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_var_type());
+  }
+
+  // .DATA.QueryTable var_table_content = 23;
+  if (this->has_var_table_content()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *var_table_content_);
+  }
+
+  // .DATA.SquaredErrorsTable var_squared_errors = 24;
+  if (this->has_var_squared_errors()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *var_squared_errors_);
   }
 
   // int32 k = 1;
@@ -2133,6 +2430,20 @@ size_t Fragment::ByteSizeLong() const {
         this->_internal_fragment_id());
   }
 
+  // uint32 var_levels = 20;
+  if (this->var_levels() != 0) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt32Size(
+        this->_internal_var_levels());
+  }
+
+  // uint32 var_tiers = 25;
+  if (this->var_tiers() != 0) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt32Size(
+        this->_internal_var_tiers());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
         _internal_metadata_, total_size, &_cached_size_);
@@ -2165,8 +2476,23 @@ void Fragment::MergeFrom(const Fragment& from) {
   (void) cached_has_bits;
 
   frag_.MergeFrom(from.frag_);
+  var_dimensions_.MergeFrom(from.var_dimensions_);
+  var_level_error_bounds_.MergeFrom(from.var_level_error_bounds_);
+  var_stopping_indices_.MergeFrom(from.var_stopping_indices_);
   if (from.ec_backend_name().size() > 0) {
     _internal_set_ec_backend_name(from._internal_ec_backend_name());
+  }
+  if (from.var_name().size() > 0) {
+    _internal_set_var_name(from._internal_var_name());
+  }
+  if (from.var_type().size() > 0) {
+    _internal_set_var_type(from._internal_var_type());
+  }
+  if (from.has_var_table_content()) {
+    _internal_mutable_var_table_content()->::DATA::QueryTable::MergeFrom(from._internal_var_table_content());
+  }
+  if (from.has_var_squared_errors()) {
+    _internal_mutable_var_squared_errors()->::DATA::SquaredErrorsTable::MergeFrom(from._internal_var_squared_errors());
   }
   if (from.k() != 0) {
     _internal_set_k(from._internal_k());
@@ -2210,6 +2536,12 @@ void Fragment::MergeFrom(const Fragment& from) {
   if (from.fragment_id() != 0) {
     _internal_set_fragment_id(from._internal_fragment_id());
   }
+  if (from.var_levels() != 0) {
+    _internal_set_var_levels(from._internal_var_levels());
+  }
+  if (from.var_tiers() != 0) {
+    _internal_set_var_tiers(from._internal_var_tiers());
+  }
 }
 
 void Fragment::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -2234,13 +2566,18 @@ void Fragment::InternalSwap(Fragment* other) {
   using std::swap;
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
   frag_.InternalSwap(&other->frag_);
+  var_dimensions_.InternalSwap(&other->var_dimensions_);
+  var_level_error_bounds_.InternalSwap(&other->var_level_error_bounds_);
+  var_stopping_indices_.InternalSwap(&other->var_stopping_indices_);
   ec_backend_name_.Swap(&other->ec_backend_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  var_name_.Swap(&other->var_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  var_type_.Swap(&other->var_type_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(Fragment, fragment_id_)
-      + sizeof(Fragment::fragment_id_)
-      - PROTOBUF_FIELD_OFFSET(Fragment, k_)>(
-          reinterpret_cast<char*>(&k_),
-          reinterpret_cast<char*>(&other->k_));
+      PROTOBUF_FIELD_OFFSET(Fragment, var_tiers_)
+      + sizeof(Fragment::var_tiers_)
+      - PROTOBUF_FIELD_OFFSET(Fragment, var_table_content_)>(
+          reinterpret_cast<char*>(&var_table_content_),
+          reinterpret_cast<char*>(&other->var_table_content_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata Fragment::GetMetadata() const {

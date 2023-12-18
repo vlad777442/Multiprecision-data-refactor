@@ -33,6 +33,19 @@
 #include "rocksdb/slice.h"
 #include "rocksdb/options.h"
 
+#include <boost/asio.hpp>
+#include <boost/array.hpp>
+#include <boost/bind.hpp>
+#include "fragment.pb.h"
+#include <chrono>
+
+#define IPADDRESS "127.0.0.1" // "192.168.1.64"
+#define UDP_PORT 13251
+#define TIMEOUT_DURATION_SECONDS 5
+
+using boost::asio::ip::udp;
+using boost::asio::ip::address;
+
 using namespace ROCKSDB_NAMESPACE;
 
 
@@ -123,9 +136,117 @@ std::vector<T> UnpackVector(const std::string& data)
     return d;
 }
 
+struct Client {
+    boost::asio::io_service io_service;
+    udp::socket socket{io_service};
+    boost::array<char, 1024> recv_buffer;
+    udp::endpoint remote_endpoint;
+    boost::asio::deadline_timer timer{io_service};
+
+    void handle_receive(const boost::system::error_code& error, size_t bytes_transferred) {
+        if (error) {
+            std::cout << "Receive failed: " << error.message() << "\n";
+            return;
+        }
+
+        DATA::Fragment received_message;
+        if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred))) {
+            std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
+        } else {
+            std::cout << "idx: " << received_message.idx() << std::endl;
+            std::cout << "chunk id: " << received_message.chunk_id() << std::endl;
+            int k_value = received_message.k();
+            int m_value = received_message.m();
+            int w_value = received_message.w();
+            int hd_value = received_message.hd();
+            std::string ec_backend_name_value = received_message.ec_backend_name();
+            uint64_t encoded_fragment_length_value = received_message.encoded_fragment_length();
+
+            // uint32_t idx_value = received_message.idx();
+            // uint32_t size_value = received_message.size();
+            // uint64_t orig_data_size_value = received_message.orig_data_size();
+            // uint32_t chksum_mismatch_value = received_message.chksum_mismatch();
+            //std::string backend_id_value = received_message.backend_id();
+            bool is_data_value = received_message.is_data();
+            uint32_t tier_id_value = received_message.tier_id();
+            uint32_t chunk_id_value = received_message.chunk_id();
+            uint32_t fragment_id_value = received_message.fragment_id();
+
+            // Reading values from fields of Variable message included in Fragment
+            std::string var_name_value = received_message.var_name();
+            std::vector<uint32_t> var_dimensions_value(received_message.var_dimensions().begin(), received_message.var_dimensions().end());
+            std::string var_type_value = received_message.var_type();
+            uint32_t var_levels_value = received_message.var_levels();
+            std::vector<double> var_level_error_bounds_value(received_message.var_level_error_bounds().begin(), received_message.var_level_error_bounds().end());
+            std::vector<uint32_t> var_stopping_indices_value(received_message.var_stopping_indices().begin(), received_message.var_stopping_indices().end());
+            
+            // Reading 'rows' and 'cols' from QueryTable
+            int32_t rows_value = received_message.var_table_content().rows();
+            int32_t cols_value = received_message.var_table_content().cols();
+
+            std::vector<size_t> varQueryTableShape = { static_cast<size_t>(rows_value), static_cast<size_t>(cols_value) };
+
+            std::vector<uint64_t> varQueryTable;
+            for (int i = 0; i < received_message.var_table_content().content_size(); ++i) {
+                uint64_t content_value = received_message.var_table_content().content(i);
+                varQueryTable.push_back(content_value);
+            }
+
+            // Reading 'rows' and 'cols' from SquaredErrorsTable
+            int32_t rows_value2 = received_message.var_squared_errors().rows();
+            int32_t cols_value2 = received_message.var_squared_errors().cols();
+            std::vector<size_t> varSquaredErrorsTableShape = { static_cast<size_t>(rows_value2), static_cast<size_t>(cols_value2) };
+
+            std::vector<uint64_t> varSquaredErrorsTable;
+            for (int i = 0; i < received_message.var_squared_errors().content_size(); ++i) {
+                uint64_t content_value = received_message.var_squared_errors().content(i);
+                varSquaredErrorsTable.push_back(content_value);
+            }
+        }
+
+        std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
+
+        // Restart the timer for another TIMEOUT_DURATION_SECONDS seconds
+        timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
+        timer.async_wait(boost::bind(&Client::handle_timeout, this, boost::asio::placeholders::error));
+        wait();
+    }
+
+    void wait() {
+        socket.async_receive_from(boost::asio::buffer(recv_buffer),
+                                  remote_endpoint,
+                                  boost::bind(&Client::handle_receive,
+                                              this,
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred));
+    }
+
+    void handle_timeout(const boost::system::error_code& error) {
+        if (!error) {
+            std::cout << "No new data received for " << TIMEOUT_DURATION_SECONDS << " seconds. Stopping.\n";
+            socket.cancel();
+        }
+    }
+
+    void Receiver() {
+        socket.open(udp::v4());
+        socket.bind(udp::endpoint(address::from_string(IPADDRESS), UDP_PORT));
+
+        wait();
+
+        // Set initial timer for TIMEOUT_DURATION_SECONDS seconds
+        timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
+        timer.async_wait(boost::bind(&Client::handle_timeout, this, boost::asio::placeholders::error));
+
+        std::cout << "Receiving\n";
+        io_service.run();
+        std::cout << "Receiver exit\n";
+    }
+};
+
 int main(int argc, char *argv[])
 {
-    std::string rocksDBPath;
+    // std::string rocksDBPath;
     std::string variableName;
     int error_mode = 0;
     int totalSites = 0;
@@ -136,10 +257,10 @@ int main(int argc, char *argv[])
     {
         std::string arg = argv[i];
         if (arg == "-kvs" || arg == "--kvstore")
-        {
+        {//not used
             if (i+1 < argc)
             {
-                rocksDBPath = argv[i+1];
+                // rocksDBPath = argv[i+1];
             }
             else
             {
@@ -148,7 +269,7 @@ int main(int argc, char *argv[])
             }            
         } 
         else if (arg == "-var" || arg == "--variable")
-        {
+        {//not used
             if (i+1 < argc)
             {
                 variableName = argv[i+1];
@@ -235,14 +356,14 @@ int main(int argc, char *argv[])
     // create the DB if it's not already present
     options.create_if_missing = true;
     // open DB
-    Status s = DB::Open(options, rocksDBPath, &db);
-    assert(s.ok());
+    // Status s = DB::Open(options, rocksDBPath, &db);
+    // assert(s.ok());
 
     std::string varDimensionsName = variableName+":Dimensions";
     std::vector<uint32_t> dimensions;
     std::string varDimensionsResult;
-    s = db->Get(ReadOptions(), varDimensionsName, &varDimensionsResult);
-    assert(s.ok());  
+    // s = db->Get(ReadOptions(), varDimensionsName, &varDimensionsResult);
+    // assert(s.ok());  
     dimensions = UnpackVector<uint32_t>(varDimensionsResult);    
     std::cout << varDimensionsName << ", ";
     for (size_t i = 0; i < dimensions.size(); i++)
@@ -254,8 +375,8 @@ int main(int argc, char *argv[])
     uint32_t levels;
     std::string varLevelsName = variableName+":Levels";
     std::string varLevelsResult;
-    s = db->Get(ReadOptions(), varLevelsName, &varLevelsResult);
-    assert(s.ok());  
+    // s = db->Get(ReadOptions(), varLevelsName, &varLevelsResult);
+    // assert(s.ok());  
     std::unique_ptr<uint32_t> pVarLevelsResult = UnpackSingleElement<uint32_t>(varLevelsResult);
     levels = *pVarLevelsResult;
     std::cout << varLevelsName << ", " << levels << std::endl;   
@@ -263,8 +384,8 @@ int main(int argc, char *argv[])
     uint32_t tiers;
     std::string varTiersName = variableName+":Tiers";
     std::string varTiersResult;
-    s = db->Get(ReadOptions(), varTiersName, &varTiersResult);
-    assert(s.ok());  
+    // s = db->Get(ReadOptions(), varTiersName, &varTiersResult);
+    // assert(s.ok());  
     std::unique_ptr<uint32_t> pVarTiersResult = UnpackSingleElement<uint32_t>(varTiersResult);
     tiers = *pVarTiersResult;
     std::cout << varTiersName << ", " << tiers << std::endl;       
@@ -280,32 +401,32 @@ int main(int argc, char *argv[])
     {
         std::string varECParam_k_Name = variableName+":Tier:"+std::to_string(i)+":K";
         std::string varECParam_k_Result;
-        s = db->Get(ReadOptions(), varECParam_k_Name, &varECParam_k_Result);
-        assert(s.ok());  
+        // s = db->Get(ReadOptions(), varECParam_k_Name, &varECParam_k_Result);
+        // assert(s.ok());  
         std::unique_ptr<int> pVarECParam_k_Result = UnpackSingleElement<int>(varECParam_k_Result);
         std::cout << varECParam_k_Name << ", " << *pVarECParam_k_Result << std::endl;   
         dataTiersECParam_k[i] = *pVarECParam_k_Result;
 
         std::string varECParam_m_Name = variableName+":Tier:"+std::to_string(i)+":M";
         std::string varECParam_m_Result;
-        s = db->Get(ReadOptions(), varECParam_m_Name, &varECParam_m_Result);
-        assert(s.ok());  
+        // s = db->Get(ReadOptions(), varECParam_m_Name, &varECParam_m_Result);
+        // assert(s.ok());  
         std::unique_ptr<int> pVarECParam_m_Result = UnpackSingleElement<int>(varECParam_m_Result);
         std::cout << varECParam_m_Name << ", " << *pVarECParam_m_Result << std::endl;   
         dataTiersECParam_m[i] = *pVarECParam_m_Result;      
 
         std::string varECParam_w_Name = variableName+":Tier:"+std::to_string(i)+":W";
         std::string varECParam_w_Result;
-        s = db->Get(ReadOptions(), varECParam_w_Name, &varECParam_w_Result);
-        assert(s.ok());  
+        // s = db->Get(ReadOptions(), varECParam_w_Name, &varECParam_w_Result);
+        // assert(s.ok());  
         std::unique_ptr<int> pVarECParam_w_Result = UnpackSingleElement<int>(varECParam_w_Result);
         std::cout << varECParam_w_Name << ", " << *pVarECParam_w_Result << std::endl;   
         dataTiersECParam_w[i] = *pVarECParam_w_Result;   
 
         std::string varECParam_hd_Name = variableName+":Tier:"+std::to_string(i)+":HD";
         std::string varECParam_hd_Result;
-        s = db->Get(ReadOptions(), varECParam_hd_Name, &varECParam_hd_Result);
-        assert(s.ok());  
+        // s = db->Get(ReadOptions(), varECParam_hd_Name, &varECParam_hd_Result);
+        // assert(s.ok());  
         std::unique_ptr<int> pVarECParam_hd_Result = UnpackSingleElement<int>(varECParam_hd_Result);
         std::cout << varECParam_hd_Name << ", " << *pVarECParam_hd_Result << std::endl;   
         dataTiersECParam_hd[i] = *pVarECParam_hd_Result;  
@@ -314,8 +435,8 @@ int main(int argc, char *argv[])
         {   
             std::string varDataLocationName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j)+":Location";
             std::string varDataLocationResult;
-            s = db->Get(ReadOptions(), varDataLocationName, &varDataLocationResult);
-            assert(s.ok()); 
+            // s = db->Get(ReadOptions(), varDataLocationName, &varDataLocationResult);
+            // assert(s.ok()); 
             std::cout << varDataLocationName << ", " << varDataLocationResult << std::endl;   
             dataTiersDataLocations[i].push_back(varDataLocationResult);
         }
@@ -324,8 +445,8 @@ int main(int argc, char *argv[])
         {   
             std::string varParityLocationName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j)+":Location";
             std::string varParityLocationResult;
-            s = db->Get(ReadOptions(), varParityLocationName, &varParityLocationResult);
-            assert(s.ok()); 
+            // s = db->Get(ReadOptions(), varParityLocationName, &varParityLocationResult);
+            // assert(s.ok()); 
             std::cout << varParityLocationName << ", " << varParityLocationResult << std::endl;   
             dataTiersParityLocations[i].push_back(varParityLocationResult);
         }
@@ -333,14 +454,14 @@ int main(int argc, char *argv[])
 
     std::string variableType;
     std::string variableTypeName = variableName+":Type";
-    s = db->Get(ReadOptions(), variableTypeName, &variableType);
-    assert(s.ok()); 
+    // s = db->Get(ReadOptions(), variableTypeName, &variableType);
+    // assert(s.ok()); 
     std::cout << variableTypeName << ", " << variableType << std::endl;  
 
     std::string varQueryTableShapeName = variableName+":QueryTable:Shape";   
     std::string varQueryTableShapeResult;
-    s = db->Get(ReadOptions(), varQueryTableShapeName, &varQueryTableShapeResult);
-    assert(s.ok());  
+    // s = db->Get(ReadOptions(), varQueryTableShapeName, &varQueryTableShapeResult);
+    // assert(s.ok());  
     std::vector<size_t> varQueryTableShape = UnpackVector<size_t>(varQueryTableShapeResult); 
     std::cout << varQueryTableShapeName << ", ";
     for (size_t i = 0; i < varQueryTableShape.size(); i++)
@@ -351,8 +472,8 @@ int main(int argc, char *argv[])
 
     std::string varQueryTableName = variableName+":QueryTable"; 
     std::string varQueryTableResult;
-    s = db->Get(ReadOptions(), varQueryTableName, &varQueryTableResult);
-    assert(s.ok());  
+    // s = db->Get(ReadOptions(), varQueryTableName, &varQueryTableResult);
+    // assert(s.ok());  
     std::vector<uint64_t> varQueryTable = UnpackVector<uint64_t>(varQueryTableResult);
     std::cout << varQueryTableName << ", " << std::endl;
     int count = 0;
@@ -374,8 +495,8 @@ int main(int argc, char *argv[])
 
     std::string varSquaredErrorsShapeName = variableName+":SquaredErrors:Shape"; 
     std::string varSquaredErrorsShapeResult;
-    s = db->Get(ReadOptions(), varSquaredErrorsShapeName, &varSquaredErrorsShapeResult);
-    assert(s.ok());  
+    // s = db->Get(ReadOptions(), varSquaredErrorsShapeName, &varSquaredErrorsShapeResult);
+    // assert(s.ok());  
     std::vector<size_t> varSquaredErrorsShape = UnpackVector<size_t>(varSquaredErrorsShapeResult);
     std::cout << varSquaredErrorsShapeName << ", ";
     for (size_t i = 0; i < varSquaredErrorsShape.size(); i++)
@@ -386,8 +507,8 @@ int main(int argc, char *argv[])
 
     std::string varSquaredErrorsName = variableName+":SquaredErrors";
     std::string varSquaredErrorsResult;
-    s = db->Get(ReadOptions(), varSquaredErrorsName, &varSquaredErrorsResult);
-    assert(s.ok());  
+    // s = db->Get(ReadOptions(), varSquaredErrorsName, &varSquaredErrorsResult);
+    // assert(s.ok());  
     std::vector<double> varSquaredErrors = UnpackVector<double>(varSquaredErrorsResult);
     std::cout << varSquaredErrorsName << ", " << std::endl;
     count = 0;
@@ -420,8 +541,8 @@ int main(int argc, char *argv[])
 
     std::string varStopIndicesName = variableName+":StopIndices";
     std::string varStopIndicesResult;
-    s = db->Get(ReadOptions(), varStopIndicesName, &varStopIndicesResult);
-    assert(s.ok());  
+    // s = db->Get(ReadOptions(), varStopIndicesName, &varStopIndicesResult);
+    // assert(s.ok());  
     std::vector<uint8_t> stopping_indices = UnpackVector<uint8_t>(varStopIndicesResult);
     std::cout << varStopIndicesName << ", ";
     for (size_t i = 0; i < stopping_indices.size(); i++)
@@ -439,8 +560,8 @@ int main(int argc, char *argv[])
 
         std::string varErrorBoundsName = variableName+":ErrorBounds";
         std::string varErrorBoundsResult;
-        s = db->Get(ReadOptions(), varErrorBoundsName, &varErrorBoundsResult);
-        assert(s.ok());  
+        // s = db->Get(ReadOptions(), varErrorBoundsName, &varErrorBoundsResult);
+        // assert(s.ok());  
         std::vector<T> level_error_bounds = UnpackVector<T>(varErrorBoundsResult);
         std::cout << varErrorBoundsName << ", ";
         for (size_t i = 0; i < level_error_bounds.size(); i++)
@@ -516,16 +637,16 @@ int main(int argc, char *argv[])
                     
                     std::string varECParam_EncodedFragLen_Name = variableName+":Tier:"+std::to_string(i)+":EncodedFragmentLength";
                     std::string varECParam_EncodedFragLen_Result;
-                    s = db->Get(ReadOptions(), varECParam_EncodedFragLen_Name, &varECParam_EncodedFragLen_Result);
-                    assert(s.ok());  
+                    // s = db->Get(ReadOptions(), varECParam_EncodedFragLen_Name, &varECParam_EncodedFragLen_Result);
+                    // assert(s.ok());  
                     std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = UnpackSingleElement<uint64_t>(varECParam_EncodedFragLen_Result);
                     uint64_t encoded_fragment_len = *pVarECParam_EncodedFragLen_Result;
                     std::cout << varECParam_EncodedFragLen_Name << ", " << encoded_fragment_len << std::endl;  
 
                     std::string varECBackendName = variableName+":Tier:"+std::to_string(i)+":ECBackendName";
                     std::string ECBackendName;
-                    s = db->Get(ReadOptions(), varECBackendName, &ECBackendName);
-                    assert(s.ok()); 
+                    // s = db->Get(ReadOptions(), varECBackendName, &ECBackendName);
+                    // assert(s.ok()); 
                     std::cout << varECBackendName << ", " << ECBackendName << std::endl;  
 
                     ec_backend_id_t backendID;

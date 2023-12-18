@@ -1294,7 +1294,23 @@ int main(int argc, char *argv[])
                         protoFragment1.set_tier_id(i);
                         protoFragment1.set_chunk_id(k);
                         protoFragment1.set_fragment_id(j);
-                        // *protoTier.add_fragment() = protoFragment1;
+                        // setting variable parameters
+                        protoFragment1.set_var_name(variableName);
+                        *protoFragment1.mutable_var_table_content() = protoQueryTable;
+                        for (const auto& data : dimensions) {
+                            protoFragment1.add_var_dimensions(data);
+                        }
+                        protoFragment1.set_var_type(variableType);
+                        protoFragment1.set_var_levels(numLevels);
+                        for (const auto& data : level_error_bounds) {
+                            protoFragment1.add_var_level_error_bounds(data);
+                        }
+                        for (const auto& data : stopping_indices) {
+                            protoFragment1.add_var_stopping_indices(data);
+                        }
+                        *protoFragment1.mutable_var_squared_errors() = protoAllSquaredErrors;
+                        protoFragment1.set_var_tiers(numTiers);
+                    
                         sender(protoFragment1);
                     }
                     for (size_t j = 0; j < dataTiersECParam_m[i]; j++)

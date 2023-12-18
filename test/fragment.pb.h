@@ -1082,7 +1082,14 @@ class Fragment PROTOBUF_FINAL :
 
   enum : int {
     kFragFieldNumber = 12,
+    kVarDimensionsFieldNumber = 18,
+    kVarLevelErrorBoundsFieldNumber = 21,
+    kVarStoppingIndicesFieldNumber = 22,
     kEcBackendNameFieldNumber = 5,
+    kVarNameFieldNumber = 17,
+    kVarTypeFieldNumber = 19,
+    kVarTableContentFieldNumber = 23,
+    kVarSquaredErrorsFieldNumber = 24,
     kKFieldNumber = 1,
     kMFieldNumber = 2,
     kWFieldNumber = 3,
@@ -1097,6 +1104,8 @@ class Fragment PROTOBUF_FINAL :
     kTierIdFieldNumber = 14,
     kChunkIdFieldNumber = 15,
     kFragmentIdFieldNumber = 16,
+    kVarLevelsFieldNumber = 20,
+    kVarTiersFieldNumber = 25,
   };
   // repeated bytes frag = 12;
   int frag_size() const;
@@ -1122,6 +1131,72 @@ class Fragment PROTOBUF_FINAL :
   std::string* _internal_add_frag();
   public:
 
+  // repeated uint32 var_dimensions = 18;
+  int var_dimensions_size() const;
+  private:
+  int _internal_var_dimensions_size() const;
+  public:
+  void clear_var_dimensions();
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_var_dimensions(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+      _internal_var_dimensions() const;
+  void _internal_add_var_dimensions(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+      _internal_mutable_var_dimensions();
+  public:
+  ::PROTOBUF_NAMESPACE_ID::uint32 var_dimensions(int index) const;
+  void set_var_dimensions(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value);
+  void add_var_dimensions(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+      var_dimensions() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+      mutable_var_dimensions();
+
+  // repeated double var_level_error_bounds = 21;
+  int var_level_error_bounds_size() const;
+  private:
+  int _internal_var_level_error_bounds_size() const;
+  public:
+  void clear_var_level_error_bounds();
+  private:
+  double _internal_var_level_error_bounds(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+      _internal_var_level_error_bounds() const;
+  void _internal_add_var_level_error_bounds(double value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+      _internal_mutable_var_level_error_bounds();
+  public:
+  double var_level_error_bounds(int index) const;
+  void set_var_level_error_bounds(int index, double value);
+  void add_var_level_error_bounds(double value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+      var_level_error_bounds() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+      mutable_var_level_error_bounds();
+
+  // repeated uint32 var_stopping_indices = 22;
+  int var_stopping_indices_size() const;
+  private:
+  int _internal_var_stopping_indices_size() const;
+  public:
+  void clear_var_stopping_indices();
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_var_stopping_indices(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+      _internal_var_stopping_indices() const;
+  void _internal_add_var_stopping_indices(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+      _internal_mutable_var_stopping_indices();
+  public:
+  ::PROTOBUF_NAMESPACE_ID::uint32 var_stopping_indices(int index) const;
+  void set_var_stopping_indices(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value);
+  void add_var_stopping_indices(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+      var_stopping_indices() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+      mutable_var_stopping_indices();
+
   // string ec_backend_name = 5;
   void clear_ec_backend_name();
   const std::string& ec_backend_name() const;
@@ -1146,6 +1221,92 @@ class Fragment PROTOBUF_FINAL :
   void _internal_set_ec_backend_name(const std::string& value);
   std::string* _internal_mutable_ec_backend_name();
   public:
+
+  // string var_name = 17;
+  void clear_var_name();
+  const std::string& var_name() const;
+  void set_var_name(const std::string& value);
+  void set_var_name(std::string&& value);
+  void set_var_name(const char* value);
+  void set_var_name(const char* value, size_t size);
+  std::string* mutable_var_name();
+  std::string* release_var_name();
+  void set_allocated_var_name(std::string* var_name);
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  std::string* unsafe_arena_release_var_name();
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  void unsafe_arena_set_allocated_var_name(
+      std::string* var_name);
+  private:
+  const std::string& _internal_var_name() const;
+  void _internal_set_var_name(const std::string& value);
+  std::string* _internal_mutable_var_name();
+  public:
+
+  // string var_type = 19;
+  void clear_var_type();
+  const std::string& var_type() const;
+  void set_var_type(const std::string& value);
+  void set_var_type(std::string&& value);
+  void set_var_type(const char* value);
+  void set_var_type(const char* value, size_t size);
+  std::string* mutable_var_type();
+  std::string* release_var_type();
+  void set_allocated_var_type(std::string* var_type);
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  std::string* unsafe_arena_release_var_type();
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  void unsafe_arena_set_allocated_var_type(
+      std::string* var_type);
+  private:
+  const std::string& _internal_var_type() const;
+  void _internal_set_var_type(const std::string& value);
+  std::string* _internal_mutable_var_type();
+  public:
+
+  // .DATA.QueryTable var_table_content = 23;
+  bool has_var_table_content() const;
+  private:
+  bool _internal_has_var_table_content() const;
+  public:
+  void clear_var_table_content();
+  const ::DATA::QueryTable& var_table_content() const;
+  ::DATA::QueryTable* release_var_table_content();
+  ::DATA::QueryTable* mutable_var_table_content();
+  void set_allocated_var_table_content(::DATA::QueryTable* var_table_content);
+  private:
+  const ::DATA::QueryTable& _internal_var_table_content() const;
+  ::DATA::QueryTable* _internal_mutable_var_table_content();
+  public:
+  void unsafe_arena_set_allocated_var_table_content(
+      ::DATA::QueryTable* var_table_content);
+  ::DATA::QueryTable* unsafe_arena_release_var_table_content();
+
+  // .DATA.SquaredErrorsTable var_squared_errors = 24;
+  bool has_var_squared_errors() const;
+  private:
+  bool _internal_has_var_squared_errors() const;
+  public:
+  void clear_var_squared_errors();
+  const ::DATA::SquaredErrorsTable& var_squared_errors() const;
+  ::DATA::SquaredErrorsTable* release_var_squared_errors();
+  ::DATA::SquaredErrorsTable* mutable_var_squared_errors();
+  void set_allocated_var_squared_errors(::DATA::SquaredErrorsTable* var_squared_errors);
+  private:
+  const ::DATA::SquaredErrorsTable& _internal_var_squared_errors() const;
+  ::DATA::SquaredErrorsTable* _internal_mutable_var_squared_errors();
+  public:
+  void unsafe_arena_set_allocated_var_squared_errors(
+      ::DATA::SquaredErrorsTable* var_squared_errors);
+  ::DATA::SquaredErrorsTable* unsafe_arena_release_var_squared_errors();
 
   // int32 k = 1;
   void clear_k();
@@ -1273,6 +1434,24 @@ class Fragment PROTOBUF_FINAL :
   void _internal_set_fragment_id(::PROTOBUF_NAMESPACE_ID::uint32 value);
   public:
 
+  // uint32 var_levels = 20;
+  void clear_var_levels();
+  ::PROTOBUF_NAMESPACE_ID::uint32 var_levels() const;
+  void set_var_levels(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_var_levels() const;
+  void _internal_set_var_levels(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  public:
+
+  // uint32 var_tiers = 25;
+  void clear_var_tiers();
+  ::PROTOBUF_NAMESPACE_ID::uint32 var_tiers() const;
+  void set_var_tiers(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_var_tiers() const;
+  void _internal_set_var_tiers(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  public:
+
   // @@protoc_insertion_point(class_scope:DATA.Fragment)
  private:
   class _Internal;
@@ -1281,7 +1460,17 @@ class Fragment PROTOBUF_FINAL :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> frag_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 > var_dimensions_;
+  mutable std::atomic<int> _var_dimensions_cached_byte_size_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > var_level_error_bounds_;
+  mutable std::atomic<int> _var_level_error_bounds_cached_byte_size_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 > var_stopping_indices_;
+  mutable std::atomic<int> _var_stopping_indices_cached_byte_size_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr ec_backend_name_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr var_name_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr var_type_;
+  ::DATA::QueryTable* var_table_content_;
+  ::DATA::SquaredErrorsTable* var_squared_errors_;
   ::PROTOBUF_NAMESPACE_ID::int32 k_;
   ::PROTOBUF_NAMESPACE_ID::int32 m_;
   ::PROTOBUF_NAMESPACE_ID::int32 w_;
@@ -1296,6 +1485,8 @@ class Fragment PROTOBUF_FINAL :
   ::PROTOBUF_NAMESPACE_ID::uint32 tier_id_;
   ::PROTOBUF_NAMESPACE_ID::uint32 chunk_id_;
   ::PROTOBUF_NAMESPACE_ID::uint32 fragment_id_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 var_levels_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 var_tiers_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_fragment_2eproto;
 };
@@ -2785,6 +2976,511 @@ inline void Fragment::_internal_set_fragment_id(::PROTOBUF_NAMESPACE_ID::uint32 
 inline void Fragment::set_fragment_id(::PROTOBUF_NAMESPACE_ID::uint32 value) {
   _internal_set_fragment_id(value);
   // @@protoc_insertion_point(field_set:DATA.Fragment.fragment_id)
+}
+
+// string var_name = 17;
+inline void Fragment::clear_var_name() {
+  var_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline const std::string& Fragment::var_name() const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.var_name)
+  return _internal_var_name();
+}
+inline void Fragment::set_var_name(const std::string& value) {
+  _internal_set_var_name(value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.var_name)
+}
+inline std::string* Fragment::mutable_var_name() {
+  // @@protoc_insertion_point(field_mutable:DATA.Fragment.var_name)
+  return _internal_mutable_var_name();
+}
+inline const std::string& Fragment::_internal_var_name() const {
+  return var_name_.Get();
+}
+inline void Fragment::_internal_set_var_name(const std::string& value) {
+  
+  var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value, GetArena());
+}
+inline void Fragment::set_var_name(std::string&& value) {
+  
+  var_name_.Set(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArena());
+  // @@protoc_insertion_point(field_set_rvalue:DATA.Fragment.var_name)
+}
+inline void Fragment::set_var_name(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  
+  var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
+              GetArena());
+  // @@protoc_insertion_point(field_set_char:DATA.Fragment.var_name)
+}
+inline void Fragment::set_var_name(const char* value,
+    size_t size) {
+  
+  var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
+      reinterpret_cast<const char*>(value), size), GetArena());
+  // @@protoc_insertion_point(field_set_pointer:DATA.Fragment.var_name)
+}
+inline std::string* Fragment::_internal_mutable_var_name() {
+  
+  return var_name_.Mutable(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline std::string* Fragment::release_var_name() {
+  // @@protoc_insertion_point(field_release:DATA.Fragment.var_name)
+  return var_name_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline void Fragment::set_allocated_var_name(std::string* var_name) {
+  if (var_name != nullptr) {
+    
+  } else {
+    
+  }
+  var_name_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), var_name,
+      GetArena());
+  // @@protoc_insertion_point(field_set_allocated:DATA.Fragment.var_name)
+}
+inline std::string* Fragment::unsafe_arena_release_var_name() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:DATA.Fragment.var_name)
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  
+  return var_name_.UnsafeArenaRelease(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      GetArena());
+}
+inline void Fragment::unsafe_arena_set_allocated_var_name(
+    std::string* var_name) {
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  if (var_name != nullptr) {
+    
+  } else {
+    
+  }
+  var_name_.UnsafeArenaSetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      var_name, GetArena());
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:DATA.Fragment.var_name)
+}
+
+// repeated uint32 var_dimensions = 18;
+inline int Fragment::_internal_var_dimensions_size() const {
+  return var_dimensions_.size();
+}
+inline int Fragment::var_dimensions_size() const {
+  return _internal_var_dimensions_size();
+}
+inline void Fragment::clear_var_dimensions() {
+  var_dimensions_.Clear();
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::_internal_var_dimensions(int index) const {
+  return var_dimensions_.Get(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::var_dimensions(int index) const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.var_dimensions)
+  return _internal_var_dimensions(index);
+}
+inline void Fragment::set_var_dimensions(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  var_dimensions_.Set(index, value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.var_dimensions)
+}
+inline void Fragment::_internal_add_var_dimensions(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  var_dimensions_.Add(value);
+}
+inline void Fragment::add_var_dimensions(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_add_var_dimensions(value);
+  // @@protoc_insertion_point(field_add:DATA.Fragment.var_dimensions)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+Fragment::_internal_var_dimensions() const {
+  return var_dimensions_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+Fragment::var_dimensions() const {
+  // @@protoc_insertion_point(field_list:DATA.Fragment.var_dimensions)
+  return _internal_var_dimensions();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+Fragment::_internal_mutable_var_dimensions() {
+  return &var_dimensions_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+Fragment::mutable_var_dimensions() {
+  // @@protoc_insertion_point(field_mutable_list:DATA.Fragment.var_dimensions)
+  return _internal_mutable_var_dimensions();
+}
+
+// string var_type = 19;
+inline void Fragment::clear_var_type() {
+  var_type_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline const std::string& Fragment::var_type() const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.var_type)
+  return _internal_var_type();
+}
+inline void Fragment::set_var_type(const std::string& value) {
+  _internal_set_var_type(value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.var_type)
+}
+inline std::string* Fragment::mutable_var_type() {
+  // @@protoc_insertion_point(field_mutable:DATA.Fragment.var_type)
+  return _internal_mutable_var_type();
+}
+inline const std::string& Fragment::_internal_var_type() const {
+  return var_type_.Get();
+}
+inline void Fragment::_internal_set_var_type(const std::string& value) {
+  
+  var_type_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value, GetArena());
+}
+inline void Fragment::set_var_type(std::string&& value) {
+  
+  var_type_.Set(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArena());
+  // @@protoc_insertion_point(field_set_rvalue:DATA.Fragment.var_type)
+}
+inline void Fragment::set_var_type(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  
+  var_type_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
+              GetArena());
+  // @@protoc_insertion_point(field_set_char:DATA.Fragment.var_type)
+}
+inline void Fragment::set_var_type(const char* value,
+    size_t size) {
+  
+  var_type_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
+      reinterpret_cast<const char*>(value), size), GetArena());
+  // @@protoc_insertion_point(field_set_pointer:DATA.Fragment.var_type)
+}
+inline std::string* Fragment::_internal_mutable_var_type() {
+  
+  return var_type_.Mutable(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline std::string* Fragment::release_var_type() {
+  // @@protoc_insertion_point(field_release:DATA.Fragment.var_type)
+  return var_type_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline void Fragment::set_allocated_var_type(std::string* var_type) {
+  if (var_type != nullptr) {
+    
+  } else {
+    
+  }
+  var_type_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), var_type,
+      GetArena());
+  // @@protoc_insertion_point(field_set_allocated:DATA.Fragment.var_type)
+}
+inline std::string* Fragment::unsafe_arena_release_var_type() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:DATA.Fragment.var_type)
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  
+  return var_type_.UnsafeArenaRelease(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      GetArena());
+}
+inline void Fragment::unsafe_arena_set_allocated_var_type(
+    std::string* var_type) {
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  if (var_type != nullptr) {
+    
+  } else {
+    
+  }
+  var_type_.UnsafeArenaSetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      var_type, GetArena());
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:DATA.Fragment.var_type)
+}
+
+// uint32 var_levels = 20;
+inline void Fragment::clear_var_levels() {
+  var_levels_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::_internal_var_levels() const {
+  return var_levels_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::var_levels() const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.var_levels)
+  return _internal_var_levels();
+}
+inline void Fragment::_internal_set_var_levels(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  var_levels_ = value;
+}
+inline void Fragment::set_var_levels(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_set_var_levels(value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.var_levels)
+}
+
+// repeated double var_level_error_bounds = 21;
+inline int Fragment::_internal_var_level_error_bounds_size() const {
+  return var_level_error_bounds_.size();
+}
+inline int Fragment::var_level_error_bounds_size() const {
+  return _internal_var_level_error_bounds_size();
+}
+inline void Fragment::clear_var_level_error_bounds() {
+  var_level_error_bounds_.Clear();
+}
+inline double Fragment::_internal_var_level_error_bounds(int index) const {
+  return var_level_error_bounds_.Get(index);
+}
+inline double Fragment::var_level_error_bounds(int index) const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.var_level_error_bounds)
+  return _internal_var_level_error_bounds(index);
+}
+inline void Fragment::set_var_level_error_bounds(int index, double value) {
+  var_level_error_bounds_.Set(index, value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.var_level_error_bounds)
+}
+inline void Fragment::_internal_add_var_level_error_bounds(double value) {
+  var_level_error_bounds_.Add(value);
+}
+inline void Fragment::add_var_level_error_bounds(double value) {
+  _internal_add_var_level_error_bounds(value);
+  // @@protoc_insertion_point(field_add:DATA.Fragment.var_level_error_bounds)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+Fragment::_internal_var_level_error_bounds() const {
+  return var_level_error_bounds_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+Fragment::var_level_error_bounds() const {
+  // @@protoc_insertion_point(field_list:DATA.Fragment.var_level_error_bounds)
+  return _internal_var_level_error_bounds();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+Fragment::_internal_mutable_var_level_error_bounds() {
+  return &var_level_error_bounds_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+Fragment::mutable_var_level_error_bounds() {
+  // @@protoc_insertion_point(field_mutable_list:DATA.Fragment.var_level_error_bounds)
+  return _internal_mutable_var_level_error_bounds();
+}
+
+// repeated uint32 var_stopping_indices = 22;
+inline int Fragment::_internal_var_stopping_indices_size() const {
+  return var_stopping_indices_.size();
+}
+inline int Fragment::var_stopping_indices_size() const {
+  return _internal_var_stopping_indices_size();
+}
+inline void Fragment::clear_var_stopping_indices() {
+  var_stopping_indices_.Clear();
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::_internal_var_stopping_indices(int index) const {
+  return var_stopping_indices_.Get(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::var_stopping_indices(int index) const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.var_stopping_indices)
+  return _internal_var_stopping_indices(index);
+}
+inline void Fragment::set_var_stopping_indices(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  var_stopping_indices_.Set(index, value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.var_stopping_indices)
+}
+inline void Fragment::_internal_add_var_stopping_indices(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  var_stopping_indices_.Add(value);
+}
+inline void Fragment::add_var_stopping_indices(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_add_var_stopping_indices(value);
+  // @@protoc_insertion_point(field_add:DATA.Fragment.var_stopping_indices)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+Fragment::_internal_var_stopping_indices() const {
+  return var_stopping_indices_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+Fragment::var_stopping_indices() const {
+  // @@protoc_insertion_point(field_list:DATA.Fragment.var_stopping_indices)
+  return _internal_var_stopping_indices();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+Fragment::_internal_mutable_var_stopping_indices() {
+  return &var_stopping_indices_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+Fragment::mutable_var_stopping_indices() {
+  // @@protoc_insertion_point(field_mutable_list:DATA.Fragment.var_stopping_indices)
+  return _internal_mutable_var_stopping_indices();
+}
+
+// .DATA.QueryTable var_table_content = 23;
+inline bool Fragment::_internal_has_var_table_content() const {
+  return this != internal_default_instance() && var_table_content_ != nullptr;
+}
+inline bool Fragment::has_var_table_content() const {
+  return _internal_has_var_table_content();
+}
+inline void Fragment::clear_var_table_content() {
+  if (GetArena() == nullptr && var_table_content_ != nullptr) {
+    delete var_table_content_;
+  }
+  var_table_content_ = nullptr;
+}
+inline const ::DATA::QueryTable& Fragment::_internal_var_table_content() const {
+  const ::DATA::QueryTable* p = var_table_content_;
+  return p != nullptr ? *p : *reinterpret_cast<const ::DATA::QueryTable*>(
+      &::DATA::_QueryTable_default_instance_);
+}
+inline const ::DATA::QueryTable& Fragment::var_table_content() const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.var_table_content)
+  return _internal_var_table_content();
+}
+inline void Fragment::unsafe_arena_set_allocated_var_table_content(
+    ::DATA::QueryTable* var_table_content) {
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(var_table_content_);
+  }
+  var_table_content_ = var_table_content;
+  if (var_table_content) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:DATA.Fragment.var_table_content)
+}
+inline ::DATA::QueryTable* Fragment::release_var_table_content() {
+  auto temp = unsafe_arena_release_var_table_content();
+  if (GetArena() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+  return temp;
+}
+inline ::DATA::QueryTable* Fragment::unsafe_arena_release_var_table_content() {
+  // @@protoc_insertion_point(field_release:DATA.Fragment.var_table_content)
+  
+  ::DATA::QueryTable* temp = var_table_content_;
+  var_table_content_ = nullptr;
+  return temp;
+}
+inline ::DATA::QueryTable* Fragment::_internal_mutable_var_table_content() {
+  
+  if (var_table_content_ == nullptr) {
+    auto* p = CreateMaybeMessage<::DATA::QueryTable>(GetArena());
+    var_table_content_ = p;
+  }
+  return var_table_content_;
+}
+inline ::DATA::QueryTable* Fragment::mutable_var_table_content() {
+  // @@protoc_insertion_point(field_mutable:DATA.Fragment.var_table_content)
+  return _internal_mutable_var_table_content();
+}
+inline void Fragment::set_allocated_var_table_content(::DATA::QueryTable* var_table_content) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArena();
+  if (message_arena == nullptr) {
+    delete var_table_content_;
+  }
+  if (var_table_content) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::GetArena(var_table_content);
+    if (message_arena != submessage_arena) {
+      var_table_content = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, var_table_content, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  var_table_content_ = var_table_content;
+  // @@protoc_insertion_point(field_set_allocated:DATA.Fragment.var_table_content)
+}
+
+// .DATA.SquaredErrorsTable var_squared_errors = 24;
+inline bool Fragment::_internal_has_var_squared_errors() const {
+  return this != internal_default_instance() && var_squared_errors_ != nullptr;
+}
+inline bool Fragment::has_var_squared_errors() const {
+  return _internal_has_var_squared_errors();
+}
+inline void Fragment::clear_var_squared_errors() {
+  if (GetArena() == nullptr && var_squared_errors_ != nullptr) {
+    delete var_squared_errors_;
+  }
+  var_squared_errors_ = nullptr;
+}
+inline const ::DATA::SquaredErrorsTable& Fragment::_internal_var_squared_errors() const {
+  const ::DATA::SquaredErrorsTable* p = var_squared_errors_;
+  return p != nullptr ? *p : *reinterpret_cast<const ::DATA::SquaredErrorsTable*>(
+      &::DATA::_SquaredErrorsTable_default_instance_);
+}
+inline const ::DATA::SquaredErrorsTable& Fragment::var_squared_errors() const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.var_squared_errors)
+  return _internal_var_squared_errors();
+}
+inline void Fragment::unsafe_arena_set_allocated_var_squared_errors(
+    ::DATA::SquaredErrorsTable* var_squared_errors) {
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(var_squared_errors_);
+  }
+  var_squared_errors_ = var_squared_errors;
+  if (var_squared_errors) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:DATA.Fragment.var_squared_errors)
+}
+inline ::DATA::SquaredErrorsTable* Fragment::release_var_squared_errors() {
+  auto temp = unsafe_arena_release_var_squared_errors();
+  if (GetArena() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+  return temp;
+}
+inline ::DATA::SquaredErrorsTable* Fragment::unsafe_arena_release_var_squared_errors() {
+  // @@protoc_insertion_point(field_release:DATA.Fragment.var_squared_errors)
+  
+  ::DATA::SquaredErrorsTable* temp = var_squared_errors_;
+  var_squared_errors_ = nullptr;
+  return temp;
+}
+inline ::DATA::SquaredErrorsTable* Fragment::_internal_mutable_var_squared_errors() {
+  
+  if (var_squared_errors_ == nullptr) {
+    auto* p = CreateMaybeMessage<::DATA::SquaredErrorsTable>(GetArena());
+    var_squared_errors_ = p;
+  }
+  return var_squared_errors_;
+}
+inline ::DATA::SquaredErrorsTable* Fragment::mutable_var_squared_errors() {
+  // @@protoc_insertion_point(field_mutable:DATA.Fragment.var_squared_errors)
+  return _internal_mutable_var_squared_errors();
+}
+inline void Fragment::set_allocated_var_squared_errors(::DATA::SquaredErrorsTable* var_squared_errors) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArena();
+  if (message_arena == nullptr) {
+    delete var_squared_errors_;
+  }
+  if (var_squared_errors) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::GetArena(var_squared_errors);
+    if (message_arena != submessage_arena) {
+      var_squared_errors = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, var_squared_errors, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  var_squared_errors_ = var_squared_errors;
+  // @@protoc_insertion_point(field_set_allocated:DATA.Fragment.var_squared_errors)
+}
+
+// uint32 var_tiers = 25;
+inline void Fragment::clear_var_tiers() {
+  var_tiers_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::_internal_var_tiers() const {
+  return var_tiers_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::var_tiers() const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.var_tiers)
+  return _internal_var_tiers();
+}
+inline void Fragment::_internal_set_var_tiers(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  var_tiers_ = value;
+}
+inline void Fragment::set_var_tiers(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_set_var_tiers(value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.var_tiers)
 }
 
 // -------------------------------------------------------------------

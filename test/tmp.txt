@@ -1,0 +1,23 @@
+std::string varDimensionsResult;
+std::string varLevelsResult;
+std::string varTiersResult;
+for tier{
+std::string varECParam_k_Result;
+std::string varECParam_m_Result;
+std::string varECParam_w_Result;
+std::string varECParam_hd_Result;
+
+std::string varDataLocationResult;//not used
+std::string varParityLocationResult;//not used
+}
+std::string variableType;
+std::string varQueryTableShapeResult;
+std::string varQueryTableResult;
+std::string varSquaredErrorsShapeResult;
+std::string varSquaredErrorsResult;
+std::string varStopIndicesResult;
+std::string varErrorBoundsResult;
+for datatiersvaluessize
+std::string varECParam_EncodedFragLen_Result;
+std::string ECBackendName;
+
