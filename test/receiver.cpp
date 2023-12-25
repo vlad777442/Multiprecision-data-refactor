@@ -24,10 +24,10 @@ struct Client {
         }
         
         DATA::Fragment received_message;
-    if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred))) {
-        std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
-        //return;
-    }
+        if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred))) {
+            std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
+            return;
+        }
     	std::cout << "idx: " << received_message.idx() << std::endl;
     	std::cout << "chunk id: " << received_message.chunk_id() << std::endl;
     	

@@ -312,30 +312,30 @@ std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& origin
     return splitVectors;
 }
 
-template <typename T>
-std::vector<std::vector<T>> split(const std::vector<T>& input, size_t chunkSize) {
-  if (chunkSize == 0) {
-    throw std::runtime_error("chunkSize must be greater than 0");
-  }
+// template <typename T>
+// std::vector<std::vector<T>> split(const std::vector<T>& input, size_t chunkSize) {
+//   if (chunkSize == 0) {
+//     throw std::runtime_error("chunkSize must be greater than 0");
+//   }
 
-  std::vector<std::vector<T>> chunks;
-  size_t numChunks = std::ceil(static_cast<double>(input.size()) / chunkSize);
+//   std::vector<std::vector<T>> chunks;
+//   size_t numChunks = std::ceil(static_cast<double>(input.size()) / chunkSize);
 
-  for (size_t i = 0; i < numChunks; ++i) {
-    size_t startIndex = i * chunkSize;
-    size_t endIndex = std::min((i + 1) * chunkSize, input.size());
+//   for (size_t i = 0; i < numChunks; ++i) {
+//     size_t startIndex = i * chunkSize;
+//     size_t endIndex = std::min((i + 1) * chunkSize, input.size());
 
-    std::vector<T> chunk;
+//     std::vector<T> chunk;
 
-    for (size_t j = startIndex; j < endIndex; ++j) {
-      chunk.push_back(input[j]);
-    }
+//     for (size_t j = startIndex; j < endIndex; ++j) {
+//       chunk.push_back(input[j]);
+//     }
 
-    chunks.push_back(chunk);
-  }
+//     chunks.push_back(chunk);
+//   }
 
-  return chunks;
-}
+//   return chunks;
+// }
 
 void sender(const DATA::Fragment& message) {
     std::string serialized_data;
@@ -1348,6 +1348,23 @@ int main(int argc, char *argv[])
                         protoFragment2.set_is_data(false);
                         protoFragment2.set_tier_id(i);
                         // *protoTier.add_fragment() = protoFragment2;
+                        // setting variable parameters
+                        protoFragment2.set_var_name(variableName);
+                        *protoFragment2.mutable_var_table_content() = protoQueryTable;
+                        for (const auto& data : dimensions) {
+                            protoFragment2.add_var_dimensions(data);
+                        }
+                        protoFragment2.set_var_type(variableType);
+                        protoFragment2.set_var_levels(numLevels);
+                        for (const auto& data : level_error_bounds) {
+                            protoFragment2.add_var_level_error_bounds(data);
+                        }
+                        for (const auto& data : stopping_indices) {
+                            protoFragment2.add_var_stopping_indices(data);
+                        }
+                        *protoFragment2.mutable_var_squared_errors() = protoAllSquaredErrors;
+                        protoFragment2.set_var_tiers(numTiers);
+
                         sender(protoFragment2);
                     }
                     // *protoVariable.add_tier() = protoTier;

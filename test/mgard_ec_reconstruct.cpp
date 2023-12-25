@@ -35,13 +35,13 @@
 
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include "fragment.pb.h"
 #include <chrono>
 
 #define IPADDRESS "127.0.0.1" // "192.168.1.64"
 #define UDP_PORT 13251
-#define TIMEOUT_DURATION_SECONDS 5
+#define TIMEOUT_DURATION_SECONDS 30
 
 using boost::asio::ip::udp;
 using boost::asio::ip::address;
@@ -136,12 +136,102 @@ std::vector<T> UnpackVector(const std::string& data)
     return d;
 }
 
+struct QueryTable {
+    int32_t rows;
+    int32_t cols;
+    std::vector<uint64_t> content;
+};
+
+struct SquaredErrorsTable {
+    int32_t rows;
+    int32_t cols;
+    std::vector<double> content;
+};
+
+struct Fragment {
+    int32_t k;
+    int32_t m;
+    int32_t w;
+    int32_t hd;
+    std::string ec_backend_name;
+    uint64_t encoded_fragment_length;
+    // uint32_t idx;
+    // uint32_t size;
+    // uint64_t orig_data_size;
+    // uint32_t chksum_mismatch;
+    // uint32_t backend_id;
+    std::vector<char> frag;
+    bool is_data;
+    uint32_t tier_id;
+    uint32_t chunk_id;
+    uint32_t fragment_id;
+
+    // Fields from Variable message included in Fragment
+    std::string var_name;
+    std::vector<uint32_t> var_dimensions;
+    std::string var_type;
+    uint32_t var_levels;
+    std::vector<double> var_level_error_bounds;
+    std::vector<uint32_t> var_stopping_indices;
+    QueryTable var_table_content;
+    SquaredErrorsTable var_squared_errors;
+    uint32_t var_tiers;
+};
+
+struct Variable {
+    std::string var_name;
+    std::vector<uint32_t> var_dimensions;
+    std::string var_type;
+    uint32_t var_levels;
+    std::vector<double> var_level_error_bounds;
+    std::vector<uint32_t> var_stopping_indices;
+    QueryTable var_table_content;
+    SquaredErrorsTable var_squared_errors;
+    uint32_t var_tiers;
+    std::vector<Fragment> data_fragments;
+    std::vector<Fragment> parity_fragments;
+};
+
 struct Client {
     boost::asio::io_service io_service;
     udp::socket socket{io_service};
-    boost::array<char, 1024> recv_buffer;
+    boost::array<char, 2048> recv_buffer;
     udp::endpoint remote_endpoint;
     boost::asio::deadline_timer timer{io_service};
+
+    std::string previousVarName = "null";
+    // std::vector<int> dataTiersECParam_k;
+    // std::vector<int> dataTiersECParam_m;
+    // std::vector<int> dataTiersECParam_w;
+    // std::vector<int> dataTiersECParam_hd
+    // std::string ECBackendName = "null";
+    // std::vector<uint64_t> encoded_fragment_lengths;
+    // std::vector<bool> is_datas;
+    // std::vector<uint32_t> tier_ids;
+    // std::vector<uint32_t> chunk_ids;
+    // std::vector<uint32_t> fragment_ids;
+    // std::vector<std::vector<char>> frag_values;
+    // std::vector<std::string> var_names;
+    // std::vector<std::vector<uint32_t>> var_dimensions;
+    // std::vector<std::string> var_types;
+    // std::vector<uint32_t> var_levels;
+    // std::vector<std::vector<double>> var_level_error_bounds;
+    // std::vector<std::vector<uint32_t>> var_stopping_indices;
+    // std::vector<std::vector<size_t>> varQueryTableShapes;
+    // std::vector<std::vector<uint64_t>> varQueryTables;
+    // std::vector<std::vector<size_t>> varSquaredErrorsTableShapes;
+    // std::vector<uint64_t> varSquaredErrorsTables;
+    // std::uint32_t previousTier;
+
+    // std::vector<std::vector<uint64_t>> encoded_fragment_lengths_values;
+    // std::vector<std::vector<bool>> is_data_values;
+    // std::vector<std::vector<uint32_t>> tier_ids_values;
+    // std::vector<std::vector<uint32_t>> chunk_ids_values;
+    // std::vector<std::vector<uint32_t>> fragment_ids_values;
+    // std::vector<std::vector<std::vector<char>>> frag_values;
+
+    std::vector<Fragment> fragments;
+    std::vector<Variable> variables;
 
     void handle_receive(const boost::system::error_code& error, size_t bytes_transferred) {
         if (error) {
@@ -152,59 +242,104 @@ struct Client {
         DATA::Fragment received_message;
         if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred))) {
             std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
-        } else {
-            std::cout << "idx: " << received_message.idx() << std::endl;
-            std::cout << "chunk id: " << received_message.chunk_id() << std::endl;
-            int k_value = received_message.k();
-            int m_value = received_message.m();
-            int w_value = received_message.w();
-            int hd_value = received_message.hd();
-            std::string ec_backend_name_value = received_message.ec_backend_name();
-            uint64_t encoded_fragment_length_value = received_message.encoded_fragment_length();
+        } else {   
+            if (previousVarName == received_message.var_name() && !variables.empty()) {
+                Variable &latestVariable = variables.back();
 
-            // uint32_t idx_value = received_message.idx();
-            // uint32_t size_value = received_message.size();
-            // uint64_t orig_data_size_value = received_message.orig_data_size();
-            // uint32_t chksum_mismatch_value = received_message.chksum_mismatch();
-            //std::string backend_id_value = received_message.backend_id();
-            bool is_data_value = received_message.is_data();
-            uint32_t tier_id_value = received_message.tier_id();
-            uint32_t chunk_id_value = received_message.chunk_id();
-            uint32_t fragment_id_value = received_message.fragment_id();
+                Fragment myFragment;
 
-            // Reading values from fields of Variable message included in Fragment
-            std::string var_name_value = received_message.var_name();
-            std::vector<uint32_t> var_dimensions_value(received_message.var_dimensions().begin(), received_message.var_dimensions().end());
-            std::string var_type_value = received_message.var_type();
-            uint32_t var_levels_value = received_message.var_levels();
-            std::vector<double> var_level_error_bounds_value(received_message.var_level_error_bounds().begin(), received_message.var_level_error_bounds().end());
-            std::vector<uint32_t> var_stopping_indices_value(received_message.var_stopping_indices().begin(), received_message.var_stopping_indices().end());
+                myFragment.k = received_message.k();
+                myFragment.m = received_message.m();
+                myFragment.w = received_message.w();
+                myFragment.hd = received_message.hd();
+                myFragment.ec_backend_name = received_message.ec_backend_name();
+                myFragment.encoded_fragment_length = received_message.encoded_fragment_length();  // Set the desired value
+                
+                for (int i = 0; i < received_message.frag_size(); ++i) {
+                    const std::string& fragString = received_message.frag(i);
+                    myFragment.frag.insert(myFragment.frag.end(), fragString.begin(), fragString.end());
+                }
+
+                myFragment.is_data = received_message.is_data();
+                myFragment.tier_id = received_message.tier_id();
+                myFragment.chunk_id = received_message.chunk_id();
+                myFragment.fragment_id = received_message.fragment_id();
+                
+                if (myFragment.is_data == true) {
+                    latestVariable.data_fragments.push_back(myFragment);
+                } else {
+                    latestVariable.parity_fragments.push_back(myFragment);
+                }
+                
+            } else {
+                Variable var1;
+                var1.var_name = received_message.var_name();
+                var1.var_dimensions.insert(
+                    var1.var_dimensions.end(),
+                    received_message.var_dimensions().begin(),
+                    received_message.var_dimensions().end()
+                );
+                var1.var_type = received_message.var_type();
+                var1.var_levels = received_message.var_levels();
+                var1.var_level_error_bounds.insert(
+                    var1.var_level_error_bounds.end(),
+                    received_message.var_level_error_bounds().begin(), 
+                    received_message.var_level_error_bounds().end()
+                );  
+                var1.var_stopping_indices.insert(
+                    var1.var_stopping_indices.end(),
+                    received_message.var_stopping_indices().begin(), 
+                    received_message.var_stopping_indices().end()
+                );  
+
+                var1.var_table_content.rows = received_message.var_table_content().rows();
+                var1.var_table_content.cols = received_message.var_table_content().cols();
+                for (int i = 0; i < received_message.var_table_content().content_size(); ++i) {
+                    uint64_t content_value = received_message.var_table_content().content(i);
+                    var1.var_table_content.content.push_back(content_value);
+                }
+
+                var1.var_squared_errors.rows = received_message.var_squared_errors().rows();
+                var1.var_squared_errors.cols = received_message.var_squared_errors().cols();
+                for (int i = 0; i < received_message.var_squared_errors().content_size(); ++i) {
+                    uint64_t content_value = received_message.var_squared_errors().content(i);  
+                    var1.var_squared_errors.content.push_back(content_value);            
+                }
+
+                Fragment myFragment;
+
+                myFragment.k = received_message.k();
+                myFragment.m = received_message.m();
+                myFragment.w = received_message.w();
+                myFragment.hd = received_message.hd();
+                myFragment.ec_backend_name = received_message.ec_backend_name();
+                myFragment.encoded_fragment_length = received_message.encoded_fragment_length();  // Set the desired value
+                
+                for (int i = 0; i < received_message.frag_size(); ++i) {
+                    const std::string& fragString = received_message.frag(i);
+                    myFragment.frag.insert(myFragment.frag.end(), fragString.begin(), fragString.end());
+                }
+
+                myFragment.is_data = received_message.is_data();
+                myFragment.tier_id = received_message.tier_id();
+                myFragment.chunk_id = received_message.chunk_id();
+                myFragment.fragment_id = received_message.fragment_id();
+                
+                if (myFragment.is_data == true) {
+                    var1.data_fragments.push_back(myFragment);
+                } else {
+                    var1.parity_fragments.push_back(myFragment);
+                }
+                variables.push_back(var1);
+            }
+
+            previousVarName = received_message.var_name();
+       
+            std::cout << "received: " << received_message.encoded_fragment_length() << std::endl;
             
-            // Reading 'rows' and 'cols' from QueryTable
-            int32_t rows_value = received_message.var_table_content().rows();
-            int32_t cols_value = received_message.var_table_content().cols();
-
-            std::vector<size_t> varQueryTableShape = { static_cast<size_t>(rows_value), static_cast<size_t>(cols_value) };
-
-            std::vector<uint64_t> varQueryTable;
-            for (int i = 0; i < received_message.var_table_content().content_size(); ++i) {
-                uint64_t content_value = received_message.var_table_content().content(i);
-                varQueryTable.push_back(content_value);
-            }
-
-            // Reading 'rows' and 'cols' from SquaredErrorsTable
-            int32_t rows_value2 = received_message.var_squared_errors().rows();
-            int32_t cols_value2 = received_message.var_squared_errors().cols();
-            std::vector<size_t> varSquaredErrorsTableShape = { static_cast<size_t>(rows_value2), static_cast<size_t>(cols_value2) };
-
-            std::vector<uint64_t> varSquaredErrorsTable;
-            for (int i = 0; i < received_message.var_squared_errors().content_size(); ++i) {
-                uint64_t content_value = received_message.var_squared_errors().content(i);
-                varSquaredErrorsTable.push_back(content_value);
-            }
         }
-
-        std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
+        std::cout << "Received fragment" << std::endl;
+        //std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
 
         // Restart the timer for another TIMEOUT_DURATION_SECONDS seconds
         timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
@@ -256,43 +391,43 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < argc; i++)
     {
         std::string arg = argv[i];
-        if (arg == "-kvs" || arg == "--kvstore")
-        {//not used
-            if (i+1 < argc)
-            {
-                // rocksDBPath = argv[i+1];
-            }
-            else
-            {
-                std::cerr << "--kvstore option requires one argument." << std::endl;
-                return 1;
-            }            
-        } 
-        else if (arg == "-var" || arg == "--variable")
-        {//not used
-            if (i+1 < argc)
-            {
-                variableName = argv[i+1];
-            }
-            else
-            {
-                std::cerr << "--variable option requires one argument." << std::endl;
-                return 1;
-            } 
-        }
-        else if (arg == "-em" || arg == "--errormode")
-        {
-            if (i+1 < argc)
-            {
-                error_mode = atoi(argv[i+1]);
-            }
-            else
-            {
-                std::cerr << "--errormode option requires one argument." << std::endl;
-                return 1;
-            }            
-        }  
-        else if (arg == "-t" || arg == "--totalsites")
+        // if (arg == "-kvs" || arg == "--kvstore")
+        // {//not used
+        //     if (i+1 < argc)
+        //     {
+        //         // rocksDBPath = argv[i+1];
+        //     }
+        //     else
+        //     {
+        //         std::cerr << "--kvstore option requires one argument." << std::endl;
+        //         return 1;
+        //     }            
+        // } 
+        // else if (arg == "-var" || arg == "--variable")
+        // {//not used
+        //     if (i+1 < argc)
+        //     {
+        //         variableName = argv[i+1];
+        //     }
+        //     else
+        //     {
+        //         std::cerr << "--variable option requires one argument." << std::endl;
+        //         return 1;
+        //     } 
+        // }
+        // else if (arg == "-em" || arg == "--errormode")
+        // {
+        //     if (i+1 < argc)
+        //     {
+        //         error_mode = atoi(argv[i+1]);
+        //     }
+        //     else
+        //     {
+        //         std::cerr << "--errormode option requires one argument." << std::endl;
+        //         return 1;
+        //     }            
+        // }  
+        if (arg == "-t" || arg == "--totalsites")
         {
             if (i+1 < argc)
             {
@@ -322,18 +457,18 @@ int main(int argc, char *argv[])
                 return 1;
             }            
         } 
-        else if (arg == "-s")
-        {
-            if (i+1 < argc)
-            {
-                mgard_s_param = atof(argv[i+1]);
-            }
-            else
-            {
-                std::cerr << "-s option requires one argument." << std::endl;
-                return 1;
-            }            
-        }    
+        // else if (arg == "-s")
+        // {
+        //     if (i+1 < argc)
+        //     {
+        //         mgard_s_param = atof(argv[i+1]);
+        //     }
+        //     else
+        //     {
+        //         std::cerr << "-s option requires one argument." << std::endl;
+        //         return 1;
+        //     }            
+        // }    
         else if (arg == "-r" || arg == "--rawdata")
         {
             if (i+1 < argc)
@@ -347,7 +482,16 @@ int main(int argc, char *argv[])
             }            
         }     
     }
+    
+    // Receiving values from UDP connection
+    Client client;
+    std::thread r([&] { client.Receiver(); });
 
+    r.join();
+    std::cout << "Finished receiving" << std::endl;
+}
+int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavaialbleSites = 0, std::string rawDataFileName) {
+    std::string variableName = var1.var_name;
     DB* db;
     Options options;
     // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
@@ -360,7 +504,7 @@ int main(int argc, char *argv[])
     // assert(s.ok());
 
     std::string varDimensionsName = variableName+":Dimensions";
-    std::vector<uint32_t> dimensions;
+    std::vector<uint32_t> dimensions = var1.var_dimensions;
     std::string varDimensionsResult;
     // s = db->Get(ReadOptions(), varDimensionsName, &varDimensionsResult);
     // assert(s.ok());  
