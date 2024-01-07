@@ -352,7 +352,7 @@ void sender(const DATA::Fragment& message) {
     boost::system::error_code err;
     auto sent = socket.send_to(boost::asio::buffer(serialized_data), remote_endpoint, 0, err);
     socket.close();
-    std::cout << "Sent Payload --- " << sent << "\n";
+    // std::cout << "Sent Payload --- " << sent << "\n";
 }
 
 // void sendDataZmq(const DATA::VariableCollection& variableCollection) {
@@ -1121,6 +1121,7 @@ int main(int argc, char *argv[])
                     .hd = dataTiersECParam_m[i]+1,
                     .ct = CHKSUM_NONE,
                 };
+                std::cout << "K:" << args.k << ";M:" << args.m << ";W:" << args.w << ";HD:" << args.hd << std::endl;
                 std::string varECParam_k_Name = variableName+":Tier:"+std::to_string(i)+":K";
                 //adios2::Variable<int> varECParam_k = writer_io.DefineVariable<int>(varECParam_k_Name); 
                 int ec_k = dataTiersECParam_k[i];
@@ -1289,7 +1290,18 @@ int main(int argc, char *argv[])
                         protoFragment1.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
                         protoFragment1.set_orig_data_size(orig_data_size);
                         protoFragment1.set_chksum_mismatch(0);
-                        protoFragment1.add_frag(frag, strlen(frag));
+
+                        // std::string block_data(encoded_data[j]);
+                        // protoFragment1.add_frag(frag);
+
+                        // std::string buffer_str(frag, encoded_fragment_len);
+                        // protoFragment1.add_frag(buffer_str);
+                        // protoFragment1.add_frag(frag);
+
+                        // std::string buffer_str(reinterpret_cast<char*>(encoded_data[j]), encoded_fragment_len);
+                        
+                        std::string data_str(frag);
+                        protoFragment1.set_frag(encoded_data[j], encoded_fragment_len);
                         protoFragment1.set_is_data(true);
                         protoFragment1.set_tier_id(i);
                         protoFragment1.set_chunk_id(k);
@@ -1305,11 +1317,12 @@ int main(int argc, char *argv[])
                         for (const auto& data : level_error_bounds) {
                             protoFragment1.add_var_level_error_bounds(data);
                         }
-                        for (const auto& data : stopping_indices) {
-                            protoFragment1.add_var_stopping_indices(data);
+                        for (uint8_t val : stopping_indices) {
+                            protoFragment1.add_var_stopping_indices(reinterpret_cast<const char*>(&val), sizeof(val));
                         }
                         *protoFragment1.mutable_var_squared_errors() = protoAllSquaredErrors;
                         protoFragment1.set_var_tiers(numTiers);
+                        protoFragment1.set_encoded_fragment_length(encoded_fragment_len);
                     
                         sender(protoFragment1);
                     }
@@ -1344,11 +1357,21 @@ int main(int argc, char *argv[])
                         protoFragment2.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
                         protoFragment2.set_orig_data_size(orig_data_size);
                         protoFragment2.set_chksum_mismatch(0);
-                        protoFragment2.add_frag(frag, strlen(frag));
+                        
+                        // std::string buffer_str(reinterpret_cast<char*>(encoded_data[j]), encoded_fragment_len);
+
+                        // protoFragment2.add_frag(frag);
+                        // protoFragment2.add_frag(frag, strlen(frag));
+                        // std::string block_data(encoded_data[j]);
+                        // protoFragment2.add_frag(frag);
+                        // std::string buffer_str(reinterpret_cast<char*>(encoded_parity[j]), encoded_fragment_len);
+                        std::string data_str(frag);
+                        protoFragment2.set_frag(encoded_parity[j], encoded_fragment_len);                      
+                        
                         protoFragment2.set_is_data(false);
                         protoFragment2.set_tier_id(i);
-                        // *protoTier.add_fragment() = protoFragment2;
-                        // setting variable parameters
+                        protoFragment2.set_chunk_id(k);
+                        protoFragment2.set_fragment_id(j);
                         protoFragment2.set_var_name(variableName);
                         *protoFragment2.mutable_var_table_content() = protoQueryTable;
                         for (const auto& data : dimensions) {
@@ -1359,11 +1382,12 @@ int main(int argc, char *argv[])
                         for (const auto& data : level_error_bounds) {
                             protoFragment2.add_var_level_error_bounds(data);
                         }
-                        for (const auto& data : stopping_indices) {
-                            protoFragment2.add_var_stopping_indices(data);
+                        for (uint8_t val : stopping_indices) {
+                            protoFragment2.add_var_stopping_indices(reinterpret_cast<const char*>(&val), sizeof(val));
                         }
                         *protoFragment2.mutable_var_squared_errors() = protoAllSquaredErrors;
                         protoFragment2.set_var_tiers(numTiers);
+                        protoFragment2.set_encoded_fragment_length(encoded_fragment_len);
 
                         sender(protoFragment2);
                     }

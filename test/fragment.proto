@@ -63,7 +63,7 @@ message Fragment {
   uint32 chksum_mismatch = 10;
   uint32 backend_id = 11;
   //
-  repeated bytes frag = 12;
+  bytes frag = 12;
   bool is_data = 13;
   uint32 tier_id = 14;
   uint32 chunk_id = 15;
@@ -75,7 +75,7 @@ message Fragment {
   string var_type = 19;
   uint32 var_levels = 20;
   repeated double var_level_error_bounds = 21;
-  repeated uint32 var_stopping_indices = 22;
+  repeated bytes var_stopping_indices = 22;
   QueryTable var_table_content = 23;
   SquaredErrorsTable var_squared_errors = 24;
   uint32 var_tiers = 25;

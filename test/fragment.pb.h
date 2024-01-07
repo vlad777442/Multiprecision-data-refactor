@@ -1081,11 +1081,11 @@ class Fragment PROTOBUF_FINAL :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kFragFieldNumber = 12,
     kVarDimensionsFieldNumber = 18,
     kVarLevelErrorBoundsFieldNumber = 21,
     kVarStoppingIndicesFieldNumber = 22,
     kEcBackendNameFieldNumber = 5,
+    kFragFieldNumber = 12,
     kVarNameFieldNumber = 17,
     kVarTypeFieldNumber = 19,
     kVarTableContentFieldNumber = 23,
@@ -1107,30 +1107,6 @@ class Fragment PROTOBUF_FINAL :
     kVarLevelsFieldNumber = 20,
     kVarTiersFieldNumber = 25,
   };
-  // repeated bytes frag = 12;
-  int frag_size() const;
-  private:
-  int _internal_frag_size() const;
-  public:
-  void clear_frag();
-  const std::string& frag(int index) const;
-  std::string* mutable_frag(int index);
-  void set_frag(int index, const std::string& value);
-  void set_frag(int index, std::string&& value);
-  void set_frag(int index, const char* value);
-  void set_frag(int index, const void* value, size_t size);
-  std::string* add_frag();
-  void add_frag(const std::string& value);
-  void add_frag(std::string&& value);
-  void add_frag(const char* value);
-  void add_frag(const void* value, size_t size);
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>& frag() const;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>* mutable_frag();
-  private:
-  const std::string& _internal_frag(int index) const;
-  std::string* _internal_add_frag();
-  public:
-
   // repeated uint32 var_dimensions = 18;
   int var_dimensions_size() const;
   private:
@@ -1175,27 +1151,29 @@ class Fragment PROTOBUF_FINAL :
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
       mutable_var_level_error_bounds();
 
-  // repeated uint32 var_stopping_indices = 22;
+  // repeated bytes var_stopping_indices = 22;
   int var_stopping_indices_size() const;
   private:
   int _internal_var_stopping_indices_size() const;
   public:
   void clear_var_stopping_indices();
+  const std::string& var_stopping_indices(int index) const;
+  std::string* mutable_var_stopping_indices(int index);
+  void set_var_stopping_indices(int index, const std::string& value);
+  void set_var_stopping_indices(int index, std::string&& value);
+  void set_var_stopping_indices(int index, const char* value);
+  void set_var_stopping_indices(int index, const void* value, size_t size);
+  std::string* add_var_stopping_indices();
+  void add_var_stopping_indices(const std::string& value);
+  void add_var_stopping_indices(std::string&& value);
+  void add_var_stopping_indices(const char* value);
+  void add_var_stopping_indices(const void* value, size_t size);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>& var_stopping_indices() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>* mutable_var_stopping_indices();
   private:
-  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_var_stopping_indices(int index) const;
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
-      _internal_var_stopping_indices() const;
-  void _internal_add_var_stopping_indices(::PROTOBUF_NAMESPACE_ID::uint32 value);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
-      _internal_mutable_var_stopping_indices();
+  const std::string& _internal_var_stopping_indices(int index) const;
+  std::string* _internal_add_var_stopping_indices();
   public:
-  ::PROTOBUF_NAMESPACE_ID::uint32 var_stopping_indices(int index) const;
-  void set_var_stopping_indices(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value);
-  void add_var_stopping_indices(::PROTOBUF_NAMESPACE_ID::uint32 value);
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
-      var_stopping_indices() const;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
-      mutable_var_stopping_indices();
 
   // string ec_backend_name = 5;
   void clear_ec_backend_name();
@@ -1220,6 +1198,31 @@ class Fragment PROTOBUF_FINAL :
   const std::string& _internal_ec_backend_name() const;
   void _internal_set_ec_backend_name(const std::string& value);
   std::string* _internal_mutable_ec_backend_name();
+  public:
+
+  // bytes frag = 12;
+  void clear_frag();
+  const std::string& frag() const;
+  void set_frag(const std::string& value);
+  void set_frag(std::string&& value);
+  void set_frag(const char* value);
+  void set_frag(const void* value, size_t size);
+  std::string* mutable_frag();
+  std::string* release_frag();
+  void set_allocated_frag(std::string* frag);
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  std::string* unsafe_arena_release_frag();
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  void unsafe_arena_set_allocated_frag(
+      std::string* frag);
+  private:
+  const std::string& _internal_frag() const;
+  void _internal_set_frag(const std::string& value);
+  std::string* _internal_mutable_frag();
   public:
 
   // string var_name = 17;
@@ -1459,14 +1462,13 @@ class Fragment PROTOBUF_FINAL :
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> frag_;
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 > var_dimensions_;
   mutable std::atomic<int> _var_dimensions_cached_byte_size_;
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > var_level_error_bounds_;
   mutable std::atomic<int> _var_level_error_bounds_cached_byte_size_;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 > var_stopping_indices_;
-  mutable std::atomic<int> _var_stopping_indices_cached_byte_size_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> var_stopping_indices_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr ec_backend_name_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr frag_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr var_name_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr var_type_;
   ::DATA::QueryTable* var_table_content_;
@@ -2824,78 +2826,85 @@ inline void Fragment::set_backend_id(::PROTOBUF_NAMESPACE_ID::uint32 value) {
   // @@protoc_insertion_point(field_set:DATA.Fragment.backend_id)
 }
 
-// repeated bytes frag = 12;
-inline int Fragment::_internal_frag_size() const {
-  return frag_.size();
-}
-inline int Fragment::frag_size() const {
-  return _internal_frag_size();
-}
+// bytes frag = 12;
 inline void Fragment::clear_frag() {
-  frag_.Clear();
+  frag_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
-inline std::string* Fragment::add_frag() {
-  // @@protoc_insertion_point(field_add_mutable:DATA.Fragment.frag)
-  return _internal_add_frag();
-}
-inline const std::string& Fragment::_internal_frag(int index) const {
-  return frag_.Get(index);
-}
-inline const std::string& Fragment::frag(int index) const {
+inline const std::string& Fragment::frag() const {
   // @@protoc_insertion_point(field_get:DATA.Fragment.frag)
-  return _internal_frag(index);
+  return _internal_frag();
 }
-inline std::string* Fragment::mutable_frag(int index) {
+inline void Fragment::set_frag(const std::string& value) {
+  _internal_set_frag(value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.frag)
+}
+inline std::string* Fragment::mutable_frag() {
   // @@protoc_insertion_point(field_mutable:DATA.Fragment.frag)
-  return frag_.Mutable(index);
+  return _internal_mutable_frag();
 }
-inline void Fragment::set_frag(int index, const std::string& value) {
-  // @@protoc_insertion_point(field_set:DATA.Fragment.frag)
-  frag_.Mutable(index)->assign(value);
+inline const std::string& Fragment::_internal_frag() const {
+  return frag_.Get();
 }
-inline void Fragment::set_frag(int index, std::string&& value) {
-  // @@protoc_insertion_point(field_set:DATA.Fragment.frag)
-  frag_.Mutable(index)->assign(std::move(value));
+inline void Fragment::_internal_set_frag(const std::string& value) {
+  
+  frag_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value, GetArena());
 }
-inline void Fragment::set_frag(int index, const char* value) {
+inline void Fragment::set_frag(std::string&& value) {
+  
+  frag_.Set(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArena());
+  // @@protoc_insertion_point(field_set_rvalue:DATA.Fragment.frag)
+}
+inline void Fragment::set_frag(const char* value) {
   GOOGLE_DCHECK(value != nullptr);
-  frag_.Mutable(index)->assign(value);
+  
+  frag_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
+              GetArena());
   // @@protoc_insertion_point(field_set_char:DATA.Fragment.frag)
 }
-inline void Fragment::set_frag(int index, const void* value, size_t size) {
-  frag_.Mutable(index)->assign(
-    reinterpret_cast<const char*>(value), size);
+inline void Fragment::set_frag(const void* value,
+    size_t size) {
+  
+  frag_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
+      reinterpret_cast<const char*>(value), size), GetArena());
   // @@protoc_insertion_point(field_set_pointer:DATA.Fragment.frag)
 }
-inline std::string* Fragment::_internal_add_frag() {
-  return frag_.Add();
+inline std::string* Fragment::_internal_mutable_frag() {
+  
+  return frag_.Mutable(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
-inline void Fragment::add_frag(const std::string& value) {
-  frag_.Add()->assign(value);
-  // @@protoc_insertion_point(field_add:DATA.Fragment.frag)
+inline std::string* Fragment::release_frag() {
+  // @@protoc_insertion_point(field_release:DATA.Fragment.frag)
+  return frag_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
-inline void Fragment::add_frag(std::string&& value) {
-  frag_.Add(std::move(value));
-  // @@protoc_insertion_point(field_add:DATA.Fragment.frag)
+inline void Fragment::set_allocated_frag(std::string* frag) {
+  if (frag != nullptr) {
+    
+  } else {
+    
+  }
+  frag_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), frag,
+      GetArena());
+  // @@protoc_insertion_point(field_set_allocated:DATA.Fragment.frag)
 }
-inline void Fragment::add_frag(const char* value) {
-  GOOGLE_DCHECK(value != nullptr);
-  frag_.Add()->assign(value);
-  // @@protoc_insertion_point(field_add_char:DATA.Fragment.frag)
+inline std::string* Fragment::unsafe_arena_release_frag() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:DATA.Fragment.frag)
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  
+  return frag_.UnsafeArenaRelease(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      GetArena());
 }
-inline void Fragment::add_frag(const void* value, size_t size) {
-  frag_.Add()->assign(reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_add_pointer:DATA.Fragment.frag)
-}
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>&
-Fragment::frag() const {
-  // @@protoc_insertion_point(field_list:DATA.Fragment.frag)
-  return frag_;
-}
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>*
-Fragment::mutable_frag() {
-  // @@protoc_insertion_point(field_mutable_list:DATA.Fragment.frag)
-  return &frag_;
+inline void Fragment::unsafe_arena_set_allocated_frag(
+    std::string* frag) {
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  if (frag != nullptr) {
+    
+  } else {
+    
+  }
+  frag_.UnsafeArenaSetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      frag, GetArena());
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:DATA.Fragment.frag)
 }
 
 // bool is_data = 13;
@@ -3254,7 +3263,7 @@ Fragment::mutable_var_level_error_bounds() {
   return _internal_mutable_var_level_error_bounds();
 }
 
-// repeated uint32 var_stopping_indices = 22;
+// repeated bytes var_stopping_indices = 22;
 inline int Fragment::_internal_var_stopping_indices_size() const {
   return var_stopping_indices_.size();
 }
@@ -3264,41 +3273,68 @@ inline int Fragment::var_stopping_indices_size() const {
 inline void Fragment::clear_var_stopping_indices() {
   var_stopping_indices_.Clear();
 }
-inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::_internal_var_stopping_indices(int index) const {
+inline std::string* Fragment::add_var_stopping_indices() {
+  // @@protoc_insertion_point(field_add_mutable:DATA.Fragment.var_stopping_indices)
+  return _internal_add_var_stopping_indices();
+}
+inline const std::string& Fragment::_internal_var_stopping_indices(int index) const {
   return var_stopping_indices_.Get(index);
 }
-inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::var_stopping_indices(int index) const {
+inline const std::string& Fragment::var_stopping_indices(int index) const {
   // @@protoc_insertion_point(field_get:DATA.Fragment.var_stopping_indices)
   return _internal_var_stopping_indices(index);
 }
-inline void Fragment::set_var_stopping_indices(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value) {
-  var_stopping_indices_.Set(index, value);
+inline std::string* Fragment::mutable_var_stopping_indices(int index) {
+  // @@protoc_insertion_point(field_mutable:DATA.Fragment.var_stopping_indices)
+  return var_stopping_indices_.Mutable(index);
+}
+inline void Fragment::set_var_stopping_indices(int index, const std::string& value) {
   // @@protoc_insertion_point(field_set:DATA.Fragment.var_stopping_indices)
+  var_stopping_indices_.Mutable(index)->assign(value);
 }
-inline void Fragment::_internal_add_var_stopping_indices(::PROTOBUF_NAMESPACE_ID::uint32 value) {
-  var_stopping_indices_.Add(value);
+inline void Fragment::set_var_stopping_indices(int index, std::string&& value) {
+  // @@protoc_insertion_point(field_set:DATA.Fragment.var_stopping_indices)
+  var_stopping_indices_.Mutable(index)->assign(std::move(value));
 }
-inline void Fragment::add_var_stopping_indices(::PROTOBUF_NAMESPACE_ID::uint32 value) {
-  _internal_add_var_stopping_indices(value);
+inline void Fragment::set_var_stopping_indices(int index, const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  var_stopping_indices_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:DATA.Fragment.var_stopping_indices)
+}
+inline void Fragment::set_var_stopping_indices(int index, const void* value, size_t size) {
+  var_stopping_indices_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:DATA.Fragment.var_stopping_indices)
+}
+inline std::string* Fragment::_internal_add_var_stopping_indices() {
+  return var_stopping_indices_.Add();
+}
+inline void Fragment::add_var_stopping_indices(const std::string& value) {
+  var_stopping_indices_.Add()->assign(value);
   // @@protoc_insertion_point(field_add:DATA.Fragment.var_stopping_indices)
 }
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
-Fragment::_internal_var_stopping_indices() const {
-  return var_stopping_indices_;
+inline void Fragment::add_var_stopping_indices(std::string&& value) {
+  var_stopping_indices_.Add(std::move(value));
+  // @@protoc_insertion_point(field_add:DATA.Fragment.var_stopping_indices)
 }
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+inline void Fragment::add_var_stopping_indices(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  var_stopping_indices_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:DATA.Fragment.var_stopping_indices)
+}
+inline void Fragment::add_var_stopping_indices(const void* value, size_t size) {
+  var_stopping_indices_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:DATA.Fragment.var_stopping_indices)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>&
 Fragment::var_stopping_indices() const {
   // @@protoc_insertion_point(field_list:DATA.Fragment.var_stopping_indices)
-  return _internal_var_stopping_indices();
+  return var_stopping_indices_;
 }
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
-Fragment::_internal_mutable_var_stopping_indices() {
-  return &var_stopping_indices_;
-}
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string>*
 Fragment::mutable_var_stopping_indices() {
   // @@protoc_insertion_point(field_mutable_list:DATA.Fragment.var_stopping_indices)
-  return _internal_mutable_var_stopping_indices();
+  return &var_stopping_indices_;
 }
 
 // .DATA.QueryTable var_table_content = 23;
