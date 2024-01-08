@@ -635,21 +635,29 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                             // std::cout << std::endl;
                             //std::vector<char> encodedValues(varDataValues.Shape()[0]);
                             // avail_frags[num_avail_frags] = (char *)malloc(varDataValues.frag.data()[0]*sizeof(char));
-                            // avail_frags[num_avail_frags] = (char *)malloc(chunk.data_fragments[j].frag.size() * sizeof(char));
+                            avail_frags[num_avail_frags] = (char *)malloc(chunk.data_fragments[j].frag.size() * sizeof(char));
+                            std::cout << "allocated memory:" << chunk.data_fragments[j].frag.size() * sizeof(char) << std::endl;
+                            
+                            const char* c_str = chunk.data_fragments[j].frag.c_str();
+                            size_t size_in_bytes = strlen(c_str);
+                            std::cout << "actual size:" << size_in_bytes << std::endl;
                             // if (avail_frags[num_avail_frags] != nullptr) {
                             //     memcpy(avail_frags[num_avail_frags], chunk.data_fragments[j].frag.data(), chunk.data_fragments[j].frag.size());
                             // } else {
                             //     std::cout << "avail_frags nullptr" << std::endl;
                             // }
-                            
+                            if (chunk.data_fragments[j].frag == NULL) {
+                                std::cout << "frag is null" << std::endl;
+                            }
                             // std::cout << "size of char: " << sizeof(chunk.data_fragments[j].frag);
                             // avail_frags[num_avail_frags] = const_cast<char*>(chunk.data_fragments[j].frag);
-                            std::cout << "frag data id:" << chunk.data_fragments[j].fragment_id << std::endl;
-                            avail_frags[num_avail_frags] = reinterpret_cast<char*>(const_cast<char*>(chunk.data_fragments[j].frag.c_str()));
+                            std::cout << "frag data id:" << chunk.data_fragments[j].fragment_id << ";chunk:" << chunk.data_fragments[j].chunk_id << ";tier:" << chunk.data_fragments[j].tier_id << std::endl;
+                            // avail_frags[num_avail_frags] = reinterpret_cast<char*>(const_cast<char*>(chunk.data_fragments[j].frag.c_str()));
                             const std::string& data_block = chunk.data_fragments[j].frag;
-                            avail_frags[num_avail_frags] = const_cast<char*>(data_block.data());
+                            std::cout << "string len:" << data_block.size() << std::endl;
+                            avail_frags[num_avail_frags] = const_cast<char*>(data_block.c_str());
                             // std::cout << "frag.data: " << varDataValues.frag.data() << std::endl;
-                            std::cout << "frag.data:size: "<< varDataValues.frag.size() << std::endl;
+                            // std::cout << "frag.data:size: "<< varDataValues.frag.size() << std::endl;
                             // std::cout << "avail_frags: "<< avail_frags[num_avail_frags] << std::endl;
                             // data_reader_engine.Get(varDataValues, avail_frags[num_avail_frags], adios2::Mode::Sync);
                             // data_reader_engine.Close();
@@ -682,8 +690,8 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                             // if (avail_frags[num_avail_frags] != nullptr) {
                             //     memcpy(avail_frags[num_avail_frags], chunk.parity_fragments[j].frag.data(), chunk.parity_fragments[j].frag.size());
                             // }
-                            const std::string& data_block = chunk.data_fragments[j].frag;
-                            avail_frags[num_avail_frags] = const_cast<char*>(chunk.parity_fragments[j].frag.data());
+                            const std::string& data_block = chunk.parity_fragments[j].frag;
+                            avail_frags[num_avail_frags] = const_cast<char*>(data_block.c_str());
                             std::cout << "frag parity id:" << chunk.parity_fragments[j].fragment_id << std::endl;
                             std::cout << "frag.parity:size: "<< chunk.parity_fragments[j].frag.size() << std::endl;
                             // std::cout << "size of char: " << sizeof(chunk.parity_fragments[j].frag);
