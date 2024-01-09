@@ -473,6 +473,7 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
         // auto compressor = MDR::DefaultLevelCompressor();
         auto compressor = MDR::AdaptiveLevelCompressor(32);
         // auto compressor = MDR::NullLevelCompressor();
+        int nullFrag = 0;
 
         std::vector<T> reconstructedData;
         switch(error_mode)
@@ -614,7 +615,8 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                             assert(desc > 0);
                         }  
                         std::cout << "checking data" << std::endl;
-                        for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
+                        // for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
+                        for (size_t j = 0; j < chunk.data_fragments.size(); j++)
                         {
                             /* check if data chunks are avaialble */
                             if (std::find(unavailableSiteList.begin(), unavailableSiteList.end(), j) != unavailableSiteList.end())
@@ -626,7 +628,11 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                             //     reader_io.Open(dataTiersDataLocations[i][j], adios2::Mode::Read); 
                             // std::string varDataValuesName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j);
                             // auto varDataValues = reader_io.InquireVariable<char>(varDataValuesName);
-                            auto varDataValues = chunk.data_fragments[j];
+                            if (chunk.data_fragments[j].frag.empty()) {
+                                std::cout << "frag data is null" << std::endl;
+                                nullFrag++;
+                            } else {
+                            // auto varDataValues = chunk.data_fragments[j];
                             
                             // for (size_t k = 0; k < varDataValues.Shape().size(); k++)
                             // {
@@ -636,36 +642,42 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                             //std::vector<char> encodedValues(varDataValues.Shape()[0]);
                             // avail_frags[num_avail_frags] = (char *)malloc(varDataValues.frag.data()[0]*sizeof(char));
                             avail_frags[num_avail_frags] = (char *)malloc(chunk.data_fragments[j].frag.size() * sizeof(char));
-                            std::cout << "allocated memory:" << chunk.data_fragments[j].frag.size() * sizeof(char) << std::endl;
+                            std::cout << "frag size:" << chunk.data_fragments[j].frag.size() << std::endl;
+                            std::cout << "allocated data memory:" << chunk.data_fragments[j].frag.size() * sizeof(char) << std::endl;
+                            if (avail_frags[num_avail_frags] != nullptr) {
+                                // Copy the data from chunk.data_fragments[j].frag into the allocated memory
+                                memcpy(avail_frags[num_avail_frags], chunk.data_fragments[j].frag.c_str(), chunk.data_fragments[j].frag.size());
+
+                                // Increment the index for the next available fragment
+                                num_avail_frags++;
+                            } else {
+                                std::cerr << "Memory allocation failed!" << std::endl;
+                                // Handle the case when memory allocation fails
+                            }
                             
-                            const char* c_str = chunk.data_fragments[j].frag.c_str();
-                            size_t size_in_bytes = strlen(c_str);
-                            std::cout << "actual size:" << size_in_bytes << std::endl;
                             // if (avail_frags[num_avail_frags] != nullptr) {
                             //     memcpy(avail_frags[num_avail_frags], chunk.data_fragments[j].frag.data(), chunk.data_fragments[j].frag.size());
                             // } else {
                             //     std::cout << "avail_frags nullptr" << std::endl;
                             // }
-                            if (chunk.data_fragments[j].frag == NULL) {
-                                std::cout << "frag is null" << std::endl;
-                            }
+                            
                             // std::cout << "size of char: " << sizeof(chunk.data_fragments[j].frag);
                             // avail_frags[num_avail_frags] = const_cast<char*>(chunk.data_fragments[j].frag);
                             std::cout << "frag data id:" << chunk.data_fragments[j].fragment_id << ";chunk:" << chunk.data_fragments[j].chunk_id << ";tier:" << chunk.data_fragments[j].tier_id << std::endl;
                             // avail_frags[num_avail_frags] = reinterpret_cast<char*>(const_cast<char*>(chunk.data_fragments[j].frag.c_str()));
-                            const std::string& data_block = chunk.data_fragments[j].frag;
-                            std::cout << "string len:" << data_block.size() << std::endl;
-                            avail_frags[num_avail_frags] = const_cast<char*>(data_block.c_str());
+                            // const std::string& data_block = chunk.data_fragments[j].frag;
+                            // std::cout << "string len:" << data_block.size() << std::endl;
+                            // avail_frags[num_avail_frags] = const_cast<char*>(chunk.data_fragments[j].frag.c_str());
                             // std::cout << "frag.data: " << varDataValues.frag.data() << std::endl;
-                            // std::cout << "frag.data:size: "<< varDataValues.frag.size() << std::endl;
-                            // std::cout << "avail_frags: "<< avail_frags[num_avail_frags] << std::endl;
                             // data_reader_engine.Get(varDataValues, avail_frags[num_avail_frags], adios2::Mode::Sync);
                             // data_reader_engine.Close();
                             //avail_frags[j] = encodedValues.data();
-                            num_avail_frags++;
+                            // num_avail_frags++;
+                            }
                         }
                         std::cout << "checking parities" << std::endl;
-                        for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
+                        // for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
+                        for (size_t j = 0; j < chunk.parity_fragments.size(); j++)
                         {
                             /* check if parity chunks are avaialble */
                             if (std::find(unavailableSiteList.begin(), unavailableSiteList.end(), j+dataTiersECParam_k[i]) != unavailableSiteList.end())
@@ -673,6 +685,10 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                                 std::cout << "cannot access parity chunk " << j << " since site " << j+dataTiersECParam_k[i] << " is unavailable! skip!" << std::endl;
                                 continue;
                             }
+                            if (chunk.parity_fragments[j].frag.empty()) {
+                                std::cout << "frag parity is null" << std::endl;
+                                nullFrag++;
+                            } else {
                             // adios2::Engine parity_reader_engine =
                             //     reader_io.Open(dataTiersParityLocations[i][j], adios2::Mode::Read); 
                             // std::string varParityValuesName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j);
@@ -690,8 +706,18 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                             // if (avail_frags[num_avail_frags] != nullptr) {
                             //     memcpy(avail_frags[num_avail_frags], chunk.parity_fragments[j].frag.data(), chunk.parity_fragments[j].frag.size());
                             // }
-                            const std::string& data_block = chunk.parity_fragments[j].frag;
-                            avail_frags[num_avail_frags] = const_cast<char*>(data_block.c_str());
+                            // const std::string& data_block = chunk.parity_fragments[j].frag;
+                            if (avail_frags[num_avail_frags] != nullptr) {
+                                // Copy the data from chunk.data_fragments[j].frag into the allocated memory
+                                memcpy(avail_frags[num_avail_frags], chunk.parity_fragments[j].frag.c_str(), chunk.parity_fragments[j].frag.size());
+
+                                // Increment the index for the next available fragment
+                                num_avail_frags++;
+                            } else {
+                                std::cerr << "Memory allocation failed!" << std::endl;
+                                // Handle the case when memory allocation fails
+                            }
+                            // avail_frags[num_avail_frags] = const_cast<char*>(chunk.parity_fragments[j].frag.c_str());
                             std::cout << "frag parity id:" << chunk.parity_fragments[j].fragment_id << std::endl;
                             std::cout << "frag.parity:size: "<< chunk.parity_fragments[j].frag.size() << std::endl;
                             // std::cout << "size of char: " << sizeof(chunk.parity_fragments[j].frag);
@@ -701,7 +727,8 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                             // parity_reader_engine.Get(varParityValues, avail_frags[num_avail_frags], adios2::Mode::Sync);
                             // parity_reader_engine.Close();
                             //avail_frags[j+storageTiersECParam_k[i]] = encodedValues.data();
-                            num_avail_frags++;
+                            // num_avail_frags++;
+                            }
                         }    
                         assert(num_avail_frags > 0);
                         // std::cout << "avail_frags: " << avail_frags << std::endl;
@@ -750,6 +777,8 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                     dataTiersValues[i] = oneDArray;
 
                     dataTiersRecovered++;   
+                    std::cout << "Data tiers recovered: " << dataTiersRecovered << std::endl;
+                    std::cout << "Null fragments: " << nullFrag << std::endl;
                 }
                 std::cout << dataTiersRecovered << " data tiers recovered!" << std::endl;
                 if (dataTiersRecovered == 0)
@@ -835,7 +864,7 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
 struct Client {
     boost::asio::io_service io_service;
     udp::socket socket{io_service};
-    boost::array<char, 8192> recv_buffer;
+    boost::array<char, 32768> recv_buffer;
     udp::endpoint remote_endpoint;
     boost::asio::deadline_timer timer{io_service};
 
@@ -911,10 +940,6 @@ struct Client {
                     newTier.m = myFragment.m;
                     newTier.w = myFragment.w;
                     newTier.hd = myFragment.hd;
-                    std:: cout << "Tier:" << newTier.id << "K:" << newTier.k << std::endl;
-                    std:: cout << "Tier:" << newTier.id << "M:" << newTier.m << std::endl;
-                    std:: cout << "Tier:" << newTier.id << "W:" << newTier.w << std::endl;
-                    std:: cout << "Tier:" << newTier.id << "HD:" << newTier.hd << std::endl;
 
                     Chunk newChunk;
                     newChunk.id = myFragment.chunk_id;
@@ -960,10 +985,7 @@ struct Client {
 
                 var1.var_squared_errors.rows = received_message.var_squared_errors().rows();
                 var1.var_squared_errors.cols = received_message.var_squared_errors().cols();
-                // for (int i = 0; i < received_message.var_squared_errors().content_size(); ++i) {
-                //     uint64_t content_value = received_message.var_squared_errors().content(i);  
-                //     var1.var_squared_errors.content.push_back(content_value);            
-                // }
+
                 var1.var_squared_errors.content.insert(
                     var1.var_squared_errors.content.end(),
                     received_message.var_squared_errors().content().begin(),
@@ -1001,10 +1023,6 @@ struct Client {
                 tier.m = received_message.m();
                 tier.w = received_message.w();
                 tier.hd = received_message.hd();
-                std:: cout << "Tier:" << tier.id << "K:" << tier.k << std::endl;
-                std:: cout << "Tier:" << tier.id << "M:" << tier.m << std::endl;
-                std:: cout << "Tier:" << tier.id << "W:" << tier.w << std::endl;
-                std:: cout << "Tier:" << tier.id << "HD:" << tier.hd << std::endl;
                 chunk.id = myFragment.chunk_id;
                 
                 if (myFragment.is_data) {
@@ -1019,8 +1037,8 @@ struct Client {
             previousTierId = received_message.tier_id();
             previousVarName = received_message.var_name();
             previousChunkId = received_message.chunk_id();
-
-            std::cout << "received frag: " << received_message.fragment_id() << std::endl;
+            std::cout << "received frag data id:" << received_message.fragment_id() << ";chunk:" << received_message.chunk_id() << ";tier:" << received_message.tier_id() << std::endl;
+            std::cout << "received frag size: " << received_message.frag().size() << std::endl;
             
         }
         //std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
@@ -1059,7 +1077,7 @@ struct Client {
 
         std::cout << "Receiving\n";
         io_service.run();
-        std::cout << "Receiver exit\n";
+        std::cout << "Receiver exit\nStarting recovery\n";
         for (int i = 0; i < variables.size(); i++) {
             restoreData(variables[i], 0, 0, 0, rawDataName);
         }

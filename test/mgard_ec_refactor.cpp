@@ -312,31 +312,6 @@ std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& origin
     return splitVectors;
 }
 
-// template <typename T>
-// std::vector<std::vector<T>> split(const std::vector<T>& input, size_t chunkSize) {
-//   if (chunkSize == 0) {
-//     throw std::runtime_error("chunkSize must be greater than 0");
-//   }
-
-//   std::vector<std::vector<T>> chunks;
-//   size_t numChunks = std::ceil(static_cast<double>(input.size()) / chunkSize);
-
-//   for (size_t i = 0; i < numChunks; ++i) {
-//     size_t startIndex = i * chunkSize;
-//     size_t endIndex = std::min((i + 1) * chunkSize, input.size());
-
-//     std::vector<T> chunk;
-
-//     for (size_t j = startIndex; j < endIndex; ++j) {
-//       chunk.push_back(input[j]);
-//     }
-
-//     chunks.push_back(chunk);
-//   }
-
-//   return chunks;
-// }
-
 void sender(const DATA::Fragment& message) {
     std::string serialized_data;
     if (!message.SerializeToString(&serialized_data)) {
@@ -1301,11 +1276,13 @@ int main(int argc, char *argv[])
                         // std::string buffer_str(reinterpret_cast<char*>(encoded_data[j]), encoded_fragment_len);
                         
                         std::string data_str(frag);
-                        protoFragment1.set_frag(encoded_data[j], encoded_fragment_len);
+                        // protoFragment1.set_frag(encoded_data[j], encoded_fragment_len);
+                        protoFragment1.set_frag(frag, encoded_fragment_len);
                         protoFragment1.set_is_data(true);
                         protoFragment1.set_tier_id(i);
                         protoFragment1.set_chunk_id(k);
                         protoFragment1.set_fragment_id(j);
+                        std::cout << "frag id:" << j << ";chunk id:" << k << ";tier id:" << i << std::endl;
                         // setting variable parameters
                         protoFragment1.set_var_name(variableName);
                         *protoFragment1.mutable_var_table_content() = protoQueryTable;
@@ -1365,9 +1342,9 @@ int main(int argc, char *argv[])
                         // std::string block_data(encoded_data[j]);
                         // protoFragment2.add_frag(frag);
                         // std::string buffer_str(reinterpret_cast<char*>(encoded_parity[j]), encoded_fragment_len);
-                        std::string data_str(frag);
-                        protoFragment2.set_frag(encoded_parity[j], encoded_fragment_len);                      
-                        
+                        // std::string data_str(frag);
+                        // protoFragment2.set_frag(encoded_parity[j], encoded_fragment_len);                      
+                        protoFragment2.set_frag(frag, encoded_fragment_len);  
                         protoFragment2.set_is_data(false);
                         protoFragment2.set_tier_id(i);
                         protoFragment2.set_chunk_id(k);
