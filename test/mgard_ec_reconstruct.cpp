@@ -447,20 +447,20 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
         }
         std::cout << std::endl;
 
-        // adios2::ADIOS adios;
-        // adios2::IO reader_io = adios.DeclareIO("ReaderIO");
-        // adios2::Engine rawdata_reader_engine =
-        //     reader_io.Open(rawDataFileName, adios2::Mode::Read);   
-        // auto rawVariable = reader_io.InquireVariable<T>(variableName);
-        // size_t rawVariableSize = 1;
-        // for (size_t i = 0; i < rawVariable.Shape().size(); i++)
-        // {
-        //     rawVariableSize *= rawVariable.Shape()[i];
-        // }
+        adios2::ADIOS adios;
+        adios2::IO reader_io = adios.DeclareIO("ReaderIO");
+        adios2::Engine rawdata_reader_engine =
+            reader_io.Open(rawDataFileName, adios2::Mode::Read);   
+        auto rawVariable = reader_io.InquireVariable<T>(variableName);
+        size_t rawVariableSize = 1;
+        for (size_t i = 0; i < rawVariable.Shape().size(); i++)
+        {
+            rawVariableSize *= rawVariable.Shape()[i];
+        }
         // std::cout << "size of raw data is " << rawVariableSize << std::endl;
-        // std::vector<T> rawVariableData(rawVariableSize);
-        // rawdata_reader_engine.Get(rawVariable, rawVariableData.data(), adios2::Mode::Sync);
-        // rawdata_reader_engine.Close();
+        std::vector<T> rawVariableData(rawVariableSize);
+        rawdata_reader_engine.Get(rawVariable, rawVariableData.data(), adios2::Mode::Sync);
+        rawdata_reader_engine.Close();
 
         auto decomposer = MDR::MGARDOrthoganalDecomposer<T>();
         // auto decomposer = MDR::MGARDHierarchicalDecomposer<T>();
@@ -850,7 +850,7 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                 }
 
                 decomposer.recompose(reconstructedData.data(), reconstruct_dimensions, target_level);
-                // MGARD::print_statistics(rawVariableData.data(), reconstructedData.data(), rawVariableData.size()); 
+                MGARD::print_statistics(rawVariableData.data(), reconstructedData.data(), rawVariableData.size()); 
                 
             }
         }
@@ -864,7 +864,7 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
 struct Client {
     boost::asio::io_service io_service;
     udp::socket socket{io_service};
-    boost::array<char, 32768> recv_buffer;
+    boost::array<char, 8192> recv_buffer;
     udp::endpoint remote_endpoint;
     boost::asio::deadline_timer timer{io_service};
 
@@ -872,6 +872,8 @@ struct Client {
     std::int32_t previousTierId = -1;
     std::int32_t previousChunkId = -1;
     std::string rawDataName;
+    std::int32_t totalSites;
+    std::int32_t unavailableSites;
     std::vector<Fragment> fragments;
     std::vector<Variable> variables;
 
@@ -1079,7 +1081,7 @@ struct Client {
         io_service.run();
         std::cout << "Receiver exit\nStarting recovery\n";
         for (int i = 0; i < variables.size(); i++) {
-            restoreData(variables[i], 0, 0, 0, rawDataName);
+            restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
         }
     }
 };
@@ -1191,6 +1193,8 @@ int main(int argc, char *argv[])
     // Receiving values from UDP connection
     Client client;
     client.rawDataName = rawDataFileName;
+    client.totalSites = totalSites;
+    client.unavailableSites = unavaialbleSites;
     std::thread r([&] { client.Receiver(); });
 
     r.join();
