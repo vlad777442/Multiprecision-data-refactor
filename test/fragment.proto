@@ -54,7 +54,7 @@ message Fragment {
   int32 m = 2;
   int32 w = 3;
   int32 hd = 4;
-  string ec_backend_name = 5;
+  bytes ec_backend_name = 5;
   uint32 encoded_fragment_length = 6;
   //delete
   uint32 idx = 7;

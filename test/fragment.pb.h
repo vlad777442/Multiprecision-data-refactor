@@ -1175,13 +1175,13 @@ class Fragment PROTOBUF_FINAL :
   std::string* _internal_add_var_stopping_indices();
   public:
 
-  // string ec_backend_name = 5;
+  // bytes ec_backend_name = 5;
   void clear_ec_backend_name();
   const std::string& ec_backend_name() const;
   void set_ec_backend_name(const std::string& value);
   void set_ec_backend_name(std::string&& value);
   void set_ec_backend_name(const char* value);
-  void set_ec_backend_name(const char* value, size_t size);
+  void set_ec_backend_name(const void* value, size_t size);
   std::string* mutable_ec_backend_name();
   std::string* release_ec_backend_name();
   void set_allocated_ec_backend_name(std::string* ec_backend_name);
@@ -2625,7 +2625,7 @@ inline void Fragment::set_hd(::PROTOBUF_NAMESPACE_ID::int32 value) {
   // @@protoc_insertion_point(field_set:DATA.Fragment.hd)
 }
 
-// string ec_backend_name = 5;
+// bytes ec_backend_name = 5;
 inline void Fragment::clear_ec_backend_name() {
   ec_backend_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
@@ -2661,7 +2661,7 @@ inline void Fragment::set_ec_backend_name(const char* value) {
               GetArena());
   // @@protoc_insertion_point(field_set_char:DATA.Fragment.ec_backend_name)
 }
-inline void Fragment::set_ec_backend_name(const char* value,
+inline void Fragment::set_ec_backend_name(const void* value,
     size_t size) {
   
   ec_backend_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(

@@ -37,10 +37,12 @@ using namespace ROCKSDB_NAMESPACE;
 #include <adios2.h>
 #include <boost/asio.hpp>
 #include <iostream>
+#include <zmq.hpp>
 
 #define IPADDRESS "127.0.0.1" // "192.168.1.64"
 #define UDP_PORT 13251
 
+using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
 using boost::asio::ip::address;
 
@@ -192,22 +194,6 @@ void outputFragment(const DATA::Fragment& fragment) {
     std::cout << "tier_id: " << fragment.tier_id() << std::endl;
 }
 
-void outputTier(const DATA::Tier& tier) {
-    std::cout << "Tier Details:" << std::endl;
-    std::cout << "ID: " << tier.id() << std::endl;
-    std::cout << "K: " << tier.k() << std::endl;
-    std::cout << "M: " << tier.m() << std::endl;
-    std::cout << "W: " << tier.w() << std::endl;
-    std::cout << "HD: " << tier.hd() << std::endl;
-    std::cout << "ec_backend_name: " << tier.ec_backend_name() << std::endl;
-    std::cout << "encoded_fragment_length: " << tier.encoded_fragment_length() << std::endl;
-
-    // for (int i = 0; i < tier.fragment_size(); ++i) {
-    //     std::cout << "Fragment " << i + 1 << ":" << std::endl;
-    //     outputFragment(tier.fragment(i));
-    // }
-}
-
 void outputQueryTable(const DATA::QueryTable& queryTable) {
     int k = 1;
     int cols = queryTable.cols();
@@ -230,45 +216,6 @@ void outputQueryTable(const DATA::SquaredErrorsTable& queryTable) {
         k++;
     }
     std::cout << std::endl;
-}
-
-void outputVariable(const DATA::Variable& variable) {
-    std::cout << "Variable Details:" << std::endl;
-    std::cout << "Name: " << variable.name() << std::endl;
-    std::cout << "Type: " << variable.type() << std::endl;
-    std::cout << "Levels: " << variable.levels() << std::endl;
-    std::cout << "Level Error Bounds: ";
-    for (const auto& bound : variable.level_error_bounds()) {
-        std::cout << bound << " ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "Stopping Indices: ";
-    for (const auto& index : variable.stopping_indices()) {
-        std::cout << index << " ";
-    }
-
-    std::cout << "Query Table Content: " << variable.type() << std::endl;
-    outputQueryTable(variable.table_content());
-
-    std::cout << "All Squared Errors: " << variable.type() << std::endl;
-    outputQueryTable(variable.squared_errors());
-    
-    std::cout << "Number of Tiers: " << variable.tiers() << std::endl;
-
-    // for (int i = 0; i < variable.tiers(); ++i) {
-    //     std::cout << "Tier " << i << ":" << std::endl;
-    //     outputTier(variable.tier(i));
-    // }
-}
-
-void outputVariableCollection(const DATA::VariableCollection& variableCollection) {
-    std::cout << "Variable Collection:" << std::endl;
-
-    for (int i = 0; i < variableCollection.variables_size(); ++i) {
-        const DATA::Variable& var = variableCollection.variables(i);
-        outputVariable(var);
-    }
 }
 
 void calculateKAndAddToVector(std::vector<int>& dataTiersECParam_k, std::vector<int>& dataTiersECParam_m) {
@@ -312,22 +259,85 @@ std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& origin
     return splitVectors;
 }
 
-void sender(const DATA::Fragment& message) {
+void sender(boost::asio::io_service& io_service, udp::socket& socket, const DATA::Fragment& message) {
     std::string serialized_data;
     if (!message.SerializeToString(&serialized_data)) {
         std::cerr << "Failed to serialize the protobuf message." << std::endl;
         return;
     }
 
-    boost::asio::io_service io_service;
-    udp::socket socket(io_service);
     udp::endpoint remote_endpoint = udp::endpoint(address::from_string(IPADDRESS), UDP_PORT);
-    socket.open(udp::v4());
 
     boost::system::error_code err;
     auto sent = socket.send_to(boost::asio::buffer(serialized_data), remote_endpoint, 0, err);
-    socket.close();
-    // std::cout << "Sent Payload --- " << sent << "\n";
+
+    if (err) {
+        std::cerr << "Error sending data: " << err.message() << std::endl;
+    } else {
+        // Data sent successfully
+        // std::cout << "Sent Payload --- " << sent << "\n";
+    }
+}
+
+
+void senderTcp(boost::asio::io_service& io_service, tcp::socket& socket, const DATA::Fragment& message) {
+    std::string serialized_data;
+    if (!message.SerializeToString(&serialized_data)) {
+        std::cerr << "Failed to serialize the protobuf message." << std::endl;
+        return;
+    }
+
+    // boost::asio::io_service io_service;
+    // tcp::socket socket(io_service);
+
+    // tcp::endpoint remote_endpoint = tcp::endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT);
+
+    try {
+        // socket.connect(remote_endpoint);
+        boost::system::error_code err;
+        auto sent = boost::asio::write(socket, boost::asio::buffer(serialized_data), err);
+
+        if (err) {
+            std::cerr << "Error sending data: " << err.message() << std::endl;
+        } else {
+            // Data sent successfully
+            // std::cout << "Sent Payload --- " << sent << "\n";
+        }
+
+        // socket.close();
+    } catch (const std::exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+    }
+}
+
+// void senderZmq2(zmq::socket_t& socket, const DATA::Fragment& message) {
+//     // Serialize the message
+//     std::string serialized_message;
+//     message.SerializeToString(&serialized_message);
+
+//     // Send the message
+//     socket.send(zmq::buffer(serialized_message), zmq::send_flags::none);
+// }
+
+void send_protobuf_message(tcp::socket& socket, const DATA::Fragment& message) {
+    // Serialize the protobuf message
+    std::ostringstream serialized_message;
+    message.SerializeToOstream(&serialized_message);
+
+    // Append a newline character as the delimiter
+    serialized_message << '\n';
+
+    // Send the serialized protobuf message
+    boost::asio::write(socket, boost::asio::buffer(serialized_message.str()));
+}
+
+void senderZmq(zmq::socket_t& socket, const DATA::Fragment& message) {
+    // Serialize the message
+    std::string serialized_message;
+    message.SerializeToString(&serialized_message);
+
+    // Send the message
+    socket.send(zmq::buffer(serialized_message), zmq::send_flags::none);
 }
 
 // void sendDataZmq(const DATA::VariableCollection& variableCollection) {
@@ -407,9 +417,26 @@ int main(int argc, char *argv[])
     size_t total_mgard_levels = 0;
     size_t num_bitplanes = 0;
     std::string rocksDBPath;
+    std::vector<DATA::Fragment> fragments_vector;
 
     ec_backend_id_t backendID;
     size_t fragmentSize;
+
+    // boost::asio::io_service io_service;
+    // // udp::socket socket(io_service);
+    // // socket.open(udp::v4());
+    // tcp::socket socket2(io_service);
+
+    // tcp::endpoint remote_endpoint = tcp::endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT);
+    // socket2.connect(remote_endpoint);
+
+    //zmq
+    // initialize the ZeroMQ context with a single IO thread
+    zmq::context_t context{1};
+
+    // construct a REQ (request) socket and connect to the interface
+    zmq::socket_t socket{context, zmq::socket_type::push};
+    socket.connect("tcp://localhost:5555");
 
     for (size_t i = 0; i < argc; i++)
     {
@@ -452,15 +479,15 @@ int main(int argc, char *argv[])
                     {
                         dataTiersRelativeTolerance.push_back(atof(argv[j]));
                     } 
+                    // for (size_t j = i+2+dataTiers*2; j < i+2+dataTiers*3; j++)
+                    // {
+                    //     // dataTiersECParam_k.push_back(atoi(argv[j]));
+                    // }
                     for (size_t j = i+2+dataTiers*2; j < i+2+dataTiers*3; j++)
-                    {
-                        // dataTiersECParam_k.push_back(atoi(argv[j]));
-                    }
-                    for (size_t j = i+2+dataTiers*3; j < i+2+dataTiers*4; j++)
                     {
                         dataTiersECParam_m.push_back(atoi(argv[j]));
                     }
-                    for (size_t j = i+2+dataTiers*4; j < i+2+dataTiers*5; j++)
+                    for (size_t j = i+2+dataTiers*3; j < i+2+dataTiers*4; j++)
                     {
                         dataTiersECParam_w.push_back(atoi(argv[j]));
                     }
@@ -1167,8 +1194,6 @@ int main(int argc, char *argv[])
                 std::cout << varECBackendName << ", " << varECBackendResult << std::endl;  
 
                 
-                
-
                 std::cout << "Encoding tier chunks" << std::endl;
                 for (size_t k = 0; k < splitDataTiers[i].size(); k++)
                 {
@@ -1266,13 +1291,6 @@ int main(int argc, char *argv[])
                         protoFragment1.set_orig_data_size(orig_data_size);
                         protoFragment1.set_chksum_mismatch(0);
 
-                        // std::string block_data(encoded_data[j]);
-                        // protoFragment1.add_frag(frag);
-
-                        // std::string buffer_str(frag, encoded_fragment_len);
-                        // protoFragment1.add_frag(buffer_str);
-                        // protoFragment1.add_frag(frag);
-
                         // std::string buffer_str(reinterpret_cast<char*>(encoded_data[j]), encoded_fragment_len);
                         
                         std::string data_str(frag);
@@ -1282,7 +1300,7 @@ int main(int argc, char *argv[])
                         protoFragment1.set_tier_id(i);
                         protoFragment1.set_chunk_id(k);
                         protoFragment1.set_fragment_id(j);
-                        std::cout << "frag id:" << j << ";chunk id:" << k << ";tier id:" << i << std::endl;
+                        // std::cout << "frag id:" << j << ";chunk id:" << k << ";tier id:" << i << std::endl;
                         // setting variable parameters
                         protoFragment1.set_var_name(variableName);
                         *protoFragment1.mutable_var_table_content() = protoQueryTable;
@@ -1301,7 +1319,11 @@ int main(int argc, char *argv[])
                         protoFragment1.set_var_tiers(numTiers);
                         protoFragment1.set_encoded_fragment_length(encoded_fragment_len);
                     
-                        sender(protoFragment1);
+                        // senderTcp(io_service, socket2, protoFragment1);
+                        // send_protobuf_message(socket2, protoFragment1);
+                        // senderTcp(io_service, socket2, protoFragment1);
+                        // fragments_vector.push_back(protoFragment1);
+                        senderZmq(socket, protoFragment1);
                     }
                     for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
                     {
@@ -1334,16 +1356,7 @@ int main(int argc, char *argv[])
                         protoFragment2.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
                         protoFragment2.set_orig_data_size(orig_data_size);
                         protoFragment2.set_chksum_mismatch(0);
-                        
-                        // std::string buffer_str(reinterpret_cast<char*>(encoded_data[j]), encoded_fragment_len);
-
-                        // protoFragment2.add_frag(frag);
-                        // protoFragment2.add_frag(frag, strlen(frag));
-                        // std::string block_data(encoded_data[j]);
-                        // protoFragment2.add_frag(frag);
-                        // std::string buffer_str(reinterpret_cast<char*>(encoded_parity[j]), encoded_fragment_len);
-                        // std::string data_str(frag);
-                        // protoFragment2.set_frag(encoded_parity[j], encoded_fragment_len);                      
+                            
                         protoFragment2.set_frag(frag, encoded_fragment_len);  
                         protoFragment2.set_is_data(false);
                         protoFragment2.set_tier_id(i);
@@ -1366,14 +1379,18 @@ int main(int argc, char *argv[])
                         protoFragment2.set_var_tiers(numTiers);
                         protoFragment2.set_encoded_fragment_length(encoded_fragment_len);
 
-                        sender(protoFragment2);
+                        // senderTcp(io_service, socket2, protoFragment2);
+                        // fragments_vector.push_back(protoFragment2);
+                        // senderTcp(io_service, socket2, protoFragment2);
+                        // send_protobuf_message(socket2, protoFragment2);
+                        senderZmq(socket, protoFragment2);
                     }
                     // *protoVariable.add_tier() = protoTier;
 
                     rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
                     assert(rc == 0);    
                     assert(0 == liberasurecode_instance_destroy(desc));   
-                } //end
+                }
                 std::cout << "Encoded tier: " << i << std::endl;
 
                 // char **encoded_data = NULL, **encoded_parity = NULL;
@@ -1543,6 +1560,7 @@ int main(int argc, char *argv[])
             *variableCollection.add_variables() = protoVariable;
         } 
     }
+    
     std::cout << "Completed!" << std::endl;
     for (auto it : data_writer_engines)
     {
@@ -1557,6 +1575,8 @@ int main(int argc, char *argv[])
     reader_engine.Close();
 
     delete db;
+
+    // socket2.close();s
 
     //Output proto data
     //outputVariableCollection(variableCollection);

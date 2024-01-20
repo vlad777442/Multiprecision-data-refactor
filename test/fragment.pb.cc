@@ -249,7 +249,7 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "\n\002hd\030\005 \001(\005\022\027\n\017ec_backend_name\030\006 \001(\t\022\037\n\027e"
   "ncoded_fragment_length\030\007 \001(\004\"\254\004\n\010Fragmen"
   "t\022\t\n\001k\030\001 \001(\005\022\t\n\001m\030\002 \001(\005\022\t\n\001w\030\003 \001(\005\022\n\n\002hd"
-  "\030\004 \001(\005\022\027\n\017ec_backend_name\030\005 \001(\t\022\037\n\027encod"
+  "\030\004 \001(\005\022\027\n\017ec_backend_name\030\005 \001(\014\022\037\n\027encod"
   "ed_fragment_length\030\006 \001(\r\022\013\n\003idx\030\007 \001(\r\022\014\n"
   "\004size\030\010 \001(\r\022\026\n\016orig_data_size\030\t \001(\004\022\027\n\017c"
   "hksum_mismatch\030\n \001(\r\022\022\n\nbackend_id\030\013 \001(\r"
@@ -1868,12 +1868,11 @@ const char* Fragment::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::i
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // string ec_backend_name = 5;
+      // bytes ec_backend_name = 5;
       case 5:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 42)) {
           auto str = _internal_mutable_ec_backend_name();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
-          CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "DATA.Fragment.ec_backend_name"));
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -2086,13 +2085,9 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(4, this->_internal_hd(), target);
   }
 
-  // string ec_backend_name = 5;
+  // bytes ec_backend_name = 5;
   if (this->ec_backend_name().size() > 0) {
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->_internal_ec_backend_name().data(), static_cast<int>(this->_internal_ec_backend_name().length()),
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "DATA.Fragment.ec_backend_name");
-    target = stream->WriteStringMaybeAliased(
+    target = stream->WriteBytesMaybeAliased(
         5, this->_internal_ec_backend_name(), target);
   }
 
@@ -2284,10 +2279,10 @@ size_t Fragment::ByteSizeLong() const {
       var_stopping_indices_.Get(i));
   }
 
-  // string ec_backend_name = 5;
+  // bytes ec_backend_name = 5;
   if (this->ec_backend_name().size() > 0) {
     total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_ec_backend_name());
   }
 
