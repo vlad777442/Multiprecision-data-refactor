@@ -39,7 +39,7 @@ set (ROCKSDB_INCLUDES "/usr/local/include")
 add_library(${PROJECT_NAME} INTERFACE)
 target_include_directories(${PROJECT_NAME} INTERFACE include)
 #added lo tink libz
-target_link_libraries(${PROJECT_NAME} INTERFACE z bz2 snappy lz4 ${Protobuf_LIBRARIES} zmq)  # Add 'snappy' and 'lz4' 
+target_link_libraries(${PROJECT_NAME} INTERFACE z bz2 snappy lz4 ${Protobuf_LIBRARIES} zmq enet)  # Add 'snappy' and 'lz4' 
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION include)
 add_subdirectory (test)

@@ -38,6 +38,9 @@ using namespace ROCKSDB_NAMESPACE;
 #include <boost/asio.hpp>
 #include <iostream>
 #include <zmq.hpp>
+#include <thread>
+#include <chrono>
+#include <enet/enet.h>
 
 #define IPADDRESS "127.0.0.1" // "192.168.1.64"
 #define UDP_PORT 13251
@@ -319,18 +322,6 @@ void senderTcp(boost::asio::io_service& io_service, tcp::socket& socket, const D
 //     socket.send(zmq::buffer(serialized_message), zmq::send_flags::none);
 // }
 
-void send_protobuf_message(tcp::socket& socket, const DATA::Fragment& message) {
-    // Serialize the protobuf message
-    std::ostringstream serialized_message;
-    message.SerializeToOstream(&serialized_message);
-
-    // Append a newline character as the delimiter
-    serialized_message << '\n';
-
-    // Send the serialized protobuf message
-    boost::asio::write(socket, boost::asio::buffer(serialized_message.str()));
-}
-
 void senderZmq(zmq::socket_t& socket, const DATA::Fragment& message) {
     // Serialize the message
     std::string serialized_message;
@@ -339,6 +330,24 @@ void senderZmq(zmq::socket_t& socket, const DATA::Fragment& message) {
     // Send the message
     socket.send(zmq::buffer(serialized_message), zmq::send_flags::none);
 }
+
+void sendProtobufMessageEnet(ENetPeer* peer, const DATA::Fragment& message) {
+    // Serialize the protobuf message to a string
+    std::string serialized_message;
+    if (!message.SerializeToString(&serialized_message)) {
+        std::cerr << "Failed to serialize protobuf message.\n";
+        return;
+    }
+
+    // Create an ENet packet with the serialized message
+    ENetPacket* packet = enet_packet_create(serialized_message.c_str(), serialized_message.size(), ENET_PACKET_FLAG_RELIABLE);
+
+    // Send the packet
+    enet_peer_send(peer, 0, packet);
+
+    std::cout << "Protobuf message with fragment id sent: " << message.fragment_id() << std::endl;
+}
+
 
 // void sendDataZmq(const DATA::VariableCollection& variableCollection) {
 //     // using namespace std::chrono_literals;
@@ -422,9 +431,9 @@ int main(int argc, char *argv[])
     ec_backend_id_t backendID;
     size_t fragmentSize;
 
-    // boost::asio::io_service io_service;
-    // // udp::socket socket(io_service);
-    // // socket.open(udp::v4());
+    boost::asio::io_service io_service;
+    udp::socket socket(io_service);
+    socket.open(udp::v4());
     // tcp::socket socket2(io_service);
 
     // tcp::endpoint remote_endpoint = tcp::endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT);
@@ -432,11 +441,52 @@ int main(int argc, char *argv[])
 
     //zmq
     // initialize the ZeroMQ context with a single IO thread
-    zmq::context_t context{1};
+    // zmq::context_t context{1};
 
-    // construct a REQ (request) socket and connect to the interface
-    zmq::socket_t socket{context, zmq::socket_type::push};
-    socket.connect("tcp://localhost:5555");
+    // // construct a REQ (request) socket and connect to the interface
+    // zmq::socket_t socket{context, zmq::socket_type::push};
+    // socket.connect("tcp://localhost:5555");
+
+    // //Enet Start
+    // if (enet_initialize() != 0) {
+    //     std::cerr << "Failed to initialize ENet.\n";
+    //     return EXIT_FAILURE;
+    // }
+
+    // ENetAddress address;
+    // ENetHost* client;
+    // ENetPeer* peer;
+
+    // // Create a host
+    // client = enet_host_create(NULL, 1, 2, 0, 0);
+    // if (client == NULL) {
+    //     std::cerr << "Failed to create ENet client.\n";
+    //     enet_deinitialize();
+    //     return EXIT_FAILURE;
+    // }
+
+    // // Set the address and port of the server to connect to
+    // enet_address_set_host(&address, "127.0.0.1");
+    // address.port = 1234;
+
+    // // Connect to the server
+    // peer = enet_host_connect(client, &address, 2, 0);
+    // if (peer == NULL) {
+    //     std::cerr << "No available peers for initiating an ENet connection.\n";
+    //     enet_host_destroy(client);
+    //     enet_deinitialize();
+    //     return EXIT_FAILURE;
+    // }
+
+    // // Wait until the connection is established (or fails)
+    // ENetEvent event;
+    // if (enet_host_service(client, &event, 5000) > 0 && event.type == ENET_EVENT_TYPE_CONNECT) {
+    //     std::cout << "Connected to the server!\n";
+    //     DATA::Fragment tmp;
+    //     sendProtobufMessageEnet(peer, tmp);
+    // //Enet End
+
+    //
 
     for (size_t i = 0; i < argc; i++)
     {
@@ -857,8 +907,8 @@ int main(int argc, char *argv[])
             for (const auto& vec : dataTiersValues) {
                 std::vector<std::vector<uint8_t>> splitResult = splitVector(vec, numberOfChunks[chunkCnt]);
                 splitDataTiers.push_back(splitResult);
-                chunkCnt++;
                 std::cout << "splitting by " << numberOfChunks[chunkCnt] << " chunks" << std::endl;
+                chunkCnt++;
             }
             // splitDataTiers.push_back(dataTiersValues);
             
@@ -1323,7 +1373,13 @@ int main(int argc, char *argv[])
                         // send_protobuf_message(socket2, protoFragment1);
                         // senderTcp(io_service, socket2, protoFragment1);
                         // fragments_vector.push_back(protoFragment1);
-                        senderZmq(socket, protoFragment1);
+                        // senderZmq(socket, protoFragment1);
+
+                        // ENet
+                        // sendProtobufMessageEnet(peer, protoFragment1);
+                        // enet_host_flush(client);
+                        sender(io_service, socket, protoFragment1);
+                        std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
                     for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
                     {
@@ -1382,9 +1438,16 @@ int main(int argc, char *argv[])
                         // senderTcp(io_service, socket2, protoFragment2);
                         // fragments_vector.push_back(protoFragment2);
                         // senderTcp(io_service, socket2, protoFragment2);
-                        // send_protobuf_message(socket2, protoFragment2);
-                        senderZmq(socket, protoFragment2);
+
+                        // ENet
+                        // sendProtobufMessageEnet(peer, protoFragment2);
+                        // enet_host_flush(client);
+
+                        sender(io_service, socket, protoFragment2);
+                        // // senderZmq(socket, protoFragment2);
+                        std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
+                    
                     // *protoVariable.add_tier() = protoTier;
 
                     rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
@@ -1560,7 +1623,33 @@ int main(int argc, char *argv[])
             *variableCollection.add_variables() = protoVariable;
         } 
     }
+
+    // std::cout << "Completed!" << std::endl;
+    // for (auto it : data_writer_engines)
+    // {
+    //     it.second.Close();
+    // }
+    // for (auto it : parity_writer_engines)
+    // {
+    //     it.second.Close();
+    // }
+    // //metadata_writer_engine.Close();
     
+    // reader_engine.Close();
+
+    // delete db;
+
+    // //enet end
+    // } else {
+    //     std::cerr << "Failed to connect to the server or timed out.\n";
+    //     enet_peer_reset(peer);
+    // }
+
+    // // Clean up
+    // enet_host_destroy(client);
+    // enet_deinitialize();
+    // //enet end
+
     std::cout << "Completed!" << std::endl;
     for (auto it : data_writer_engines)
     {
