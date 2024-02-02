@@ -41,8 +41,8 @@
 #include <zmq.hpp>
 #include <enet/enet.h>
 
-#define IPADDRESS "127.0.0.1" // "192.168.1.64"
-#define UDP_PORT 13251
+#define IPADDRESS "10.51.197.229" // "192.168.1.64"
+#define UDP_PORT 33898
 #define TIMEOUT_DURATION_SECONDS 30
 
 using namespace boost::asio;
