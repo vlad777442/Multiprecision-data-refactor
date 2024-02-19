@@ -14,7 +14,7 @@ int main() {
 
     // construct a REP (reply) socket and bind to interface
     zmq::socket_t socket{context, zmq::socket_type::pull};
-    socket.bind("tcp://*:5555");
+    socket.bind("tcp://*:4343");
 
     // create an instance of your Protobuf message
     PROTO::MyMessage response_message; // Replace with your actual message name and namespace
