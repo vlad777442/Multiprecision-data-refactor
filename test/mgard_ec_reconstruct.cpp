@@ -40,6 +40,8 @@
 #include <chrono>
 #include <zmq.hpp>
 #include <enet/enet.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
 
 #define IPADDRESS "10.51.197.229" // "192.168.1.64"
 #define UDP_PORT 33898
@@ -212,6 +214,85 @@ struct Variable {
     std::vector<Tier> tiers;
 };
 
+std::vector<double> getRetransmissionData() {
+    std::ifstream file("percent_retrans_values.txt");
+    std::vector<double> values;
+
+    double temp;
+    while (file >> temp) {
+        values.push_back(temp);
+    }
+    // std::cout << "Values read from file:" << std::endl;
+    // for (double value : values) {
+    //     std::cout << value << std::endl;
+    // }
+    return values;
+}
+
+// Function to compute the log likelihood of the data given parameters
+double logLikelihood(const std::vector<double>& data, double shape, double scale) {
+    double logLikelihood = 0.0;
+    for (double d : data) {
+        logLikelihood += log(shape / scale) + (shape - 1) * log(d / scale) - pow(d / scale, shape);
+    }
+    return logLikelihood;
+}
+
+// Expectation step: compute the expected value of the latent variable
+double expectation(const std::vector<double>& data, double shape, double scale) {
+    double expectation = 0.0;
+    for (double d : data) {
+        expectation += pow(d / scale, shape) * log(d / scale);
+    }
+    return expectation;
+}
+
+
+// Function to estimate Weibull parameters from data
+std::pair<double, double> estimateWeibullParameters(const std::vector<double>& data) {
+    double sum = 0.0;
+    for (double d : data) {
+        sum += log(d);
+    }
+    double n = data.size();
+    double shape = n / sum;
+    
+    double scale = 0.0;
+    for (double d : data) {
+        scale += pow(d, shape);
+    }
+    scale = pow(scale / n, 1.0 / shape);
+    
+    return std::make_pair(shape, scale);
+}
+
+// void corruptProtobufObject(DATA::Fragment& message, gsl_rng* r, double shape, double scale) {
+//     // Example: Corrupting a numerical field
+//     double originalValue = message.numerical_field();
+//     double corruptionFactor = gsl_ran_weibull(r, shape, scale);
+//     double corruptedValue = originalValue * (1.0 + corruptionFactor); // Apply corruption
+//     message.set_numerical_field(corruptedValue);
+// }
+
+DATA::Fragment corruptFragment(const Fragment& originalFragment, gsl_rng* r, double shape, double scale) {
+    Fragment corruptedFragment = originalFragment;
+
+    size_t originalLength = corruptedFragment.ec_backend_name.size();
+
+    // Corrupt the ec_backend_name field
+    for (size_t i = 0; i < originalLength; ++i) {
+        // Determine if the character should be corrupted based on Weibull distribution
+        double randValue = gsl_ran_weibull(r, shape, scale);
+        if (randValue > 0.5) { // Example: Corrupt if random value > 0.5
+            // Replace the character with 'X' (you can adjust this logic)
+            corruptedFragment.ec_backend_name[i] = 'X';
+        }
+    }
+
+    return corruptedFragment;
+}
+
+
 int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavaialbleSites = 0, std::string rawDataFileName = "NYXrestored.bp") {
     std::string variableName = var1.var_name;
     DB* db;
@@ -257,6 +338,20 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
     std::unique_ptr<uint32_t> pVarTiersResult = std::make_unique<uint32_t>(var1.tiers.size());
     tiers = *pVarTiersResult;
     std::cout << varTiersName << ", " << tiers << std::endl;       
+
+    // Reading retransmission data and setting Weibull distribution parameters
+    std::pair<double, double> weibullParams = estimateWeibullParameters(getRetransmissionData());
+    double shape = weibullParams.first;
+    double scale = weibullParams.second;
+
+    // Initialize random number generator
+    const gsl_rng_type * T;
+    gsl_rng * r;
+    gsl_rng_env_setup();
+    T = gsl_rng_default;
+    r = gsl_rng_alloc(T);
+
+    //
 
     std::vector<int> dataTiersECParam_k(tiers);
     std::vector<int> dataTiersECParam_m(tiers);
@@ -501,6 +596,8 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                 }
                 std::cout << std::endl;
 
+                // Set up timer parameters
+                int timerValueSeconds = 5; 
                 size_t dataTiersRecovered = 0;
                 for (size_t i = 0; i < var1.tiers.size(); ++i)
                 {
@@ -732,7 +829,13 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                         rc = liberasurecode_decode(desc, avail_frags, num_avail_frags,
                                                 encoded_fragment_len, 1,
                                                 &decoded_data, &decoded_data_len);   
-                        assert(0 == rc);
+                        //assert(0 == rc);
+                        if (rc != 0)
+                        {
+                            std::cout << "Tier: " << i << " cannot be reconstructed due to a corrupted fragment. Skipping Tier..." << std::endl;
+                            break;
+                        }
+                        
                         std::cout << "rc: " << rc << std::endl;
 
                         uint8_t *tmp = static_cast<uint8_t*>(static_cast<void *>(decoded_data));  
@@ -2020,6 +2123,9 @@ int main(int argc, char *argv[])
 
     r.join();
     std::cout << "Finished receiving" << std::endl;
+    // Free the random number generator
+    gsl_rng_free(r);
+
     return 0;
 }
 // add sleep
