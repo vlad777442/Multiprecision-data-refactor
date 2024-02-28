@@ -25,7 +25,7 @@ int main() {
         }
 
         // Receiver endpoint
-        udp::endpoint receiver_endpoint(boost::asio::ip::address::from_string("10.51.197.229"), 33898); // Receiver IP and port
+        udp::endpoint receiver_endpoint(boost::asio::ip::address::from_string("10.51.197.229"), 34565); // Receiver IP and port
 
         while (true)
         {
