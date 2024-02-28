@@ -42,8 +42,10 @@ using namespace ROCKSDB_NAMESPACE;
 #include <chrono>
 #include <enet/enet.h>
 
-#define IPADDRESS "127.0.0.1" // "192.168.1.64"
-#define UDP_PORT 13251
+// #define IPADDRESS "127.0.0.1" // "192.168.1.64"
+// #define UDP_PORT 13251
+#define IPADDRESS "10.51.197.229" // "192.168.1.64"
+#define UDP_PORT 33898
 
 using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
@@ -262,7 +264,7 @@ std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& origin
     return splitVectors;
 }
 
-void sender(boost::asio::io_service& io_service, udp::socket& socket, const DATA::Fragment& message) {
+void senderBoost(boost::asio::io_service& io_service, udp::socket& socket, const DATA::Fragment& message) {
     std::string serialized_data;
     if (!message.SerializeToString(&serialized_data)) {
         std::cerr << "Failed to serialize the protobuf message." << std::endl;
@@ -366,24 +368,24 @@ int main(int argc, char *argv[])
     ec_backend_id_t backendID;
     size_t fragmentSize;
     // udp boost start
-    // boost::asio::io_service io_service;
-    // udp::socket socket(io_service);
-    // socket.open(udp::v4());
+    boost::asio::io_service io_service;
+    udp::socket socket(io_service);
+    socket.open(udp::v4());
     // tcp::socket socket2(io_service);
     //udp boost end
 
     // tcp::endpoint remote_endpoint = tcp::endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT);
     // socket2.connect(remote_endpoint);
 
-    //zmq start
-    // initialize the ZeroMQ context with a single IO thread
-    zmq::context_t context{1};
+    // //zmq start
+    // // initialize the ZeroMQ context with a single IO thread
+    // zmq::context_t context{1};
 
-    // construct a REQ (request) socket and connect to the interface
-    zmq::socket_t socket{context, zmq::socket_type::push};
-    socket.connect("tcp://10.51.197.229:33898");
-    // socket.connect("tcp://localhost:5555");
-    //zmq end
+    // // construct a REQ (request) socket and connect to the interface
+    // zmq::socket_t socket{context, zmq::socket_type::push};
+    // socket.connect("tcp://10.51.197.229:33898");
+    // // socket.connect("tcp://localhost:5555");
+    // //zmq end
 
     // //Enet Start
     // if (enet_initialize() != 0) {
@@ -1311,12 +1313,12 @@ int main(int argc, char *argv[])
                         // send_protobuf_message(socket2, protoFragment1);
                         // senderTcp(io_service, socket2, protoFragment1);
                         // fragments_vector.push_back(protoFragment1);
-                        senderZmq(socket, protoFragment1);
+                        // senderZmq(socket, protoFragment1);
 
                         // ENet
                         // sendProtobufMessageEnet(peer, protoFragment1);
                         // enet_host_flush(client);
-                        // sender(io_service, socket, protoFragment1);
+                        senderBoost(io_service, socket, protoFragment1);
                         // std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
                     for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
@@ -1381,8 +1383,8 @@ int main(int argc, char *argv[])
                         // sendProtobufMessageEnet(peer, protoFragment2);
                         // enet_host_flush(client);
 
-                        // sender(io_service, socket, protoFragment2);
-                        senderZmq(socket, protoFragment2);
+                        senderBoost(io_service, socket, protoFragment2);
+                        // senderZmq(socket, protoFragment2);
                         // std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
                     
