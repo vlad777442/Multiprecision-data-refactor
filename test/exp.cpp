@@ -57,7 +57,7 @@ int main() {
     // Output results
     std::cout << "True lambda: " << true_lambda << std::endl;
     std::cout << "Estimated lambda: " << estimated_lambda << std::endl;
-    std::cout << "Total packet loss: " << total_loss << std::endl;
+    std::cout << "Total packet loss: " << total_loss <<  " out of " << num_packets << std::endl;
     std::cout << "Percentage of packet loss: " << percentage_loss << "%" << std::endl;
 
     return 0;

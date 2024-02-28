@@ -313,15 +313,6 @@ void senderTcp(boost::asio::io_service& io_service, tcp::socket& socket, const D
     }
 }
 
-// void senderZmq2(zmq::socket_t& socket, const DATA::Fragment& message) {
-//     // Serialize the message
-//     std::string serialized_message;
-//     message.SerializeToString(&serialized_message);
-
-//     // Send the message
-//     socket.send(zmq::buffer(serialized_message), zmq::send_flags::none);
-// }
-
 void senderZmq(zmq::socket_t& socket, const DATA::Fragment& message) {
     // Serialize the message
     std::string serialized_message;
@@ -348,68 +339,12 @@ void sendProtobufMessageEnet(ENetPeer* peer, const DATA::Fragment& message) {
     std::cout << "Protobuf message with fragment id sent: " << message.fragment_id() << std::endl;
 }
 
-
-// void sendDataZmq(const DATA::VariableCollection& variableCollection) {
-//     // using namespace std::chrono_literals;
-
-//     // initialize the ZeroMQ context with a single IO thread
-//     zmq::context_t context{1};
-
-//     // construct a REP (reply) socket and bind to interface
-//     zmq::socket_t socket{context, zmq::socket_type::rep};
-//     socket.bind("tcp://*:5555");
-
-
-//     for (const auto& variable : variableCollection.variables()) {
-        
-
-//         // Serialize the Variable message
-//         // std::string serialized_variable;
-//         // variable.SerializeToString(&serialized_variable);
-
-//         // Sending the serialized Variable via ZeroMQ
-//         // zmq::message_t zmq_variable(serialized_variable.size());
-//         // memcpy(zmq_variable.data(), serialized_variable.c_str(), serialized_variable.size());
-//         // socket.send(zmq_variable, zmq::send_flags::none);
-
-//         // Iterate through the Tiers associated with the Variable
-//         for (const auto& tier : variable.tier()) {
-//             // Serialize the Tier message
-//             // std::string serialized_tier;
-//             // tier.SerializeToString(&serialized_tier);
-
-//             // // Sending the serialized Tier via ZeroMQ
-//             // zmq::message_t zmq_tier(serialized_tier.size());
-//             // memcpy(zmq_tier.data(), serialized_tier.c_str(), serialized_tier.size());
-//             // socket.send(zmq_tier, zmq::send_flags::none);
-
-//             // Iterate through the Fragments associated with the Tier
-//             for (const auto& fragment : tier.fragment()) {
-//                 zmq::message_t received_message;
-
-//                 // receive a request from the client
-//                 (void)socket.recv(received_message, zmq::recv_flags::none);
-
-//                 std::cout << "Received Message:" << received_message.to_string() << std::endl;
-
-//                 // Serialize the Fragment message
-//                 std::string serialized_fragment;
-//                 fragment.SerializeToString(&serialized_fragment);
-
-//                 // Sending the serialized Fragment via ZeroMQ
-//                 zmq::message_t zmq_fragment(serialized_fragment.size());
-//                 memcpy(zmq_fragment.data(), serialized_fragment.c_str(), serialized_fragment.size());
-//                 socket.send(zmq_fragment, zmq::send_flags::none);
-//                 // send the reply to the client
-//                 // socket.send(zmq::buffer(fragment), zmq::send_flags::none);
-
-//                 // simulate work
-//                 // std::this_thread::sleep_for(1s);
-//             }
-//         }
-//     }
-    
-// }
+void adjustParameters(int& k, int& m) {
+    // Adjust parameters based on packet loss rate or other criteria
+    k += 1;  // Increase the number of data fragments
+    m += 1;  // Increase the number of parity fragments
+    std::cout << "Adjusted parameters: k=" << k << ", m=" << m << std::endl;
+}
 
 int main(int argc, char *argv[])
 {  
@@ -1298,14 +1233,14 @@ int main(int argc, char *argv[])
                     // std::cout << varECParam_EncodedFragLen_Name << ", " << *pVarECParam_EncodedFragLen_Result << std::endl;  
 
                     //Setting protobuf parameters
-                    DATA::Tier protoTier;
-                    protoTier.set_id(i);
-                    protoTier.set_k(ec_k);
-                    protoTier.set_m(ec_m);
-                    protoTier.set_w(ec_w);
-                    protoTier.set_hd(ec_hd);
-                    protoTier.set_ec_backend_name(ECBackendName);
-                    protoTier.set_encoded_fragment_length(encoded_fragment_len);
+                    // DATA::Tier protoTier;
+                    // protoTier.set_id(i);
+                    // protoTier.set_k(ec_k);
+                    // protoTier.set_m(ec_m);
+                    // protoTier.set_w(ec_w);
+                    // protoTier.set_hd(ec_hd);
+                    // protoTier.set_ec_backend_name(ECBackendName);
+                    // protoTier.set_encoded_fragment_length(encoded_fragment_len);
 
                     size_t frag_header_size =  sizeof(fragment_header_t);
                     for (size_t j = 0; j < dataTiersECParam_k[i]; j++)

@@ -1106,6 +1106,7 @@ class Fragment PROTOBUF_FINAL :
     kFragmentIdFieldNumber = 16,
     kVarLevelsFieldNumber = 20,
     kVarTiersFieldNumber = 25,
+    kChunkSizeFieldNumber = 26,
   };
   // repeated uint32 var_dimensions = 18;
   int var_dimensions_size() const;
@@ -1455,6 +1456,15 @@ class Fragment PROTOBUF_FINAL :
   void _internal_set_var_tiers(::PROTOBUF_NAMESPACE_ID::uint32 value);
   public:
 
+  // uint32 chunk_size = 26;
+  void clear_chunk_size();
+  ::PROTOBUF_NAMESPACE_ID::uint32 chunk_size() const;
+  void set_chunk_size(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_chunk_size() const;
+  void _internal_set_chunk_size(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  public:
+
   // @@protoc_insertion_point(class_scope:DATA.Fragment)
  private:
   class _Internal;
@@ -1489,6 +1499,7 @@ class Fragment PROTOBUF_FINAL :
   ::PROTOBUF_NAMESPACE_ID::uint32 fragment_id_;
   ::PROTOBUF_NAMESPACE_ID::uint32 var_levels_;
   ::PROTOBUF_NAMESPACE_ID::uint32 var_tiers_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 chunk_size_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_fragment_2eproto;
 };
@@ -3517,6 +3528,26 @@ inline void Fragment::_internal_set_var_tiers(::PROTOBUF_NAMESPACE_ID::uint32 va
 inline void Fragment::set_var_tiers(::PROTOBUF_NAMESPACE_ID::uint32 value) {
   _internal_set_var_tiers(value);
   // @@protoc_insertion_point(field_set:DATA.Fragment.var_tiers)
+}
+
+// uint32 chunk_size = 26;
+inline void Fragment::clear_chunk_size() {
+  chunk_size_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::_internal_chunk_size() const {
+  return chunk_size_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 Fragment::chunk_size() const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.chunk_size)
+  return _internal_chunk_size();
+}
+inline void Fragment::_internal_set_chunk_size(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  chunk_size_ = value;
+}
+inline void Fragment::set_chunk_size(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_set_chunk_size(value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.chunk_size)
 }
 
 // -------------------------------------------------------------------

@@ -22,7 +22,6 @@
 #include "../include/LosslessCompressor/LevelCompressor.hpp"
 #include "../include/RefactorUtils.hpp"
 
-
 #include <erasurecode.h>
 #include <erasurecode_helpers.h>
 #include <config_liberasurecode.h>
@@ -40,44 +39,40 @@
 #include <chrono>
 #include <zmq.hpp>
 #include <enet/enet.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
 
 #define IPADDRESS "10.51.197.229" // "192.168.1.64"
 #define UDP_PORT 33898
 #define TIMEOUT_DURATION_SECONDS 30
 
 using namespace boost::asio;
+using boost::asio::ip::address;
 using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
-using boost::asio::ip::address;
 
 using namespace ROCKSDB_NAMESPACE;
 
-
-std::vector<std::vector<uint32_t>> get_level_sizes(uint32_t levels, const std::vector<std::vector<uint64_t>>& query_table)
+std::vector<std::vector<uint32_t>> get_level_sizes(uint32_t levels, const std::vector<std::vector<uint64_t>> &query_table)
 {
     std::vector<std::vector<uint32_t>> level_sizes(levels);
     for (size_t i = 0; i < query_table.size(); i++)
     {
         level_sizes[query_table[i][0]].push_back(query_table[i][4]);
     }
-    return level_sizes;   
+    return level_sizes;
 }
-
 
 void shuffle(std::vector<size_t> &arr, size_t n, unsigned int seed)
 {
-    if (n > 1) 
+    if (n > 1)
     {
         size_t i;
         srand(seed);
-        for (i = 0; i < n - 1; i++) 
+        for (i = 0; i < n - 1; i++)
         {
-          size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
-          size_t t = arr[j];
-          arr[j] = arr[i];
-          arr[i] = t;
+            size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+            size_t t = arr[j];
+            arr[j] = arr[i];
+            arr[i] = t;
         }
     }
 }
@@ -102,12 +97,12 @@ std::vector<size_t> randomly_mark_site_as_unavailable(size_t total_site, size_t 
     {
         unavailable_site_list[i] = site_id_list[i];
     }
-    
+
     return unavailable_site_list;
 }
 
 template <typename T>
-std::string PackSingleElement(const T* data)
+std::string PackSingleElement(const T *data)
 {
     std::string d(sizeof(T), L'\0');
     memcpy(&d[0], data, d.size());
@@ -115,7 +110,7 @@ std::string PackSingleElement(const T* data)
 }
 
 template <typename T>
-std::unique_ptr<T> UnpackSingleElement(const std::string& data)
+std::unique_ptr<T> UnpackSingleElement(const std::string &data)
 {
     if (data.size() != sizeof(T))
         return nullptr;
@@ -128,21 +123,22 @@ std::unique_ptr<T> UnpackSingleElement(const std::string& data)
 template <typename T>
 std::string PackVector(const std::vector<T> data)
 {
-    std::string d(sizeof(T)*data.size(), L'\0');
+    std::string d(sizeof(T) * data.size(), L'\0');
     memcpy(&d[0], data.data(), d.size());
     return d;
 }
 
 template <typename T>
-std::vector<T> UnpackVector(const std::string& data)
+std::vector<T> UnpackVector(const std::string &data)
 {
-    int size = data.size()/sizeof(T);
+    int size = data.size() / sizeof(T);
     std::vector<T> d(size);
     memcpy(d.data(), data.data(), data.size());
     return d;
 };
 
-struct Fragment {
+struct Fragment
+{
     int32_t k;
     int32_t m;
     int32_t w;
@@ -173,13 +169,15 @@ struct Fragment {
     // uint32_t var_tiers;
 };
 
-struct Chunk {
+struct Chunk
+{
     int32_t id;
     std::vector<Fragment> data_fragments;
     std::vector<Fragment> parity_fragments;
 };
 
-struct Tier {
+struct Tier
+{
     int32_t id;
     int32_t k;
     int32_t m;
@@ -188,19 +186,22 @@ struct Tier {
     std::vector<Chunk> chunks;
 };
 
-struct QueryTable {
+struct QueryTable
+{
     size_t rows;
     size_t cols;
     std::vector<uint64_t> content;
 };
 
-struct SquaredErrorsTable {
+struct SquaredErrorsTable
+{
     size_t rows;
     size_t cols;
     std::vector<double> content;
 };
 
-struct Variable {
+struct Variable
+{
     std::string var_name;
     std::vector<uint32_t> var_dimensions;
     std::string var_type;
@@ -214,12 +215,96 @@ struct Variable {
     std::vector<Tier> tiers;
 };
 
-std::vector<double> getRetransmissionData() {
+Fragment setFragment(const DATA::Fragment received_message)
+{
+    Fragment myFragment;
+    myFragment.k = received_message.k();
+    myFragment.m = received_message.m();
+    myFragment.w = received_message.w();
+    myFragment.hd = received_message.hd();
+    myFragment.ec_backend_name = received_message.ec_backend_name();
+    myFragment.encoded_fragment_length = received_message.encoded_fragment_length();
+    myFragment.frag = received_message.frag();
+
+    myFragment.is_data = received_message.is_data();
+    myFragment.tier_id = received_message.tier_id();
+    myFragment.chunk_id = received_message.chunk_id();
+    myFragment.fragment_id = received_message.fragment_id();
+
+    return myFragment;
+}
+
+Variable setVariable(const DATA::Fragment received_message)
+{
+    Variable var1;
+    var1.var_name = received_message.var_name();
+    var1.ec_backend_name = received_message.ec_backend_name();
+    var1.var_dimensions.insert(
+        var1.var_dimensions.end(),
+        received_message.var_dimensions().begin(),
+        received_message.var_dimensions().end());
+    var1.var_type = received_message.var_type();
+    var1.var_levels = received_message.var_levels();
+    var1.var_level_error_bounds.insert(
+        var1.var_level_error_bounds.end(),
+        received_message.var_level_error_bounds().begin(),
+        received_message.var_level_error_bounds().end());
+    for (const auto &bytes : received_message.var_stopping_indices())
+    {
+        var1.var_stopping_indices.insert(var1.var_stopping_indices.end(), bytes.begin(), bytes.end());
+    }
+
+    var1.var_table_content.rows = received_message.var_table_content().rows();
+    var1.var_table_content.cols = received_message.var_table_content().cols();
+    for (int i = 0; i < received_message.var_table_content().content_size(); ++i)
+    {
+        uint64_t content_value = received_message.var_table_content().content(i);
+        var1.var_table_content.content.push_back(content_value);
+    }
+
+    var1.var_squared_errors.rows = received_message.var_squared_errors().rows();
+    var1.var_squared_errors.cols = received_message.var_squared_errors().cols();
+
+    var1.var_squared_errors.content.insert(
+        var1.var_squared_errors.content.end(),
+        received_message.var_squared_errors().content().begin(),
+        received_message.var_squared_errors().content().end());
+    var1.var_tiers = received_message.var_tiers();
+
+    return var1;
+}
+
+Tier setTier(const Fragment myFragment) {
+    Tier newTier;
+    newTier.id = myFragment.tier_id;
+    newTier.k = myFragment.k;
+    newTier.m = myFragment.m;
+    newTier.w = myFragment.w;
+    newTier.hd = myFragment.hd;
+
+    return newTier;
+}
+
+
+// void calculatePacketLoss(int packets_lost, int total_loss)
+// {
+//     double percentage_loss = (static_cast<double>(packets_lost) / num_packets);
+//     if (percentage_loss > 0.1)
+//     {
+//         /* code */
+//         // send request to increase m
+//     }
+    
+// }
+
+std::vector<double> getRetransmissionData()
+{
     std::ifstream file("percent_retrans_values.txt");
     std::vector<double> values;
 
     double temp;
-    while (file >> temp) {
+    while (file >> temp)
+    {
         values.push_back(temp);
     }
     // std::cout << "Values read from file:" << std::endl;
@@ -229,73 +314,10 @@ std::vector<double> getRetransmissionData() {
     return values;
 }
 
-// Function to compute the log likelihood of the data given parameters
-double logLikelihood(const std::vector<double>& data, double shape, double scale) {
-    double logLikelihood = 0.0;
-    for (double d : data) {
-        logLikelihood += log(shape / scale) + (shape - 1) * log(d / scale) - pow(d / scale, shape);
-    }
-    return logLikelihood;
-}
-
-// Expectation step: compute the expected value of the latent variable
-double expectation(const std::vector<double>& data, double shape, double scale) {
-    double expectation = 0.0;
-    for (double d : data) {
-        expectation += pow(d / scale, shape) * log(d / scale);
-    }
-    return expectation;
-}
-
-
-// Function to estimate Weibull parameters from data
-std::pair<double, double> estimateWeibullParameters(const std::vector<double>& data) {
-    double sum = 0.0;
-    for (double d : data) {
-        sum += log(d);
-    }
-    double n = data.size();
-    double shape = n / sum;
-    
-    double scale = 0.0;
-    for (double d : data) {
-        scale += pow(d, shape);
-    }
-    scale = pow(scale / n, 1.0 / shape);
-    
-    return std::make_pair(shape, scale);
-}
-
-// void corruptProtobufObject(DATA::Fragment& message, gsl_rng* r, double shape, double scale) {
-//     // Example: Corrupting a numerical field
-//     double originalValue = message.numerical_field();
-//     double corruptionFactor = gsl_ran_weibull(r, shape, scale);
-//     double corruptedValue = originalValue * (1.0 + corruptionFactor); // Apply corruption
-//     message.set_numerical_field(corruptedValue);
-// }
-
-DATA::Fragment corruptFragment(const Fragment& originalFragment, gsl_rng* r, double shape, double scale) {
-    Fragment corruptedFragment = originalFragment;
-
-    size_t originalLength = corruptedFragment.ec_backend_name.size();
-
-    // Corrupt the ec_backend_name field
-    for (size_t i = 0; i < originalLength; ++i) {
-        // Determine if the character should be corrupted based on Weibull distribution
-        double randValue = gsl_ran_weibull(r, shape, scale);
-        if (randValue > 0.5) { // Example: Corrupt if random value > 0.5
-            // Replace the character with 'X' (you can adjust this logic)
-            corruptedFragment.ec_backend_name[i] = 'X';
-        }
-    }
-
-    return corruptedFragment;
-}
-
-
-int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavaialbleSites = 0, std::string rawDataFileName = "NYXrestored.bp") {
+int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unavaialbleSites = 0, std::string rawDataFileName = "NYXrestored.bp")
+{
     std::string variableName = var1.var_name;
-    DB* db;
+    DB *db;
     Options options;
     // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
     options.IncreaseParallelism();
@@ -306,12 +328,12 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
     // Status s = DB::Open(options, rocksDBPath, &db);
     // assert(s.ok());
 
-    std::string varDimensionsName = variableName+":Dimensions";
+    std::string varDimensionsName = variableName + ":Dimensions";
     std::vector<uint32_t> dimensions = var1.var_dimensions;
     std::string varDimensionsResult;
     // s = db->Get(ReadOptions(), varDimensionsName, &varDimensionsResult);
-    // assert(s.ok());  
-    //dimensions = UnpackVector<uint32_t>(varDimensionsResult);    
+    // assert(s.ok());
+    // dimensions = UnpackVector<uint32_t>(varDimensionsResult);
     std::cout << varDimensionsName << ", ";
     for (size_t i = 0; i < dimensions.size(); i++)
     {
@@ -320,38 +342,25 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
     std::cout << std::endl;
 
     uint32_t levels;
-    std::string varLevelsName = variableName+":Levels";
+    std::string varLevelsName = variableName + ":Levels";
     std::string varLevelsResult;
     // s = db->Get(ReadOptions(), varLevelsName, &varLevelsResult);
-    // assert(s.ok());  
+    // assert(s.ok());
     // std::unique_ptr<uint32_t> pVarLevelsResult = UnpackSingleElement<uint32_t>(varLevelsResult);
     std::unique_ptr<uint32_t> pVarLevelsResult = std::make_unique<uint32_t>(var1.var_levels);
     levels = *pVarLevelsResult;
-    std::cout << varLevelsName << ", " << levels << std::endl;   
+    std::cout << varLevelsName << ", " << levels << std::endl;
 
     uint32_t tiers;
-    std::string varTiersName = variableName+":Tiers";
+    std::string varTiersName = variableName + ":Tiers";
     std::string varTiersResult;
     // s = db->Get(ReadOptions(), varTiersName, &varTiersResult);
-    // assert(s.ok());  
+    // assert(s.ok());
     // std::unique_ptr<uint32_t> pVarTiersResult = UnpackSingleElement<uint32_t>(varTiersResult);
     std::unique_ptr<uint32_t> pVarTiersResult = std::make_unique<uint32_t>(var1.tiers.size());
     tiers = *pVarTiersResult;
-    std::cout << varTiersName << ", " << tiers << std::endl;       
+    std::cout << varTiersName << ", " << tiers << std::endl;
 
-    // Reading retransmission data and setting Weibull distribution parameters
-    std::pair<double, double> weibullParams = estimateWeibullParameters(getRetransmissionData());
-    double shape = weibullParams.first;
-    double scale = weibullParams.second;
-
-    // Initialize random number generator
-    const gsl_rng_type * T;
-    gsl_rng * r;
-    gsl_rng_env_setup();
-    T = gsl_rng_default;
-    r = gsl_rng_alloc(T);
-
-    //
 
     std::vector<int> dataTiersECParam_k(tiers);
     std::vector<int> dataTiersECParam_m(tiers);
@@ -362,78 +371,79 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
 
     for (size_t i = 0; i < tiers; i++)
     {
-        std::string varECParam_k_Name = variableName+":Tier:"+std::to_string(i)+":K";
+        std::string varECParam_k_Name = variableName + ":Tier:" + std::to_string(i) + ":K";
         std::string varECParam_k_Result;
         // s = db->Get(ReadOptions(), varECParam_k_Name, &varECParam_k_Result);
-        // assert(s.ok());  
+        // assert(s.ok());
         // std::unique_ptr<int> pVarECParam_k_Result = UnpackSingleElement<int>(varECParam_k_Result);
         std::unique_ptr<int> pVarECParam_k_Result = std::make_unique<int>(static_cast<int>(var1.tiers[i].k));
-        std::cout << varECParam_k_Name << ", " << *pVarECParam_k_Result << std::endl;   
+        std::cout << varECParam_k_Name << ", " << *pVarECParam_k_Result << std::endl;
         dataTiersECParam_k[i] = *pVarECParam_k_Result;
         // dataTiersECParam_k[i] = var1.tiers[i].k;
         // dataTiersECParam_m[i] = var1.tiers[i].m;
         // dataTiersECParam_w[i] = var1.tiers[i].w;
         // dataTiersECParam_hd[i] = var1.tiers[i].hd;
 
-        // std::cout << varECParam_k_Name << ", " << dataTiersECParam_k[i] << std::endl; 
+        // std::cout << varECParam_k_Name << ", " << dataTiersECParam_k[i] << std::endl;
 
-        std::string varECParam_m_Name = variableName+":Tier:"+std::to_string(i)+":M";
+        std::string varECParam_m_Name = variableName + ":Tier:" + std::to_string(i) + ":M";
         std::string varECParam_m_Result;
         // // s = db->Get(ReadOptions(), varECParam_m_Name, &varECParam_m_Result);
-        // // assert(s.ok());  
+        // // assert(s.ok());
         std::unique_ptr<int> pVarECParam_m_Result = std::make_unique<int>(static_cast<int>(var1.tiers[i].m));
-        std::cout << varECParam_m_Name << ", " << *pVarECParam_m_Result << std::endl;   
-        dataTiersECParam_m[i] = *pVarECParam_m_Result;      
+        std::cout << varECParam_m_Name << ", " << *pVarECParam_m_Result << std::endl;
+        dataTiersECParam_m[i] = *pVarECParam_m_Result;
 
-        std::string varECParam_w_Name = variableName+":Tier:"+std::to_string(i)+":W";
+        std::string varECParam_w_Name = variableName + ":Tier:" + std::to_string(i) + ":W";
         std::string varECParam_w_Result;
         // // s = db->Get(ReadOptions(), varECParam_w_Name, &varECParam_w_Result);
-        // // assert(s.ok());  
+        // // assert(s.ok());
         std::unique_ptr<int> pVarECParam_w_Result = std::make_unique<int>(static_cast<int>(var1.tiers[i].w));
-        std::cout << varECParam_w_Name << ", " << *pVarECParam_w_Result << std::endl;   
-        dataTiersECParam_w[i] = *pVarECParam_w_Result;   
+        std::cout << varECParam_w_Name << ", " << *pVarECParam_w_Result << std::endl;
+        dataTiersECParam_w[i] = *pVarECParam_w_Result;
 
-        std::string varECParam_hd_Name = variableName+":Tier:"+std::to_string(i)+":HD";
+        std::string varECParam_hd_Name = variableName + ":Tier:" + std::to_string(i) + ":HD";
         std::string varECParam_hd_Result;
         // // s = db->Get(ReadOptions(), varECParam_hd_Name, &varECParam_hd_Result);
-        // // assert(s.ok());  
-        std::unique_ptr<int> pVarECParam_hd_Result = std::make_unique<int>(static_cast<int>(var1.tiers[i].hd));;
-        std::cout << varECParam_hd_Name << ", " << *pVarECParam_hd_Result << std::endl;   
-        dataTiersECParam_hd[i] = *pVarECParam_hd_Result;  
+        // // assert(s.ok());
+        std::unique_ptr<int> pVarECParam_hd_Result = std::make_unique<int>(static_cast<int>(var1.tiers[i].hd));
+        ;
+        std::cout << varECParam_hd_Name << ", " << *pVarECParam_hd_Result << std::endl;
+        dataTiersECParam_hd[i] = *pVarECParam_hd_Result;
 
         // for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
-        // {   
+        // {
         //     std::string varDataLocationName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j)+":Location";
         //     std::string varDataLocationResult;
         //     // s = db->Get(ReadOptions(), varDataLocationName, &varDataLocationResult);
-        //     // assert(s.ok()); 
-        //     std::cout << varDataLocationName << ", " << varDataLocationResult << std::endl;   
+        //     // assert(s.ok());
+        //     std::cout << varDataLocationName << ", " << varDataLocationResult << std::endl;
         //     dataTiersDataLocations[i].push_back(varDataLocationResult);
         // }
 
         // for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
-        // {   
+        // {
         //     std::string varParityLocationName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j)+":Location";
         //     std::string varParityLocationResult;
         //     // s = db->Get(ReadOptions(), varParityLocationName, &varParityLocationResult);
-        //     // assert(s.ok()); 
-        //     std::cout << varParityLocationName << ", " << varParityLocationResult << std::endl;   
+        //     // assert(s.ok());
+        //     std::cout << varParityLocationName << ", " << varParityLocationResult << std::endl;
         //     dataTiersParityLocations[i].push_back(varParityLocationResult);
         // }
     }
 
     std::string variableType = var1.var_type;
-    std::string variableTypeName = variableName+":Type";
+    std::string variableTypeName = variableName + ":Type";
     // s = db->Get(ReadOptions(), variableTypeName, &variableType);
-    // assert(s.ok()); 
-    std::cout << variableTypeName << ", " << variableType << std::endl;  
+    // assert(s.ok());
+    std::cout << variableTypeName << ", " << variableType << std::endl;
 
-    std::string varQueryTableShapeName = variableName+":QueryTable:Shape";   
+    std::string varQueryTableShapeName = variableName + ":QueryTable:Shape";
     std::string varQueryTableShapeResult;
     // s = db->Get(ReadOptions(), varQueryTableShapeName, &varQueryTableShapeResult);
-    // assert(s.ok());  
-    // std::vector<size_t> varQueryTableShape = UnpackVector<size_t>(varQueryTableShapeResult); 
-    std::vector<size_t> varQueryTableShape{var1.var_table_content.rows, var1.var_table_content.cols}; 
+    // assert(s.ok());
+    // std::vector<size_t> varQueryTableShape = UnpackVector<size_t>(varQueryTableShapeResult);
+    std::vector<size_t> varQueryTableShape{var1.var_table_content.rows, var1.var_table_content.cols};
     std::cout << varQueryTableShapeName << ", ";
     for (size_t i = 0; i < varQueryTableShape.size(); i++)
     {
@@ -441,10 +451,10 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
     }
     std::cout << std::endl;
 
-    std::string varQueryTableName = variableName+":QueryTable"; 
+    std::string varQueryTableName = variableName + ":QueryTable";
     std::string varQueryTableResult;
     // s = db->Get(ReadOptions(), varQueryTableName, &varQueryTableResult);
-    // assert(s.ok());  
+    // assert(s.ok());
     // std::vector<uint64_t> varQueryTable = UnpackVector<uint64_t>(varQueryTableResult);
     std::vector<uint64_t> varQueryTable = var1.var_table_content.content;
     std::cout << varQueryTableName << ", " << std::endl;
@@ -456,19 +466,19 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
             std::cout << varQueryTable[count] << " ";
             count++;
         }
-        std::cout << std::endl;        
+        std::cout << std::endl;
     }
     std::vector<std::vector<uint64_t>> queryTable(varQueryTableShape[0]);
     for (size_t i = 0; i < varQueryTableShape[0]; i++)
     {
-        queryTable[i].insert(queryTable[i].end(), varQueryTable.begin()+i*varQueryTableShape[1], varQueryTable.begin()+i*varQueryTableShape[1]+varQueryTableShape[1]);
+        queryTable[i].insert(queryTable[i].end(), varQueryTable.begin() + i * varQueryTableShape[1], varQueryTable.begin() + i * varQueryTableShape[1] + varQueryTableShape[1]);
     }
     std::vector<std::vector<uint32_t>> level_sizes = get_level_sizes(levels, queryTable);
 
-    std::string varSquaredErrorsShapeName = variableName+":SquaredErrors:Shape"; 
+    std::string varSquaredErrorsShapeName = variableName + ":SquaredErrors:Shape";
     // std::string varSquaredErrorsShapeResult;
     // s = db->Get(ReadOptions(), varSquaredErrorsShapeName, &varSquaredErrorsShapeResult);
-    // assert(s.ok());  
+    // assert(s.ok());
     // std::vector<size_t> varSquaredErrorsShape = UnpackVector<size_t>(varSquaredErrorsShapeResult);
     std::vector<size_t> varSquaredErrorsShape{var1.var_squared_errors.rows, var1.var_squared_errors.cols};
     std::cout << varSquaredErrorsShapeName << ", ";
@@ -478,10 +488,10 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
     }
     std::cout << std::endl;
 
-    std::string varSquaredErrorsName = variableName+":SquaredErrors";
+    std::string varSquaredErrorsName = variableName + ":SquaredErrors";
     // std::string varSquaredErrorsResult;
     // s = db->Get(ReadOptions(), varSquaredErrorsName, &varSquaredErrorsResult);
-    // assert(s.ok());  
+    // assert(s.ok());
     // std::vector<double> varSquaredErrors = UnpackVector<double>(varSquaredErrorsResult);
     std::vector<double> varSquaredErrors = var1.var_squared_errors.content;
     std::cout << varSquaredErrorsName << ", " << std::endl;
@@ -493,14 +503,14 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
             std::cout << varSquaredErrors[count] << " ";
             count++;
         }
-        std::cout << std::endl;        
+        std::cout << std::endl;
     }
 
     std::vector<std::vector<double>> level_squared_errors(levels);
     size_t pos = 0;
     for (size_t i = 0; i < levels; i++)
     {
-        level_squared_errors[i].insert(level_squared_errors[i].end(), varSquaredErrors.begin()+pos, varSquaredErrors.begin()+pos+varSquaredErrorsShape[1]);
+        level_squared_errors[i].insert(level_squared_errors[i].end(), varSquaredErrors.begin() + pos, varSquaredErrors.begin() + pos + varSquaredErrorsShape[1]);
         pos += varSquaredErrorsShape[1];
     }
     // for (size_t i = 0; i < level_squared_errors.size(); i++)
@@ -513,10 +523,10 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
     //     std::cout << std::endl;
     // }
 
-    std::string varStopIndicesName = variableName+":StopIndices";
+    std::string varStopIndicesName = variableName + ":StopIndices";
     // std::string varStopIndicesResult;
     // s = db->Get(ReadOptions(), varStopIndicesName, &varStopIndicesResult);
-    // assert(s.ok());  
+    // assert(s.ok());
     // std::vector<uint8_t> stopping_indices = UnpackVector<uint8_t>(varStopIndicesResult);
     std::vector<uint8_t> stopping_indices(var1.var_stopping_indices);
     std::cout << varStopIndicesName << ", ";
@@ -533,10 +543,10 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
         using T = float;
         using T_stream = uint32_t;
 
-        std::string varErrorBoundsName = variableName+":ErrorBounds";
+        std::string varErrorBoundsName = variableName + ":ErrorBounds";
         // std::string varErrorBoundsResult;
         // s = db->Get(ReadOptions(), varErrorBoundsName, &varErrorBoundsResult);
-        // assert(s.ok());  
+        // assert(s.ok());
         // std::vector<T> level_error_bounds = UnpackVector<T>(varErrorBoundsResult);
         std::vector<T> level_error_bounds(var1.var_level_error_bounds.begin(), var1.var_level_error_bounds.end());
         std::cout << varErrorBoundsName << ", ";
@@ -549,7 +559,7 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
         adios2::ADIOS adios;
         adios2::IO reader_io = adios.DeclareIO("ReaderIO");
         adios2::Engine rawdata_reader_engine =
-            reader_io.Open(rawDataFileName, adios2::Mode::Read);   
+            reader_io.Open(rawDataFileName, adios2::Mode::Read);
         auto rawVariable = reader_io.InquireVariable<T>(variableName);
         size_t rawVariableSize = 1;
         for (size_t i = 0; i < rawVariable.Shape().size(); i++)
@@ -575,185 +585,193 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
         int nullFrag = 0;
 
         std::vector<T> reconstructedData;
-        switch(error_mode)
+        switch (error_mode)
         {
-            case 1:
+        case 1:
+        {
+            std::cerr << "error mode = 1 is not supported!" << std::endl;
+            break;
+        }
+        default:
+        {
+            auto estimator = MDR::MaxErrorEstimatorOB<T>(dimensions.size());
+            auto interpreter = MDR::SignExcludeGreedyBasedSizeInterpreter<MDR::MaxErrorEstimatorOB<T>>(estimator);
+
+            std::vector<std::vector<uint8_t>> dataTiersValues(tiers);
+
+            std::vector<size_t> unavailableSiteList = randomly_mark_site_as_unavailable(totalSites, unavaialbleSites, 0);
+            for (size_t i = 0; i < unavailableSiteList.size(); i++)
             {
-                std::cerr << "error mode = 1 is not supported!" << std::endl;
-                break;          
-            } 
-            default:
+                std::cout << unavailableSiteList[i] << " ";
+            }
+            std::cout << std::endl;
+
+            // Set up timer parameters
+            int timerValueSeconds = 5;
+            size_t dataTiersRecovered = 0;
+            for (size_t i = 0; i < var1.tiers.size(); ++i)
             {
-                auto estimator = MDR::MaxErrorEstimatorOB<T>(dimensions.size());
-                auto interpreter = MDR::SignExcludeGreedyBasedSizeInterpreter<MDR::MaxErrorEstimatorOB<T>>(estimator); 
-
-                std::vector<std::vector<uint8_t>> dataTiersValues(tiers);
-
-                std::vector<size_t> unavailableSiteList = randomly_mark_site_as_unavailable(totalSites, unavaialbleSites, 0);
-                for (size_t i = 0; i < unavailableSiteList.size(); i++)
+                std::vector<std::vector<uint8_t>> dataChunkValues;
+                for (size_t chunkIndex = 0; chunkIndex < var1.tiers[i].chunks.size(); ++chunkIndex)
                 {
-                    std::cout << unavailableSiteList[i] << " ";
-                }
-                std::cout << std::endl;
-
-                // Set up timer parameters
-                int timerValueSeconds = 5; 
-                size_t dataTiersRecovered = 0;
-                for (size_t i = 0; i < var1.tiers.size(); ++i)
-                {
-                    std::vector<std::vector<uint8_t>> dataChunkValues;
-                    for (size_t chunkIndex = 0; chunkIndex < var1.tiers[i].chunks.size(); ++chunkIndex)
-                    {
-                        const Chunk& chunk = var1.tiers[i].chunks[chunkIndex];
-                        // for (size_t t = 0; t < chunk.data_fragments.size(); t++)
-                        // {
-                        //     std::cout << "chunk at t:" << t << std::endl;
-                        //     for (char c : chunk.data_fragments[t].frag) {
-                        //         std::cout << c;
-                        //     }
-                        //     std::cout << std::endl;
-                        // }
+                    const Chunk &chunk = var1.tiers[i].chunks[chunkIndex];
+                    // for (size_t t = 0; t < chunk.data_fragments.size(); t++)
+                    // {
+                    //     std::cout << "chunk at t:" << t << std::endl;
+                    //     for (char c : chunk.data_fragments[t].frag) {
+                    //         std::cout << c;
+                    //     }
+                    //     std::cout << std::endl;
+                    // }
                     // for (size_t i = 0; i < dataTiersValues.size(); i++)
                     // {
-                        if (dataTiersECParam_m[i] < unavaialbleSites)
-                        {
-                            std::cout << "tier " << i << ": " << dataTiersECParam_m[i] <<  " parity chunks are not enough to recover from " << unavaialbleSites << " unavaialble sites!" << std::endl;
-                            break;
-                        }
-                        struct ec_args args = {
-                            .k = dataTiersECParam_k[i],
-                            .m = dataTiersECParam_m[i],
-                            .w = dataTiersECParam_w[i],
-                            .hd = dataTiersECParam_hd[i],
-                            .ct = CHKSUM_NONE,
-                        };
-                        std::cout << "K:" << args.k << ";M:" << args.m << ";W:" << args.w << ";HD:" << args.hd << std::endl;
-                        
-                        std::string varECParam_EncodedFragLen_Name = variableName+":Tier:"+std::to_string(i)+":EncodedFragmentLength";
-                        std::string varECParam_EncodedFragLen_Result;
-                        // s = db->Get(ReadOptions(), varECParam_EncodedFragLen_Name, &varECParam_EncodedFragLen_Result);
-                        // assert(s.ok());  
-                        // std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = UnpackSingleElement<uint64_t>(varECParam_EncodedFragLen_Result);
-                        std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = std::make_unique<uint64_t>(static_cast<uint64_t>(chunk.data_fragments[0].encoded_fragment_length));
-                        uint64_t encoded_fragment_len = *pVarECParam_EncodedFragLen_Result;
-                        std::cout << varECParam_EncodedFragLen_Name << ", " << encoded_fragment_len << std::endl;  
+                    if (dataTiersECParam_m[i] < unavaialbleSites)
+                    {
+                        std::cout << "tier " << i << ": " << dataTiersECParam_m[i] << " parity chunks are not enough to recover from " << unavaialbleSites << " unavaialble sites!" << std::endl;
+                        break;
+                    }
+                    struct ec_args args = {
+                        .k = dataTiersECParam_k[i],
+                        .m = dataTiersECParam_m[i],
+                        .w = dataTiersECParam_w[i],
+                        .hd = dataTiersECParam_hd[i],
+                        .ct = CHKSUM_NONE,
+                    };
+                    std::cout << "K:" << args.k << ";M:" << args.m << ";W:" << args.w << ";HD:" << args.hd << std::endl;
 
-                        std::string varECBackendName = variableName+":Tier:"+std::to_string(i)+":ECBackendName";
-                        std::string ECBackendName = chunk.data_fragments[0].ec_backend_name;
-                        // s = db->Get(ReadOptions(), varECBackendName, &ECBackendName);
-                        // assert(s.ok()); 
-                        std::cout << varECBackendName << ", " << ECBackendName << std::endl;  
+                    std::string varECParam_EncodedFragLen_Name = variableName + ":Tier:" + std::to_string(i) + ":EncodedFragmentLength";
+                    std::string varECParam_EncodedFragLen_Result;
+                    // s = db->Get(ReadOptions(), varECParam_EncodedFragLen_Name, &varECParam_EncodedFragLen_Result);
+                    // assert(s.ok());
+                    // std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = UnpackSingleElement<uint64_t>(varECParam_EncodedFragLen_Result);
+                    std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = std::make_unique<uint64_t>(static_cast<uint64_t>(chunk.data_fragments[0].encoded_fragment_length));
+                    uint64_t encoded_fragment_len = *pVarECParam_EncodedFragLen_Result;
+                    std::cout << varECParam_EncodedFragLen_Name << ", " << encoded_fragment_len << std::endl;
 
-                        ec_backend_id_t backendID;
-                        if (ECBackendName == "flat_xor_hd")
-                        {
-                            backendID = EC_BACKEND_FLAT_XOR_HD;
-                        }
-                        else if (ECBackendName == "jerasure_rs_vand")
-                        {
-                            backendID = EC_BACKEND_JERASURE_RS_VAND;
-                        }
-                        else if (ECBackendName == "jerasure_rs_cauchy")
-                        {
-                            backendID = EC_BACKEND_JERASURE_RS_CAUCHY;
-                        }
-                        else if (ECBackendName == "isa_l_rs_vand")
-                        {
-                            backendID = EC_BACKEND_ISA_L_RS_VAND;
-                        }
-                        else if (ECBackendName == "isa_l_rs_cauchy")
-                        {
-                            backendID = EC_BACKEND_ISA_L_RS_CAUCHY;
-                        }
-                        else if (ECBackendName == "shss")
-                        {
-                            backendID = EC_BACKEND_SHSS;
-                        }
-                        else if (ECBackendName == "liberasurecode_rs_vand")
-                        {
-                            backendID = EC_BACKEND_LIBERASURECODE_RS_VAND;
-                        }
-                        else if (ECBackendName == "libphazr")
-                        {
-                            backendID = EC_BACKEND_LIBPHAZR;
-                        }
-                        else if (ECBackendName == "null")
-                        {
-                            backendID = EC_BACKEND_NULL;
-                        }
-                        else 
-                        {
-                            std::cerr << "the specified EC backend is not supported!" << std::endl;
-                            return 1;
-                        }
+                    std::string varECBackendName = variableName + ":Tier:" + std::to_string(i) + ":ECBackendName";
+                    std::string ECBackendName = chunk.data_fragments[0].ec_backend_name;
+                    // s = db->Get(ReadOptions(), varECBackendName, &ECBackendName);
+                    // assert(s.ok());
+                    std::cout << varECBackendName << ", " << ECBackendName << std::endl;
 
-                        int rc = 0;
-                        int desc = -1;
-                        uint64_t decoded_data_len = 0;
-                        char *decoded_data = NULL;
-                        char **avail_frags = NULL;
-                        int num_avail_frags = 0;
-                        std::cout << "K:" << dataTiersECParam_k[i] << "; M:" << dataTiersECParam_m[i] << std::endl;
-                        avail_frags = (char **)malloc((dataTiersECParam_k[i] + dataTiersECParam_m[i]) * sizeof(char *));
-                        if (avail_frags == NULL)
+                    ec_backend_id_t backendID;
+                    if (ECBackendName == "flat_xor_hd")
+                    {
+                        backendID = EC_BACKEND_FLAT_XOR_HD;
+                    }
+                    else if (ECBackendName == "jerasure_rs_vand")
+                    {
+                        backendID = EC_BACKEND_JERASURE_RS_VAND;
+                    }
+                    else if (ECBackendName == "jerasure_rs_cauchy")
+                    {
+                        backendID = EC_BACKEND_JERASURE_RS_CAUCHY;
+                    }
+                    else if (ECBackendName == "isa_l_rs_vand")
+                    {
+                        backendID = EC_BACKEND_ISA_L_RS_VAND;
+                    }
+                    else if (ECBackendName == "isa_l_rs_cauchy")
+                    {
+                        backendID = EC_BACKEND_ISA_L_RS_CAUCHY;
+                    }
+                    else if (ECBackendName == "shss")
+                    {
+                        backendID = EC_BACKEND_SHSS;
+                    }
+                    else if (ECBackendName == "liberasurecode_rs_vand")
+                    {
+                        backendID = EC_BACKEND_LIBERASURECODE_RS_VAND;
+                    }
+                    else if (ECBackendName == "libphazr")
+                    {
+                        backendID = EC_BACKEND_LIBPHAZR;
+                    }
+                    else if (ECBackendName == "null")
+                    {
+                        backendID = EC_BACKEND_NULL;
+                    }
+                    else
+                    {
+                        std::cerr << "the specified EC backend is not supported!" << std::endl;
+                        return 1;
+                    }
+
+                    int rc = 0;
+                    int desc = -1;
+                    uint64_t decoded_data_len = 0;
+                    char *decoded_data = NULL;
+                    char **avail_frags = NULL;
+                    int num_avail_frags = 0;
+                    std::cout << "K:" << dataTiersECParam_k[i] << "; M:" << dataTiersECParam_m[i] << std::endl;
+                    avail_frags = (char **)malloc((dataTiersECParam_k[i] + dataTiersECParam_m[i]) * sizeof(char *));
+                    if (avail_frags == NULL)
+                    {
+                        num_avail_frags = -1;
+                        std::cerr << "memory allocation for avail_frags failed!" << std::endl;
+                        return 1;
+                    }
+                    desc = liberasurecode_instance_create(backendID, &args);
+                    if (-EBACKENDNOTAVAIL == desc)
+                    {
+                        std::cerr << "backend library not available!" << std::endl;
+                        return 1;
+                    }
+                    else if ((args.k + args.m) > EC_MAX_FRAGMENTS)
+                    {
+                        assert(-EINVALIDPARAMS == desc);
+                        std::cerr << "invalid parameters!" << std::endl;
+                        return 1;
+                    }
+                    else
+                    {
+                        assert(desc > 0);
+                    }
+                    std::cout << "checking data" << std::endl;
+                    // for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
+                    for (size_t j = 0; j < chunk.data_fragments.size(); j++)
+                    {
+                        /* check if data chunks are avaialble */
+                        if (std::find(unavailableSiteList.begin(), unavailableSiteList.end(), j) != unavailableSiteList.end())
                         {
-                            num_avail_frags = -1;
-                            std::cerr << "memory allocation for avail_frags failed!" << std::endl;
-                            return 1;
+                            std::cout << "cannot access data chunk " << j << " since site " << j << " is unavailable! skip!" << std::endl;
+                            continue;
                         }
-                        desc = liberasurecode_instance_create(backendID, &args);
-                        if (-EBACKENDNOTAVAIL == desc) 
+                        // adios2::Engine data_reader_engine =
+                        //     reader_io.Open(dataTiersDataLocations[i][j], adios2::Mode::Read);
+                        // std::string varDataValuesName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j);
+                        // auto varDataValues = reader_io.InquireVariable<char>(varDataValuesName);
+                        if (chunk.data_fragments[j].frag.empty())
                         {
-                            std::cerr << "backend library not available!" << std::endl;
-                            return 1;
-                        } else if ((args.k + args.m) > EC_MAX_FRAGMENTS) 
+                            std::cout << "frag data is null" << std::endl;
+                            nullFrag++;
+                        }
+                        else
                         {
-                            assert(-EINVALIDPARAMS == desc);
-                            std::cerr << "invalid parameters!" << std::endl;
-                            return 1;
-                        } else
-                        {
-                            assert(desc > 0);
-                        }  
-                        std::cout << "checking data" << std::endl;
-                        // for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
-                        for (size_t j = 0; j < chunk.data_fragments.size(); j++)
-                        {
-                            /* check if data chunks are avaialble */
-                            if (std::find(unavailableSiteList.begin(), unavailableSiteList.end(), j) != unavailableSiteList.end())
-                            {
-                                std::cout << "cannot access data chunk " << j << " since site " << j << " is unavailable! skip!" << std::endl;
-                                continue;
-                            }
-                            // adios2::Engine data_reader_engine =
-                            //     reader_io.Open(dataTiersDataLocations[i][j], adios2::Mode::Read); 
-                            // std::string varDataValuesName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j);
-                            // auto varDataValues = reader_io.InquireVariable<char>(varDataValuesName);
-                            if (chunk.data_fragments[j].frag.empty()) {
-                                std::cout << "frag data is null" << std::endl;
-                                nullFrag++;
-                            } else {
                             // auto varDataValues = chunk.data_fragments[j];
-                            
+
                             // for (size_t k = 0; k < varDataValues.Shape().size(); k++)
                             // {
                             //     std::cout << varDataValues.Shape()[k] << " ";
                             // }
                             // std::cout << std::endl;
-                            //std::vector<char> encodedValues(varDataValues.Shape()[0]);
+                            // std::vector<char> encodedValues(varDataValues.Shape()[0]);
                             // avail_frags[num_avail_frags] = (char *)malloc(varDataValues.frag.data()[0]*sizeof(char));
                             avail_frags[num_avail_frags] = (char *)malloc(chunk.data_fragments[j].frag.size() * sizeof(char));
                             std::cout << "frag size:" << chunk.data_fragments[j].frag.size() << std::endl;
                             std::cout << "allocated data memory:" << chunk.data_fragments[j].frag.size() * sizeof(char) << std::endl;
-                            if (avail_frags[num_avail_frags] != nullptr) {
+                            if (avail_frags[num_avail_frags] != nullptr)
+                            {
                                 // Copy the data from chunk.data_fragments[j].frag into the allocated memory
                                 memcpy(avail_frags[num_avail_frags], chunk.data_fragments[j].frag.c_str(), chunk.data_fragments[j].frag.size());
                                 num_avail_frags++;
-                            } else {
+                            }
+                            else
+                            {
                                 std::cerr << "Memory allocation failed!" << std::endl;
                                 // Handle the case when memory allocation fails
                             }
-                            
+
                             std::cout << "frag data id:" << chunk.data_fragments[j].fragment_id << ";chunk:" << chunk.data_fragments[j].chunk_id << ";tier:" << chunk.data_fragments[j].tier_id << std::endl;
                             // avail_frags[num_avail_frags] = reinterpret_cast<char*>(const_cast<char*>(chunk.data_fragments[j].frag.c_str()));
                             // const std::string& data_block = chunk.data_fragments[j].frag;
@@ -762,26 +780,29 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                             // std::cout << "frag.data: " << varDataValues.frag.data() << std::endl;
                             // data_reader_engine.Get(varDataValues, avail_frags[num_avail_frags], adios2::Mode::Sync);
                             // data_reader_engine.Close();
-                            //avail_frags[j] = encodedValues.data();
+                            // avail_frags[j] = encodedValues.data();
                             // num_avail_frags++;
-                            }
                         }
-                        std::cout << "checking parities" << std::endl;
-                        // for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
-                        for (size_t j = 0; j < chunk.parity_fragments.size(); j++)
+                    }
+                    std::cout << "checking parities" << std::endl;
+                    // for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
+                    for (size_t j = 0; j < chunk.parity_fragments.size(); j++)
+                    {
+                        /* check if parity chunks are avaialble */
+                        if (std::find(unavailableSiteList.begin(), unavailableSiteList.end(), j + dataTiersECParam_k[i]) != unavailableSiteList.end())
                         {
-                            /* check if parity chunks are avaialble */
-                            if (std::find(unavailableSiteList.begin(), unavailableSiteList.end(), j+dataTiersECParam_k[i]) != unavailableSiteList.end())
-                            {
-                                std::cout << "cannot access parity chunk " << j << " since site " << j+dataTiersECParam_k[i] << " is unavailable! skip!" << std::endl;
-                                continue;
-                            }
-                            if (chunk.parity_fragments[j].frag.empty()) {
-                                std::cout << "frag parity is null" << std::endl;
-                                nullFrag++;
-                            } else {
+                            std::cout << "cannot access parity chunk " << j << " since site " << j + dataTiersECParam_k[i] << " is unavailable! skip!" << std::endl;
+                            continue;
+                        }
+                        if (chunk.parity_fragments[j].frag.empty())
+                        {
+                            std::cout << "frag parity is null" << std::endl;
+                            nullFrag++;
+                        }
+                        else
+                        {
                             // adios2::Engine parity_reader_engine =
-                            //     reader_io.Open(dataTiersParityLocations[i][j], adios2::Mode::Read); 
+                            //     reader_io.Open(dataTiersParityLocations[i][j], adios2::Mode::Read);
                             // std::string varParityValuesName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j);
                             // auto varParityValues = reader_io.InquireVariable<char>(varParityValuesName);
                             auto varParityValues = chunk.parity_fragments[j];
@@ -790,170 +811,173 @@ int restoreData(Variable var1, int error_mode = 0,int totalSites = 0, int unavai
                             //     std::cout << varParityValues.Shape()[k] << " ";
                             // }
                             // std::cout << std::endl;
-                            //std::vector<char> encodedValues(varParityValues.Shape()[0]);
+                            // std::vector<char> encodedValues(varParityValues.Shape()[0]);
                             // avail_frags[num_avail_frags] = (char *)malloc(varParityValues.Shape()[0]*sizeof(char));
                             // avail_frags[num_avail_frags] = (char *)malloc(varParityValues.frag.data()[0]*sizeof(char));
                             avail_frags[num_avail_frags] = (char *)malloc(chunk.parity_fragments[j].frag.size() * sizeof(char));
 
                             // const std::string& data_block = chunk.parity_fragments[j].frag;
-                            if (avail_frags[num_avail_frags] != nullptr) {
+                            if (avail_frags[num_avail_frags] != nullptr)
+                            {
                                 // Copy the data from chunk.data_fragments[j].frag into the allocated memory
                                 memcpy(avail_frags[num_avail_frags], chunk.parity_fragments[j].frag.c_str(), chunk.parity_fragments[j].frag.size());
 
                                 // Increment the index for the next available fragment
                                 num_avail_frags++;
-                            } else {
+                            }
+                            else
+                            {
                                 std::cerr << "Memory allocation failed!" << std::endl;
                                 // Handle the case when memory allocation fails
                             }
                             // avail_frags[num_avail_frags] = const_cast<char*>(chunk.parity_fragments[j].frag.c_str());
                             std::cout << "frag parity id:" << chunk.parity_fragments[j].fragment_id << std::endl;
-                            std::cout << "frag.parity:size: "<< chunk.parity_fragments[j].frag.size() << std::endl;
+                            std::cout << "frag.parity:size: " << chunk.parity_fragments[j].frag.size() << std::endl;
                             // avail_frags[num_avail_frags] = reinterpret_cast<char*>(const_cast<char*>(chunk.data_fragments[j].frag[i].c_str()));
                             // parity_reader_engine.Get(varParityValues, avail_frags[num_avail_frags], adios2::Mode::Sync);
                             // parity_reader_engine.Close();
-                            //avail_frags[j+storageTiersECParam_k[i]] = encodedValues.data();
+                            // avail_frags[j+storageTiersECParam_k[i]] = encodedValues.data();
                             // num_avail_frags++;
-                            }
-                        }    
-                        assert(num_avail_frags > 0);
-                        // std::cout << "avail_frags: " << avail_frags << std::endl;
-                        std::cout << "num_avail_frags: " << num_avail_frags << std::endl;
-                        std::cout << "encoded_fragment_len: " << encoded_fragment_len << std::endl;
-                        // for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
-                        // {
-                        //     std::cout << avail_frags[j] << std::endl;
-                        // }
-                        
-
-                        rc = liberasurecode_decode(desc, avail_frags, num_avail_frags,
-                                                encoded_fragment_len, 1,
-                                                &decoded_data, &decoded_data_len);   
-                        //assert(0 == rc);
-                        if (rc != 0)
-                        {
-                            std::cout << "Tier: " << i << " cannot be reconstructed due to a corrupted fragment. Skipping Tier..." << std::endl;
-                            break;
                         }
-                        
-                        std::cout << "rc: " << rc << std::endl;
-
-                        uint8_t *tmp = static_cast<uint8_t*>(static_cast<void *>(decoded_data));  
-                        // std::vector<uint8_t> oneTierDecodedData(tmp, tmp+decoded_data_len);
-                        // dataTiersValues[i] = oneTierDecodedData;
-                        std::vector<uint8_t> oneChunkDecodedData(tmp, tmp+decoded_data_len);
-                        dataChunkValues.push_back(oneChunkDecodedData);
-
-                        rc = liberasurecode_decode_cleanup(desc, decoded_data);
-                        assert(rc == 0);
-
-                        assert(0 == liberasurecode_instance_destroy(desc));
-
-                        free(avail_frags);
                     }
-                    // for (const auto& innerVec : dataChunkValues) {
-                    //     // Concatenate each inner vector to the 1D vector
-                    //     dataTiersValues.insert(dataTiersValues.end(), innerVec.begin(), innerVec.end());
-                    // }
-                    size_t totalSize = 0;
-                    for (const auto& innerVec : dataChunkValues) {
-                        totalSize += innerVec.size();
-                    }
-
-                    std::vector<uint8_t> oneDArray;
-                    oneDArray.reserve(totalSize);
-
-                    for (const auto& innerVec : dataChunkValues) {
-                        oneDArray.insert(oneDArray.end(), innerVec.begin(), innerVec.end());
-                    }
-                    dataTiersValues[i] = oneDArray;
-
-                    dataTiersRecovered++;   
-                    std::cout << "Data tiers recovered: " << dataTiersRecovered << std::endl;
-                    std::cout << "Null fragments: " << nullFrag << std::endl;
-                }
-                std::cout << dataTiersRecovered << " data tiers recovered!" << std::endl;
-                if (dataTiersRecovered == 0)
-                {
-                    std::cerr << "no data tier is recovered! all data is unavailable!" << std::endl;
-                    return 1;
-                }
-
-                uint8_t target_level = level_error_bounds.size()-1;
-                std::vector<std::vector<const uint8_t*>> level_components(levels);
-                for (size_t j = 0; j < queryTable.size(); j++)
-                {
-                    //std::cout << j << ": " << queryTable[j][0] << ", " << queryTable[j][1] << ", " << queryTable[j][2] << ", " << queryTable[j][3] << ", " << queryTable[j][5] << std::endl;
-                    if (queryTable[j][2] == dataTiersRecovered)
-                    {
-                        break;
-                    }
-                    
-                    uint8_t * buffer = (uint8_t *) malloc(queryTable[j][4]);
-                    std::copy(dataTiersValues[queryTable[j][2]].begin()+queryTable[j][3], dataTiersValues[queryTable[j][2]].begin()+queryTable[j][3]+queryTable[j][4], buffer);
-                    level_components[queryTable[j][0]].push_back(buffer);
-                    level_num_bitplanes[queryTable[j][0]]++;
-                }
-                int skipped_level = 0;
-                for(size_t j = 0; j <= target_level; j++)
-                {
-                    if(level_num_bitplanes[target_level-j] != 0)
-                    {
-                        skipped_level = j;
-                        break;
-                    }
-                }
-                target_level -= skipped_level;
-                auto level_dims = MDR::compute_level_dims(dimensions, target_level);
-                auto reconstruct_dimensions = level_dims[target_level];
-                uint32_t num_elements = 1;
-                for(const auto& dim:reconstruct_dimensions)
-                {
-                    num_elements *= dim;
-                }
-
-                reconstructedData = std::vector<T>(num_elements, 0);
-                auto level_elements = MDR::compute_level_elements(level_dims, target_level);
-
-                std::vector<uint32_t> dims_dummy(reconstruct_dimensions.size(), 0);
-                for(size_t j = 0; j <= target_level; j++)
-                {
-                    // std::cout << "level " << j << " components size: "<< level_components[j].size() << std::endl;
-                    // for (size_t k = 0; k < level_components[j].size(); k++)
+                    assert(num_avail_frags > 0);
+                    // std::cout << "avail_frags: " << avail_frags << std::endl;
+                    std::cout << "num_avail_frags: " << num_avail_frags << std::endl;
+                    std::cout << "encoded_fragment_len: " << encoded_fragment_len << std::endl;
+                    // for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
                     // {
-                    //     std::cout << j << ", " << k << ": ";
-                    //     for (size_t l = 0; l < 20; l++)
-                    //     {
-                    //         std::cout << +level_components[j][k][l] << " ";
-                    //     }
-                    //     std::cout << std::endl;
+                    //     std::cout << avail_frags[j] << std::endl;
                     // }
-                    
-                    compressor.decompress_level(level_components[j], level_sizes[j], 0, level_num_bitplanes[j], stopping_indices[j]);
 
-                    int level_exp = 0;
-                    frexp(level_error_bounds[j], &level_exp);
-                    auto level_decoded_data = encoder.progressive_decode(level_components[j], level_elements[j], level_exp, 0, level_num_bitplanes[j], j);
-                    compressor.decompress_release();
-                    const std::vector<uint32_t>& prev_dims = (j == 0) ? dims_dummy : level_dims[j-1];
-                    interleaver.reposition(level_decoded_data, reconstruct_dimensions, level_dims[j], prev_dims, reconstructedData.data());
-                    free(level_decoded_data);
-                    //std::cout << " pass" << std::endl;
+                    rc = liberasurecode_decode(desc, avail_frags, num_avail_frags,
+                                               encoded_fragment_len, 1,
+                                               &decoded_data, &decoded_data_len);
+                    // assert(0 == rc);
+                    if (rc != 0)
+                    {
+                        std::cout << "Tier: " << i << " cannot be reconstructed due to a corrupted fragment. Skipping Tier..." << std::endl;
+                        break;
+                    }
+
+                    std::cout << "rc: " << rc << std::endl;
+
+                    uint8_t *tmp = static_cast<uint8_t *>(static_cast<void *>(decoded_data));
+                    // std::vector<uint8_t> oneTierDecodedData(tmp, tmp+decoded_data_len);
+                    // dataTiersValues[i] = oneTierDecodedData;
+                    std::vector<uint8_t> oneChunkDecodedData(tmp, tmp + decoded_data_len);
+                    dataChunkValues.push_back(oneChunkDecodedData);
+
+                    rc = liberasurecode_decode_cleanup(desc, decoded_data);
+                    assert(rc == 0);
+
+                    assert(0 == liberasurecode_instance_destroy(desc));
+
+                    free(avail_frags);
+                }
+                // for (const auto& innerVec : dataChunkValues) {
+                //     // Concatenate each inner vector to the 1D vector
+                //     dataTiersValues.insert(dataTiersValues.end(), innerVec.begin(), innerVec.end());
+                // }
+                size_t totalSize = 0;
+                for (const auto &innerVec : dataChunkValues)
+                {
+                    totalSize += innerVec.size();
                 }
 
-                decomposer.recompose(reconstructedData.data(), reconstruct_dimensions, target_level);
-                MGARD::print_statistics(rawVariableData.data(), reconstructedData.data(), rawVariableData.size()); 
-                
-            }
-        }
+                std::vector<uint8_t> oneDArray;
+                oneDArray.reserve(totalSize);
 
+                for (const auto &innerVec : dataChunkValues)
+                {
+                    oneDArray.insert(oneDArray.end(), innerVec.begin(), innerVec.end());
+                }
+                dataTiersValues[i] = oneDArray;
+
+                dataTiersRecovered++;
+                std::cout << "Data tiers recovered: " << dataTiersRecovered << std::endl;
+                std::cout << "Null fragments: " << nullFrag << std::endl;
+            }
+            std::cout << dataTiersRecovered << " data tiers recovered!" << std::endl;
+            if (dataTiersRecovered == 0)
+            {
+                std::cerr << "no data tier is recovered! all data is unavailable!" << std::endl;
+                return 1;
+            }
+
+            uint8_t target_level = level_error_bounds.size() - 1;
+            std::vector<std::vector<const uint8_t *>> level_components(levels);
+            for (size_t j = 0; j < queryTable.size(); j++)
+            {
+                // std::cout << j << ": " << queryTable[j][0] << ", " << queryTable[j][1] << ", " << queryTable[j][2] << ", " << queryTable[j][3] << ", " << queryTable[j][5] << std::endl;
+                if (queryTable[j][2] == dataTiersRecovered)
+                {
+                    break;
+                }
+
+                uint8_t *buffer = (uint8_t *)malloc(queryTable[j][4]);
+                std::copy(dataTiersValues[queryTable[j][2]].begin() + queryTable[j][3], dataTiersValues[queryTable[j][2]].begin() + queryTable[j][3] + queryTable[j][4], buffer);
+                level_components[queryTable[j][0]].push_back(buffer);
+                level_num_bitplanes[queryTable[j][0]]++;
+            }
+            int skipped_level = 0;
+            for (size_t j = 0; j <= target_level; j++)
+            {
+                if (level_num_bitplanes[target_level - j] != 0)
+                {
+                    skipped_level = j;
+                    break;
+                }
+            }
+            target_level -= skipped_level;
+            auto level_dims = MDR::compute_level_dims(dimensions, target_level);
+            auto reconstruct_dimensions = level_dims[target_level];
+            uint32_t num_elements = 1;
+            for (const auto &dim : reconstruct_dimensions)
+            {
+                num_elements *= dim;
+            }
+
+            reconstructedData = std::vector<T>(num_elements, 0);
+            auto level_elements = MDR::compute_level_elements(level_dims, target_level);
+
+            std::vector<uint32_t> dims_dummy(reconstruct_dimensions.size(), 0);
+            for (size_t j = 0; j <= target_level; j++)
+            {
+                // std::cout << "level " << j << " components size: "<< level_components[j].size() << std::endl;
+                // for (size_t k = 0; k < level_components[j].size(); k++)
+                // {
+                //     std::cout << j << ", " << k << ": ";
+                //     for (size_t l = 0; l < 20; l++)
+                //     {
+                //         std::cout << +level_components[j][k][l] << " ";
+                //     }
+                //     std::cout << std::endl;
+                // }
+
+                compressor.decompress_level(level_components[j], level_sizes[j], 0, level_num_bitplanes[j], stopping_indices[j]);
+
+                int level_exp = 0;
+                frexp(level_error_bounds[j], &level_exp);
+                auto level_decoded_data = encoder.progressive_decode(level_components[j], level_elements[j], level_exp, 0, level_num_bitplanes[j], j);
+                compressor.decompress_release();
+                const std::vector<uint32_t> &prev_dims = (j == 0) ? dims_dummy : level_dims[j - 1];
+                interleaver.reposition(level_decoded_data, reconstruct_dimensions, level_dims[j], prev_dims, reconstructedData.data());
+                free(level_decoded_data);
+                // std::cout << " pass" << std::endl;
+            }
+
+            decomposer.recompose(reconstructedData.data(), reconstruct_dimensions, target_level);
+            MGARD::print_statistics(rawVariableData.data(), reconstructedData.data(), rawVariableData.size());
+        }
+        }
     }
 
     delete db;
     return 0;
 }
 
-struct BoostReceiver {
+struct BoostReceiver
+{
     boost::asio::io_service io_service;
     udp::socket socket{io_service};
     boost::array<char, 8192> recv_buffer;
@@ -969,136 +993,85 @@ struct BoostReceiver {
     std::vector<Fragment> fragments;
     std::vector<Variable> variables;
 
-    void handle_receive(const boost::system::error_code& error, size_t bytes_transferred) {
-        if (error) {
+    void handle_receive(const boost::system::error_code &error, size_t bytes_transferred)
+    {
+        if (error)
+        {
             std::cout << "Receive failed: " << error.message() << "\n";
             return;
         }
 
         DATA::Fragment received_message;
-        if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred))) {
+        if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred)))
+        {
             std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
-        } else {   
-            if (previousVarName == received_message.var_name() && !variables.empty()) {
+        }
+        else
+        {
+            if (previousVarName == received_message.var_name() && !variables.empty())
+            {
                 Variable &latestVariable = variables.back();
                 Tier &latestTier = latestVariable.tiers.back();
 
-                Fragment myFragment;
+                Fragment myFragment = setFragment(received_message);
 
-                myFragment.k = received_message.k();
-                myFragment.m = received_message.m();
-                myFragment.w = received_message.w();
-                myFragment.hd = received_message.hd();
-                myFragment.ec_backend_name = received_message.ec_backend_name();
-                myFragment.encoded_fragment_length = received_message.encoded_fragment_length(); 
-                myFragment.frag = received_message.frag();
-
-                myFragment.is_data = received_message.is_data();
-                myFragment.tier_id = received_message.tier_id();
-                myFragment.chunk_id = received_message.chunk_id();
-                myFragment.fragment_id = received_message.fragment_id();
-                
-                if (myFragment.tier_id == previousTierId) {
+                if (myFragment.tier_id == previousTierId)
+                {
                     if (myFragment.chunk_id == previousChunkId)
                     {
                         Chunk &latestChunk = latestTier.chunks.back();
-                        if (myFragment.is_data) {
+                        if (myFragment.is_data)
+                        {
                             latestChunk.data_fragments.push_back(myFragment);
-                        } else {
+                        }
+                        else
+                        {
                             latestChunk.parity_fragments.push_back(myFragment);
                         }
-                    } else {
+                    }
+                    else
+                    {
                         Chunk newChunk;
                         newChunk.id = myFragment.chunk_id;
-                        if (myFragment.is_data) {
+                        if (myFragment.is_data)
+                        {
                             newChunk.data_fragments.push_back(myFragment);
-                        } else {
+                        }
+                        else
+                        {
                             newChunk.parity_fragments.push_back(myFragment);
                         }
                         latestTier.chunks.push_back(newChunk);
                     }
-                } else {
-                    Tier newTier;
-                    newTier.id = myFragment.tier_id;
-                    newTier.k = myFragment.k;
-                    newTier.m = myFragment.m;
-                    newTier.w = myFragment.w;
-                    newTier.hd = myFragment.hd;
+                }
+                else
+                {
+                    Tier newTier = setTier(myFragment);
+                    // newTier.id = myFragment.tier_id;
+                    // newTier.k = myFragment.k;
+                    // newTier.m = myFragment.m;
+                    // newTier.w = myFragment.w;
+                    // newTier.hd = myFragment.hd;
 
                     Chunk newChunk;
                     newChunk.id = myFragment.chunk_id;
-                    if (myFragment.is_data) {
+                    if (myFragment.is_data)
+                    {
                         newChunk.data_fragments.push_back(myFragment);
-                    } else {
+                    }
+                    else
+                    {
                         newChunk.parity_fragments.push_back(myFragment);
                     }
                     newTier.chunks.push_back(newChunk);
                     latestVariable.tiers.push_back(newTier);
                 }
-            } else {
-                Variable var1;
-                var1.var_name = received_message.var_name();
-                var1.ec_backend_name = received_message.ec_backend_name();
-                var1.var_dimensions.insert(
-                    var1.var_dimensions.end(),
-                    received_message.var_dimensions().begin(),
-                    received_message.var_dimensions().end()
-                );
-                var1.var_type = received_message.var_type();
-                var1.var_levels = received_message.var_levels();
-                var1.var_level_error_bounds.insert(
-                    var1.var_level_error_bounds.end(),
-                    received_message.var_level_error_bounds().begin(), 
-                    received_message.var_level_error_bounds().end()
-                );  
-                // var1.var_stopping_indices.insert(
-                //     var1.var_stopping_indices.end(),
-                //     received_message.var_stopping_indices().begin(), 
-                //     received_message.var_stopping_indices().end()
-                // );  
-                for (const auto& bytes : received_message.var_stopping_indices()) {
-                    var1.var_stopping_indices.insert(var1.var_stopping_indices.end(), bytes.begin(), bytes.end());
-                }
+            }
+            else
+            {
+                Variable var1 = setVariable(received_message);
 
-                var1.var_table_content.rows = received_message.var_table_content().rows();
-                var1.var_table_content.cols = received_message.var_table_content().cols();
-                for (int i = 0; i < received_message.var_table_content().content_size(); ++i) {
-                    uint64_t content_value = received_message.var_table_content().content(i);
-                    var1.var_table_content.content.push_back(content_value);
-                }
-
-                var1.var_squared_errors.rows = received_message.var_squared_errors().rows();
-                var1.var_squared_errors.cols = received_message.var_squared_errors().cols();
-
-                var1.var_squared_errors.content.insert(
-                    var1.var_squared_errors.content.end(),
-                    received_message.var_squared_errors().content().begin(),
-                    received_message.var_squared_errors().content().end()
-                );
-                var1.var_tiers = received_message.var_tiers();
-
-                Fragment myFragment;
-
-                myFragment.k = received_message.k();
-                myFragment.m = received_message.m();
-                myFragment.w = received_message.w();
-                myFragment.hd = received_message.hd();
-                myFragment.ec_backend_name = received_message.ec_backend_name();
-                myFragment.encoded_fragment_length = received_message.encoded_fragment_length();  
-                
-                // for (int i = 0; i < received_message.frag_size(); ++i) {
-                //     const std::string& fragString = received_message.frag(i);
-                //     myFragment.frag.insert(myFragment.frag.end(), fragString.begin(), fragString.end());
-                //     // myFragment.frag.push_back(received_message.frag(i));
-                // }
-                // std::string data_str = received_message.frag();
-                // myFragment.frag = data_str.c_str();
-                myFragment.frag = received_message.frag();
-
-                myFragment.is_data = received_message.is_data();
-                myFragment.tier_id = received_message.tier_id();
-                myFragment.chunk_id = received_message.chunk_id();
-                myFragment.fragment_id = received_message.fragment_id();
+                Fragment myFragment = setFragment(received_message);
 
                 Tier tier;
                 Chunk chunk;
@@ -1108,10 +1081,13 @@ struct BoostReceiver {
                 tier.w = received_message.w();
                 tier.hd = received_message.hd();
                 chunk.id = myFragment.chunk_id;
-                
-                if (myFragment.is_data) {
+
+                if (myFragment.is_data)
+                {
                     chunk.data_fragments.push_back(myFragment);
-                } else {
+                }
+                else
+                {
                     chunk.parity_fragments.push_back(myFragment);
                 }
                 tier.chunks.push_back(chunk);
@@ -1123,9 +1099,8 @@ struct BoostReceiver {
             previousChunkId = received_message.chunk_id();
             std::cout << "received frag data id:" << received_message.fragment_id() << ";chunk:" << received_message.chunk_id() << ";tier:" << received_message.tier_id() << std::endl;
             std::cout << "received frag size: " << received_message.frag().size() << std::endl;
-            
         }
-        //std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
+        // std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
 
         // Restart the timer for another TIMEOUT_DURATION_SECONDS seconds
         timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
@@ -1133,7 +1108,8 @@ struct BoostReceiver {
         wait();
     }
 
-    void wait() {
+    void wait()
+    {
         socket.async_receive_from(boost::asio::buffer(recv_buffer),
                                   remote_endpoint,
                                   boost::bind(&BoostReceiver::handle_receive,
@@ -1142,14 +1118,17 @@ struct BoostReceiver {
                                               boost::asio::placeholders::bytes_transferred));
     }
 
-    void handle_timeout(const boost::system::error_code& error) {
-        if (!error) {
+    void handle_timeout(const boost::system::error_code &error)
+    {
+        if (!error)
+        {
             std::cout << "No new data received for " << TIMEOUT_DURATION_SECONDS << " seconds. Stopping.\n";
             socket.cancel();
         }
     }
 
-    void Receiver() {
+    void Receiver()
+    {
         socket.open(udp::v4());
         socket.bind(udp::endpoint(address::from_string(IPADDRESS), UDP_PORT));
 
@@ -1162,13 +1141,15 @@ struct BoostReceiver {
         std::cout << "Receiving\n";
         io_service.run();
         std::cout << "Receiver exit\nStarting recovery\n";
-        for (int i = 0; i < variables.size(); i++) {
+        for (int i = 0; i < variables.size(); i++)
+        {
             restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
         }
     }
 };
 
-struct ClientTCP {
+struct ClientTCP
+{
     boost::asio::io_service io_service;
     tcp::socket socket{io_service};
     boost::array<char, 800000> recv_buffer;
@@ -1185,123 +1166,80 @@ struct ClientTCP {
     std::vector<Fragment> fragments;
     std::vector<Variable> variables;
 
-    void handle_receive(const boost::system::error_code& error, size_t bytes_transferred) {
-        if (error) {
+    void handle_receive(const boost::system::error_code &error, size_t bytes_transferred)
+    {
+        if (error)
+        {
             std::cout << "Receive failed: " << error.message() << "\n";
             return;
         }
 
         DATA::Fragment received_message;
-        if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred))) {
+        if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred)))
+        {
             std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
-        } else {   
-            if (previousVarName == received_message.var_name() && !variables.empty()) {
+        }
+        else
+        {
+            if (previousVarName == received_message.var_name() && !variables.empty())
+            {
                 Variable &latestVariable = variables.back();
                 Tier &latestTier = latestVariable.tiers.back();
 
-                Fragment myFragment;
+                Fragment myFragment = setFragment(received_message);
 
-                myFragment.k = received_message.k();
-                myFragment.m = received_message.m();
-                myFragment.w = received_message.w();
-                myFragment.hd = received_message.hd();
-                myFragment.ec_backend_name = received_message.ec_backend_name();
-                myFragment.encoded_fragment_length = received_message.encoded_fragment_length(); 
-                myFragment.frag = received_message.frag();
-
-                myFragment.is_data = received_message.is_data();
-                myFragment.tier_id = received_message.tier_id();
-                myFragment.chunk_id = received_message.chunk_id();
-                myFragment.fragment_id = received_message.fragment_id();
-                
-                if (myFragment.tier_id == previousTierId) {
+                if (myFragment.tier_id == previousTierId)
+                {
                     if (myFragment.chunk_id == previousChunkId)
                     {
                         Chunk &latestChunk = latestTier.chunks.back();
-                        if (myFragment.is_data) {
+                        if (myFragment.is_data)
+                        {
                             latestChunk.data_fragments.push_back(myFragment);
-                        } else {
+                        }
+                        else
+                        {
                             latestChunk.parity_fragments.push_back(myFragment);
                         }
-                    } else {
+                    }
+                    else
+                    {
                         Chunk newChunk;
                         newChunk.id = myFragment.chunk_id;
-                        if (myFragment.is_data) {
+                        if (myFragment.is_data)
+                        {
                             newChunk.data_fragments.push_back(myFragment);
-                        } else {
+                        }
+                        else
+                        {
                             newChunk.parity_fragments.push_back(myFragment);
                         }
                         latestTier.chunks.push_back(newChunk);
                     }
-                } else {
-                    Tier newTier;
-                    newTier.id = myFragment.tier_id;
-                    newTier.k = myFragment.k;
-                    newTier.m = myFragment.m;
-                    newTier.w = myFragment.w;
-                    newTier.hd = myFragment.hd;
+                }
+                else
+                {
+                    Tier newTier = setTier(myFragment);
 
                     Chunk newChunk;
                     newChunk.id = myFragment.chunk_id;
-                    if (myFragment.is_data) {
+                    if (myFragment.is_data)
+                    {
                         newChunk.data_fragments.push_back(myFragment);
-                    } else {
+                    }
+                    else
+                    {
                         newChunk.parity_fragments.push_back(myFragment);
                     }
                     newTier.chunks.push_back(newChunk);
                     latestVariable.tiers.push_back(newTier);
                 }
-            } else {
-                Variable var1;
-                var1.var_name = received_message.var_name();
-                var1.ec_backend_name = received_message.ec_backend_name();
-                var1.var_dimensions.insert(
-                    var1.var_dimensions.end(),
-                    received_message.var_dimensions().begin(),
-                    received_message.var_dimensions().end()
-                );
-                var1.var_type = received_message.var_type();
-                var1.var_levels = received_message.var_levels();
-                var1.var_level_error_bounds.insert(
-                    var1.var_level_error_bounds.end(),
-                    received_message.var_level_error_bounds().begin(), 
-                    received_message.var_level_error_bounds().end()
-                );  
-                for (const auto& bytes : received_message.var_stopping_indices()) {
-                    var1.var_stopping_indices.insert(var1.var_stopping_indices.end(), bytes.begin(), bytes.end());
-                }
+            }
+            else
+            {
+                Variable var1 = setVariable(received_message);
 
-                var1.var_table_content.rows = received_message.var_table_content().rows();
-                var1.var_table_content.cols = received_message.var_table_content().cols();
-                for (int i = 0; i < received_message.var_table_content().content_size(); ++i) {
-                    uint64_t content_value = received_message.var_table_content().content(i);
-                    var1.var_table_content.content.push_back(content_value);
-                }
-
-                var1.var_squared_errors.rows = received_message.var_squared_errors().rows();
-                var1.var_squared_errors.cols = received_message.var_squared_errors().cols();
-
-                var1.var_squared_errors.content.insert(
-                    var1.var_squared_errors.content.end(),
-                    received_message.var_squared_errors().content().begin(),
-                    received_message.var_squared_errors().content().end()
-                );
-                var1.var_tiers = received_message.var_tiers();
-
-                Fragment myFragment;
-
-                myFragment.k = received_message.k();
-                myFragment.m = received_message.m();
-                myFragment.w = received_message.w();
-                myFragment.hd = received_message.hd();
-                myFragment.ec_backend_name = received_message.ec_backend_name();
-                myFragment.encoded_fragment_length = received_message.encoded_fragment_length();  
-                myFragment.frag = received_message.frag();
-
-                myFragment.is_data = received_message.is_data();
-                myFragment.tier_id = received_message.tier_id();
-                myFragment.chunk_id = received_message.chunk_id();
-                myFragment.fragment_id = received_message.fragment_id();
+                Fragment myFragment = setFragment(received_message);
 
                 Tier tier;
                 Chunk chunk;
@@ -1311,10 +1249,13 @@ struct ClientTCP {
                 tier.w = received_message.w();
                 tier.hd = received_message.hd();
                 chunk.id = myFragment.chunk_id;
-                
-                if (myFragment.is_data) {
+
+                if (myFragment.is_data)
+                {
                     chunk.data_fragments.push_back(myFragment);
-                } else {
+                }
+                else
+                {
                     chunk.parity_fragments.push_back(myFragment);
                 }
                 tier.chunks.push_back(chunk);
@@ -1326,16 +1267,16 @@ struct ClientTCP {
             previousChunkId = received_message.chunk_id();
             std::cout << "received frag data id:" << received_message.fragment_id() << ";chunk:" << received_message.chunk_id() << ";tier:" << received_message.tier_id() << std::endl;
             std::cout << "received frag size: " << received_message.frag().size() << std::endl;
-            
         }
-        //std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
+        // std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
         std::fill(recv_buffer.begin(), recv_buffer.end(), 0);
         timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
         timer.async_wait(boost::bind(&ClientTCP::handle_timeout, this, boost::asio::placeholders::error));
         wait();
     }
 
-    void wait() {
+    void wait()
+    {
         socket.async_receive(boost::asio::buffer(recv_buffer),
                              boost::bind(&ClientTCP::handle_receive,
                                          this,
@@ -1343,14 +1284,17 @@ struct ClientTCP {
                                          boost::asio::placeholders::bytes_transferred));
     }
 
-    void handle_timeout(const boost::system::error_code& error) {
-        if (!error) {
+    void handle_timeout(const boost::system::error_code &error)
+    {
+        if (!error)
+        {
             std::cout << "No new data received for " << TIMEOUT_DURATION_SECONDS << " seconds. Stopping.\n";
             socket.cancel();
         }
     }
 
-    void Receiver() {
+    void Receiver()
+    {
         // socket.open(tcp::v4());
         // socket.bind(tcp::endpoint(address::from_string(IPADDRESS), UDP_PORT));
 
@@ -1365,13 +1309,15 @@ struct ClientTCP {
         std::cout << "Receiving\n";
         io_service.run();
         std::cout << "Receiver exit\nStarting recovery\n";
-        for (int i = 0; i < variables.size(); i++) {
+        for (int i = 0; i < variables.size(); i++)
+        {
             restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
         }
     }
 };
 
-struct ServerTCP {
+struct ServerTCP
+{
     std::string previousVarName = "null";
     std::int32_t previousTierId = -1;
     std::int32_t previousChunkId = -1;
@@ -1381,18 +1327,20 @@ struct ServerTCP {
     std::vector<Fragment> fragments;
     std::vector<Variable> variables;
 
-    DATA::Fragment receive_protobuf_message(tcp::socket& socket) {
+    DATA::Fragment receive_protobuf_message(tcp::socket &socket)
+    {
         // Read the length of the incoming message
         boost::asio::streambuf length_buffer;
         boost::asio::read_until(socket, length_buffer, '\n');
-        std::string length_str = boost::asio::buffer_cast<const char*>(length_buffer.data());
+        std::string length_str = boost::asio::buffer_cast<const char *>(length_buffer.data());
 
         std::cout << "Received length string: " << length_str;
 
         // Convert length_str to an integer
         std::istringstream length_stream(length_str);
         size_t length;
-        if (!(length_stream >> length)) {
+        if (!(length_stream >> length))
+        {
             std::cout << "Invalid length format." << std::endl;
             throw std::invalid_argument("Invalid length format");
         }
@@ -1403,64 +1351,67 @@ struct ServerTCP {
 
         // Deserialize the Fragment protobuf message
         DATA::Fragment message;
-        if (!message.ParseFromString(boost::asio::buffer_cast<const char*>(message_buffer.data()))) {
+        if (!message.ParseFromString(boost::asio::buffer_cast<const char *>(message_buffer.data())))
+        {
             std::cout << "Failed to parse Fragment protobuf message." << std::endl;
         }
 
         return message;
     }
 
-    void Receiver() {
+    void Receiver()
+    {
         boost::asio::io_service io_service;
         tcp::acceptor acceptor(io_service, tcp::endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT));
         tcp::socket socket(io_service);
 
         acceptor.accept(socket);
 
-        try {
+        try
+        {
             // Continuously receive protobuf messages from the client
-            while (true) {
+            while (true)
+            {
                 DATA::Fragment received_message = receive_protobuf_message(socket);
-                
-                if (previousVarName == received_message.var_name() && !variables.empty()) {
+
+                if (previousVarName == received_message.var_name() && !variables.empty())
+                {
                     Variable &latestVariable = variables.back();
                     Tier &latestTier = latestVariable.tiers.back();
 
-                    Fragment myFragment;
+                    Fragment myFragment = setFragment(received_message);
 
-                    myFragment.k = received_message.k();
-                    myFragment.m = received_message.m();
-                    myFragment.w = received_message.w();
-                    myFragment.hd = received_message.hd();
-                    myFragment.ec_backend_name = received_message.ec_backend_name();
-                    myFragment.encoded_fragment_length = received_message.encoded_fragment_length(); 
-                    myFragment.frag = received_message.frag();
-
-                    myFragment.is_data = received_message.is_data();
-                    myFragment.tier_id = received_message.tier_id();
-                    myFragment.chunk_id = received_message.chunk_id();
-                    myFragment.fragment_id = received_message.fragment_id();
-                    
-                    if (myFragment.tier_id == previousTierId) {
+                    if (myFragment.tier_id == previousTierId)
+                    {
                         if (myFragment.chunk_id == previousChunkId)
                         {
                             Chunk &latestChunk = latestTier.chunks.back();
-                            if (myFragment.is_data) {
+                            if (myFragment.is_data)
+                            {
                                 latestChunk.data_fragments.push_back(myFragment);
-                            } else {
+                            }
+                            else
+                            {
                                 latestChunk.parity_fragments.push_back(myFragment);
                             }
-                        } else {
+                        }
+                        else
+                        {
                             Chunk newChunk;
                             newChunk.id = myFragment.chunk_id;
-                            if (myFragment.is_data) {
+                            if (myFragment.is_data)
+                            {
                                 newChunk.data_fragments.push_back(myFragment);
-                            } else {
+                            }
+                            else
+                            {
                                 newChunk.parity_fragments.push_back(myFragment);
                             }
                             latestTier.chunks.push_back(newChunk);
                         }
-                    } else {
+                    }
+                    else
+                    {
                         Tier newTier;
                         newTier.id = myFragment.tier_id;
                         newTier.k = myFragment.k;
@@ -1470,65 +1421,23 @@ struct ServerTCP {
 
                         Chunk newChunk;
                         newChunk.id = myFragment.chunk_id;
-                        if (myFragment.is_data) {
+                        if (myFragment.is_data)
+                        {
                             newChunk.data_fragments.push_back(myFragment);
-                        } else {
+                        }
+                        else
+                        {
                             newChunk.parity_fragments.push_back(myFragment);
                         }
                         newTier.chunks.push_back(newChunk);
                         latestVariable.tiers.push_back(newTier);
                     }
-                } else {
-                    Variable var1;
-                    var1.var_name = received_message.var_name();
-                    var1.ec_backend_name = received_message.ec_backend_name();
-                    var1.var_dimensions.insert(
-                        var1.var_dimensions.end(),
-                        received_message.var_dimensions().begin(),
-                        received_message.var_dimensions().end()
-                    );
-                    var1.var_type = received_message.var_type();
-                    var1.var_levels = received_message.var_levels();
-                    var1.var_level_error_bounds.insert(
-                        var1.var_level_error_bounds.end(),
-                        received_message.var_level_error_bounds().begin(), 
-                        received_message.var_level_error_bounds().end()
-                    );  
-                    for (const auto& bytes : received_message.var_stopping_indices()) {
-                        var1.var_stopping_indices.insert(var1.var_stopping_indices.end(), bytes.begin(), bytes.end());
-                    }
+                }
+                else
+                {
+                    Variable var1 = setVariable(received_message);
 
-                    var1.var_table_content.rows = received_message.var_table_content().rows();
-                    var1.var_table_content.cols = received_message.var_table_content().cols();
-                    for (int i = 0; i < received_message.var_table_content().content_size(); ++i) {
-                        uint64_t content_value = received_message.var_table_content().content(i);
-                        var1.var_table_content.content.push_back(content_value);
-                    }
-
-                    var1.var_squared_errors.rows = received_message.var_squared_errors().rows();
-                    var1.var_squared_errors.cols = received_message.var_squared_errors().cols();
-
-                    var1.var_squared_errors.content.insert(
-                        var1.var_squared_errors.content.end(),
-                        received_message.var_squared_errors().content().begin(),
-                        received_message.var_squared_errors().content().end()
-                    );
-                    var1.var_tiers = received_message.var_tiers();
-
-                    Fragment myFragment;
-
-                    myFragment.k = received_message.k();
-                    myFragment.m = received_message.m();
-                    myFragment.w = received_message.w();
-                    myFragment.hd = received_message.hd();
-                    myFragment.ec_backend_name = received_message.ec_backend_name();
-                    myFragment.encoded_fragment_length = received_message.encoded_fragment_length();  
-                    myFragment.frag = received_message.frag();
-
-                    myFragment.is_data = received_message.is_data();
-                    myFragment.tier_id = received_message.tier_id();
-                    myFragment.chunk_id = received_message.chunk_id();
-                    myFragment.fragment_id = received_message.fragment_id();
+                    Fragment myFragment = setFragment(received_message);
 
                     Tier tier;
                     Chunk chunk;
@@ -1538,10 +1447,13 @@ struct ServerTCP {
                     tier.w = received_message.w();
                     tier.hd = received_message.hd();
                     chunk.id = myFragment.chunk_id;
-                    
-                    if (myFragment.is_data) {
+
+                    if (myFragment.is_data)
+                    {
                         chunk.data_fragments.push_back(myFragment);
-                    } else {
+                    }
+                    else
+                    {
                         chunk.parity_fragments.push_back(myFragment);
                     }
                     tier.chunks.push_back(chunk);
@@ -1554,20 +1466,24 @@ struct ServerTCP {
                 std::cout << "received frag data id:" << received_message.fragment_id() << ";chunk:" << received_message.chunk_id() << ";tier:" << received_message.tier_id() << std::endl;
                 std::cout << "received frag size: " << received_message.frag().size() << std::endl;
             }
-        } catch (const boost::system::system_error&) {
+        }
+        catch (const boost::system::system_error &)
+        {
             // Handle connection closure
             std::cout << "Connection closed by the sender." << std::endl;
         }
 
         // io_service.run();
         std::cout << "Receiver exit\nStarting recovery\n";
-        for (int i = 0; i < variables.size(); i++) {
+        for (int i = 0; i < variables.size(); i++)
+        {
             restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
         }
     }
 };
 
-struct ZmqTCP {
+struct ZmqTCP
+{
     std::string previousVarName = "null";
     std::int32_t previousTierId = -1;
     std::int32_t previousChunkId = -1;
@@ -1577,7 +1493,20 @@ struct ZmqTCP {
     std::vector<Fragment> fragments;
     std::vector<Variable> variables;
 
-    void Receiver() {
+    // Parameters
+    const int num_packets = 1000;
+    const double true_lambda = 0.005;   // True lambda value for packet loss
+    const double initial_lambda = 0.05; // Initial guess for lambda
+    const int max_iter = 100;           // Maximum number of iterations for EM
+    const double epsilon = 0.0001;      // Convergence criterion for EM
+
+    // Generate packet loss data
+    std::vector<double> packet_loss_times;
+    int total_loss = 0;
+    int chunk_packets = 0;
+
+    void Receiver()
+    {
         using namespace std::chrono_literals;
         using namespace std::chrono;
 
@@ -1593,55 +1522,62 @@ struct ZmqTCP {
 
         auto lastReceiveTime = steady_clock::now();
 
-        try {
+        try
+        {
             // Continuously receive protobuf messages from the client
-            while (true) {
+            while (true)
+            {
                 zmq::message_t rec_message;
-                
+
                 // receive a request from the client
-                if (socket.recv(rec_message, zmq::recv_flags::dontwait)) {
+                if (socket.recv(rec_message, zmq::recv_flags::dontwait))
+                {
                     // Deserialize the received message into the protobuf object
                     received_message.ParseFromArray(rec_message.data(), rec_message.size());
 
-                    if (previousVarName == received_message.var_name() && !variables.empty()) {
+                    if (previousVarName == received_message.var_name() && !variables.empty())
+                    {
                         Variable &latestVariable = variables.back();
                         Tier &latestTier = latestVariable.tiers.back();
 
-                        Fragment myFragment;
+                        Fragment myFragment = setFragment(received_message);
 
-                        myFragment.k = received_message.k();
-                        myFragment.m = received_message.m();
-                        myFragment.w = received_message.w();
-                        myFragment.hd = received_message.hd();
-                        myFragment.ec_backend_name = received_message.ec_backend_name();
-                        myFragment.encoded_fragment_length = received_message.encoded_fragment_length(); 
-                        myFragment.frag = received_message.frag();
-
-                        myFragment.is_data = received_message.is_data();
-                        myFragment.tier_id = received_message.tier_id();
-                        myFragment.chunk_id = received_message.chunk_id();
-                        myFragment.fragment_id = received_message.fragment_id();
-                        
-                        if (myFragment.tier_id == previousTierId) {
+                        if (myFragment.tier_id == previousTierId)
+                        {
                             if (myFragment.chunk_id == previousChunkId)
                             {
                                 Chunk &latestChunk = latestTier.chunks.back();
-                                if (myFragment.is_data) {
+                                if (myFragment.is_data)
+                                {
                                     latestChunk.data_fragments.push_back(myFragment);
-                                } else {
+                                }
+                                else
+                                {
                                     latestChunk.parity_fragments.push_back(myFragment);
                                 }
-                            } else {
+                                chunk_packets++;
+                            }
+                            else
+                            {
                                 Chunk newChunk;
                                 newChunk.id = myFragment.chunk_id;
-                                if (myFragment.is_data) {
+                                if (myFragment.is_data)
+                                {
                                     newChunk.data_fragments.push_back(myFragment);
-                                } else {
+                                }
+                                else
+                                {
                                     newChunk.parity_fragments.push_back(myFragment);
                                 }
                                 latestTier.chunks.push_back(newChunk);
+                                // if (chunk_packets > 1)
+                                // {
+                                //     calculatePacketLoss(chunk_packets);
+                                // }
                             }
-                        } else {
+                        }
+                        else
+                        {
                             Tier newTier;
                             newTier.id = myFragment.tier_id;
                             newTier.k = myFragment.k;
@@ -1651,65 +1587,23 @@ struct ZmqTCP {
 
                             Chunk newChunk;
                             newChunk.id = myFragment.chunk_id;
-                            if (myFragment.is_data) {
+                            if (myFragment.is_data)
+                            {
                                 newChunk.data_fragments.push_back(myFragment);
-                            } else {
+                            }
+                            else
+                            {
                                 newChunk.parity_fragments.push_back(myFragment);
                             }
                             newTier.chunks.push_back(newChunk);
                             latestVariable.tiers.push_back(newTier);
                         }
-                    } else {
-                        Variable var1;
-                        var1.var_name = received_message.var_name();
-                        var1.ec_backend_name = received_message.ec_backend_name();
-                        var1.var_dimensions.insert(
-                            var1.var_dimensions.end(),
-                            received_message.var_dimensions().begin(),
-                            received_message.var_dimensions().end()
-                        );
-                        var1.var_type = received_message.var_type();
-                        var1.var_levels = received_message.var_levels();
-                        var1.var_level_error_bounds.insert(
-                            var1.var_level_error_bounds.end(),
-                            received_message.var_level_error_bounds().begin(), 
-                            received_message.var_level_error_bounds().end()
-                        );  
-                        for (const auto& bytes : received_message.var_stopping_indices()) {
-                            var1.var_stopping_indices.insert(var1.var_stopping_indices.end(), bytes.begin(), bytes.end());
-                        }
+                    }
+                    else
+                    {
+                        Variable var1 = setVariable(received_message);
 
-                        var1.var_table_content.rows = received_message.var_table_content().rows();
-                        var1.var_table_content.cols = received_message.var_table_content().cols();
-                        for (int i = 0; i < received_message.var_table_content().content_size(); ++i) {
-                            uint64_t content_value = received_message.var_table_content().content(i);
-                            var1.var_table_content.content.push_back(content_value);
-                        }
-
-                        var1.var_squared_errors.rows = received_message.var_squared_errors().rows();
-                        var1.var_squared_errors.cols = received_message.var_squared_errors().cols();
-
-                        var1.var_squared_errors.content.insert(
-                            var1.var_squared_errors.content.end(),
-                            received_message.var_squared_errors().content().begin(),
-                            received_message.var_squared_errors().content().end()
-                        );
-                        var1.var_tiers = received_message.var_tiers();
-
-                        Fragment myFragment;
-
-                        myFragment.k = received_message.k();
-                        myFragment.m = received_message.m();
-                        myFragment.w = received_message.w();
-                        myFragment.hd = received_message.hd();
-                        myFragment.ec_backend_name = received_message.ec_backend_name();
-                        myFragment.encoded_fragment_length = received_message.encoded_fragment_length();  
-                        myFragment.frag = received_message.frag();
-
-                        myFragment.is_data = received_message.is_data();
-                        myFragment.tier_id = received_message.tier_id();
-                        myFragment.chunk_id = received_message.chunk_id();
-                        myFragment.fragment_id = received_message.fragment_id();
+                        Fragment myFragment = setFragment(received_message);
 
                         Tier tier;
                         Chunk chunk;
@@ -1719,10 +1613,13 @@ struct ZmqTCP {
                         tier.w = received_message.w();
                         tier.hd = received_message.hd();
                         chunk.id = myFragment.chunk_id;
-                        
-                        if (myFragment.is_data) {
+
+                        if (myFragment.is_data)
+                        {
                             chunk.data_fragments.push_back(myFragment);
-                        } else {
+                        }
+                        else
+                        {
                             chunk.parity_fragments.push_back(myFragment);
                         }
                         tier.chunks.push_back(chunk);
@@ -1742,27 +1639,30 @@ struct ZmqTCP {
                 // Check if 30 seconds have passed since the last received message
                 auto currentTime = steady_clock::now();
                 auto elapsedTime = duration_cast<seconds>(currentTime - lastReceiveTime);
-                if (elapsedTime >= 30s) {
+                if (elapsedTime >= 30s)
+                {
                     std::cout << "No new data received for 30 seconds. Exiting server loop." << std::endl;
                     break;
                 }
-                
             }
-        } 
-        catch (const boost::system::system_error&) {
+        }
+        catch (const boost::system::system_error &)
+        {
             // Handle connection closure
             std::cout << "Connection closed by the sender." << std::endl;
         }
 
         // io_service.run();
         std::cout << "Receiver exit\nStarting recovery\n";
-        for (int i = 0; i < variables.size(); i++) {
+        for (int i = 0; i < variables.size(); i++)
+        {
             restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
         }
     }
 };
 
-struct ReceiverENet {
+struct ReceiverENet
+{
     std::string previousVarName = "null";
     std::int32_t previousTierId = -1;
     std::int32_t previousChunkId = -1;
@@ -1772,10 +1672,12 @@ struct ReceiverENet {
     std::vector<Fragment> fragments;
     std::vector<Variable> variables;
 
-    ENetHost* server;
+    ENetHost *server;
 
-    ReceiverENet() {
-        if (enet_initialize() != 0) {
+    ReceiverENet()
+    {
+        if (enet_initialize() != 0)
+        {
             std::cerr << "Failed to initialize ENet.\n";
             exit(EXIT_FAILURE);
         }
@@ -1783,7 +1685,8 @@ struct ReceiverENet {
         ENetAddress address;
 
         // Create a host for receiving and specify the IP address
-        if (enet_address_set_host(&address, "127.0.0.1") != 0) {
+        if (enet_address_set_host(&address, "127.0.0.1") != 0)
+        {
             std::cerr << "Failed to set host address.\n";
             enet_deinitialize();
             exit(EXIT_FAILURE);
@@ -1791,7 +1694,8 @@ struct ReceiverENet {
         address.port = 1234;
 
         server = enet_host_create(&address, 32, 2, 0, 0);
-        if (server == NULL) {
+        if (server == NULL)
+        {
             std::cerr << "Failed to create ENet server.\n";
             enet_deinitialize();
             exit(EXIT_FAILURE);
@@ -1800,66 +1704,72 @@ struct ReceiverENet {
         std::cout << "Waiting for connection...\n";
     }
 
-    ~ReceiverENet() {
+    ~ReceiverENet()
+    {
         // Clean up
         enet_host_destroy(server);
         enet_deinitialize();
     }
 
-    void run() {
+    void run()
+    {
         std::cout << "Run" << std::endl;
         // Handle events
         ENetEvent event;
-        while (true) {
-            if (enet_host_service(server, &event, 1000) > 0 && event.type == ENET_EVENT_TYPE_CONNECT) {
+        while (true)
+        {
+            if (enet_host_service(server, &event, 1000) > 0 && event.type == ENET_EVENT_TYPE_CONNECT)
+            {
                 std::cout << "A new client connected!\n";
 
-                while (enet_host_service(server, &event, 5000) > 0 && event.type != ENET_EVENT_TYPE_DISCONNECT) {
-                    if (event.type == ENET_EVENT_TYPE_RECEIVE) {
+                while (enet_host_service(server, &event, 5000) > 0 && event.type != ENET_EVENT_TYPE_DISCONNECT)
+                {
+                    if (event.type == ENET_EVENT_TYPE_RECEIVE)
+                    {
                         std::cout << "received" << std::endl;
                         // Deserialize the received message
                         DATA::Fragment received_message;
-                        if (received_message.ParseFromArray(event.packet->data, event.packet->dataLength)) {
+                        if (received_message.ParseFromArray(event.packet->data, event.packet->dataLength))
+                        {
                             // Handle the received protobuf message
-                            if (previousVarName == received_message.var_name() && !variables.empty()) {
+                            if (previousVarName == received_message.var_name() && !variables.empty())
+                            {
                                 Variable &latestVariable = variables.back();
                                 Tier &latestTier = latestVariable.tiers.back();
 
-                                Fragment myFragment;
+                                Fragment myFragment = setFragment(received_message);
 
-                                myFragment.k = received_message.k();
-                                myFragment.m = received_message.m();
-                                myFragment.w = received_message.w();
-                                myFragment.hd = received_message.hd();
-                                myFragment.ec_backend_name = received_message.ec_backend_name();
-                                myFragment.encoded_fragment_length = received_message.encoded_fragment_length(); 
-                                myFragment.frag = received_message.frag();
-
-                                myFragment.is_data = received_message.is_data();
-                                myFragment.tier_id = received_message.tier_id();
-                                myFragment.chunk_id = received_message.chunk_id();
-                                myFragment.fragment_id = received_message.fragment_id();
-                                
-                                if (myFragment.tier_id == previousTierId) {
+                                if (myFragment.tier_id == previousTierId)
+                                {
                                     if (myFragment.chunk_id == previousChunkId)
                                     {
                                         Chunk &latestChunk = latestTier.chunks.back();
-                                        if (myFragment.is_data) {
+                                        if (myFragment.is_data)
+                                        {
                                             latestChunk.data_fragments.push_back(myFragment);
-                                        } else {
+                                        }
+                                        else
+                                        {
                                             latestChunk.parity_fragments.push_back(myFragment);
                                         }
-                                    } else {
+                                    }
+                                    else
+                                    {
                                         Chunk newChunk;
                                         newChunk.id = myFragment.chunk_id;
-                                        if (myFragment.is_data) {
+                                        if (myFragment.is_data)
+                                        {
                                             newChunk.data_fragments.push_back(myFragment);
-                                        } else {
+                                        }
+                                        else
+                                        {
                                             newChunk.parity_fragments.push_back(myFragment);
                                         }
                                         latestTier.chunks.push_back(newChunk);
                                     }
-                                } else {
+                                }
+                                else
+                                {
                                     Tier newTier;
                                     newTier.id = myFragment.tier_id;
                                     newTier.k = myFragment.k;
@@ -1869,65 +1779,22 @@ struct ReceiverENet {
 
                                     Chunk newChunk;
                                     newChunk.id = myFragment.chunk_id;
-                                    if (myFragment.is_data) {
+                                    if (myFragment.is_data)
+                                    {
                                         newChunk.data_fragments.push_back(myFragment);
-                                    } else {
+                                    }
+                                    else
+                                    {
                                         newChunk.parity_fragments.push_back(myFragment);
                                     }
                                     newTier.chunks.push_back(newChunk);
                                     latestVariable.tiers.push_back(newTier);
                                 }
-                            } else {
-                                Variable var1;
-                                var1.var_name = received_message.var_name();
-                                var1.ec_backend_name = received_message.ec_backend_name();
-                                var1.var_dimensions.insert(
-                                    var1.var_dimensions.end(),
-                                    received_message.var_dimensions().begin(),
-                                    received_message.var_dimensions().end()
-                                );
-                                var1.var_type = received_message.var_type();
-                                var1.var_levels = received_message.var_levels();
-                                var1.var_level_error_bounds.insert(
-                                    var1.var_level_error_bounds.end(),
-                                    received_message.var_level_error_bounds().begin(), 
-                                    received_message.var_level_error_bounds().end()
-                                );  
-                                for (const auto& bytes : received_message.var_stopping_indices()) {
-                                    var1.var_stopping_indices.insert(var1.var_stopping_indices.end(), bytes.begin(), bytes.end());
-                                }
-
-                                var1.var_table_content.rows = received_message.var_table_content().rows();
-                                var1.var_table_content.cols = received_message.var_table_content().cols();
-                                for (int i = 0; i < received_message.var_table_content().content_size(); ++i) {
-                                    uint64_t content_value = received_message.var_table_content().content(i);
-                                    var1.var_table_content.content.push_back(content_value);
-                                }
-
-                                var1.var_squared_errors.rows = received_message.var_squared_errors().rows();
-                                var1.var_squared_errors.cols = received_message.var_squared_errors().cols();
-
-                                var1.var_squared_errors.content.insert(
-                                    var1.var_squared_errors.content.end(),
-                                    received_message.var_squared_errors().content().begin(),
-                                    received_message.var_squared_errors().content().end()
-                                );
-                                var1.var_tiers = received_message.var_tiers();
-
-                                Fragment myFragment;
-
-                                myFragment.k = received_message.k();
-                                myFragment.m = received_message.m();
-                                myFragment.w = received_message.w();
-                                myFragment.hd = received_message.hd();
-                                myFragment.ec_backend_name = received_message.ec_backend_name();
-                                myFragment.encoded_fragment_length = received_message.encoded_fragment_length();  
-                                myFragment.frag = received_message.frag();
-
-                                myFragment.is_data = received_message.is_data();
-                                myFragment.tier_id = received_message.tier_id();
-                                myFragment.chunk_id = received_message.chunk_id();
-                                myFragment.fragment_id = received_message.fragment_id();
+                            }
+                            else
+                            {
+                                Variable var1 = setVariable(received_message);
+                                Fragment myFragment = setFragment(received_message);
 
                                 Tier tier;
                                 Chunk chunk;
@@ -1937,10 +1804,13 @@ struct ReceiverENet {
                                 tier.w = received_message.w();
                                 tier.hd = received_message.hd();
                                 chunk.id = myFragment.chunk_id;
-                                
-                                if (myFragment.is_data) {
+
+                                if (myFragment.is_data)
+                                {
                                     chunk.data_fragments.push_back(myFragment);
-                                } else {
+                                }
+                                else
+                                {
                                     chunk.parity_fragments.push_back(myFragment);
                                 }
                                 tier.chunks.push_back(chunk);
@@ -1952,7 +1822,9 @@ struct ReceiverENet {
                             previousChunkId = received_message.chunk_id();
                             std::cout << "received frag data id:" << received_message.fragment_id() << ";chunk:" << received_message.chunk_id() << ";tier:" << received_message.tier_id() << std::endl;
                             std::cout << "received frag size: " << received_message.frag().size() << std::endl;
-                        } else {
+                        }
+                        else
+                        {
                             std::cerr << "Failed to parse received protobuf message.\n";
                         }
                     }
@@ -1963,7 +1835,8 @@ struct ReceiverENet {
             }
         }
         std::cout << "Receiver exit\nStarting recovery\n";
-        for (int i = 0; i < variables.size(); i++) {
+        for (int i = 0; i < variables.size(); i++)
+        {
             restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
         }
     }
@@ -1991,7 +1864,7 @@ struct ReceiverENet {
 
 //         // send the request message
 //         socket.send(zmq::buffer(serialized_request), zmq::send_flags::none);
-        
+
 //         // wait for reply from server
 //         zmq::message_t reply;
 //         (void)socket.recv(reply, zmq::recv_flags::none);
@@ -2011,7 +1884,7 @@ int main(int argc, char *argv[])
     std::string variableName;
     int error_mode = 0;
     int totalSites = 0;
-    int unavaialbleSites = 0; 
+    int unavaialbleSites = 0;
     double mgard_s_param;
     std::string rawDataFileName;
     for (size_t i = 0; i < argc; i++)
@@ -2027,8 +1900,8 @@ int main(int argc, char *argv[])
         //     {
         //         std::cerr << "--kvstore option requires one argument." << std::endl;
         //         return 1;
-        //     }            
-        // } 
+        //     }
+        // }
         // else if (arg == "-var" || arg == "--variable")
         // {//not used
         //     if (i+1 < argc)
@@ -2039,7 +1912,7 @@ int main(int argc, char *argv[])
         //     {
         //         std::cerr << "--variable option requires one argument." << std::endl;
         //         return 1;
-        //     } 
+        //     }
         // }
         // else if (arg == "-em" || arg == "--errormode")
         // {
@@ -2051,38 +1924,37 @@ int main(int argc, char *argv[])
         //     {
         //         std::cerr << "--errormode option requires one argument." << std::endl;
         //         return 1;
-        //     }            
-        // }  
+        //     }
+        // }
         if (arg == "-t" || arg == "--totalsites")
         {
-            if (i+1 < argc)
+            if (i + 1 < argc)
             {
-                totalSites = atoi(argv[i+1]);
+                totalSites = atoi(argv[i + 1]);
                 if (totalSites < 0)
                 {
                     std::cerr << "--totalsites option must be greater than 0." << std::endl;
                     return 1;
                 }
-                
             }
             else
             {
                 std::cerr << "--totalsites option requires one argument." << std::endl;
                 return 1;
-            }            
-        } 
+            }
+        }
         else if (arg == "-u" || arg == "--unavalsites")
         {
-            if (i+1 < argc)
+            if (i + 1 < argc)
             {
-                unavaialbleSites = atoi(argv[i+1]);
+                unavaialbleSites = atoi(argv[i + 1]);
             }
             else
             {
                 std::cerr << "--unavalsites option requires one argument." << std::endl;
                 return 1;
-            }            
-        } 
+            }
+        }
         // else if (arg == "-s")
         // {
         //     if (i+1 < argc)
@@ -2093,22 +1965,22 @@ int main(int argc, char *argv[])
         //     {
         //         std::cerr << "-s option requires one argument." << std::endl;
         //         return 1;
-        //     }            
-        // }    
+        //     }
+        // }
         else if (arg == "-r" || arg == "--rawdata")
         {
-            if (i+1 < argc)
+            if (i + 1 < argc)
             {
-                rawDataFileName = argv[i+1];
+                rawDataFileName = argv[i + 1];
             }
             else
             {
                 std::cerr << "--rawdata option requires one argument." << std::endl;
                 return 1;
-            }            
-        }     
+            }
+        }
     }
-    
+
     // Receiving values from UDP connection
     // ClientTCP client;
     BoostReceiver client;
@@ -2119,12 +1991,12 @@ int main(int argc, char *argv[])
     client.unavailableSites = unavaialbleSites;
 
     // client.run();
-    std::thread r([&] { client.Receiver(); });
+    std::thread r([&]
+                  { client.Receiver(); });
 
     r.join();
     std::cout << "Finished receiving" << std::endl;
     // Free the random number generator
-    gsl_rng_free(r);
 
     return 0;
 }

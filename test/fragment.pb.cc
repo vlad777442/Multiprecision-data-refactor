@@ -209,6 +209,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_fragment_2eproto::offsets[] PR
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_table_content_),
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_squared_errors_),
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_tiers_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, chunk_size_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::DATA::VariableCollection, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -222,7 +223,7 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 16, -1, sizeof(::DATA::Variable)},
   { 30, -1, sizeof(::DATA::Tier)},
   { 42, -1, sizeof(::DATA::Fragment)},
-  { 72, -1, sizeof(::DATA::VariableCollection)},
+  { 73, -1, sizeof(::DATA::VariableCollection)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -247,7 +248,7 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "rrorsTable\022\r\n\005tiers\030\t \001(\r\"y\n\004Tier\022\n\n\002id\030"
   "\001 \001(\005\022\t\n\001k\030\002 \001(\005\022\t\n\001m\030\003 \001(\005\022\t\n\001w\030\004 \001(\005\022\n"
   "\n\002hd\030\005 \001(\005\022\027\n\017ec_backend_name\030\006 \001(\t\022\037\n\027e"
-  "ncoded_fragment_length\030\007 \001(\004\"\254\004\n\010Fragmen"
+  "ncoded_fragment_length\030\007 \001(\004\"\300\004\n\010Fragmen"
   "t\022\t\n\001k\030\001 \001(\005\022\t\n\001m\030\002 \001(\005\022\t\n\001w\030\003 \001(\005\022\n\n\002hd"
   "\030\004 \001(\005\022\027\n\017ec_backend_name\030\005 \001(\014\022\037\n\027encod"
   "ed_fragment_length\030\006 \001(\r\022\013\n\003idx\030\007 \001(\r\022\014\n"
@@ -261,9 +262,9 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "\034\n\024var_stopping_indices\030\026 \003(\014\022+\n\021var_tab"
   "le_content\030\027 \001(\0132\020.DATA.QueryTable\0224\n\022va"
   "r_squared_errors\030\030 \001(\0132\030.DATA.SquaredErr"
-  "orsTable\022\021\n\tvar_tiers\030\031 \001(\r\"7\n\022VariableC"
-  "ollection\022!\n\tvariables\030\001 \003(\0132\016.DATA.Vari"
-  "ableb\006proto3"
+  "orsTable\022\021\n\tvar_tiers\030\031 \001(\r\022\022\n\nchunk_siz"
+  "e\030\032 \001(\r\"7\n\022VariableCollection\022!\n\tvariabl"
+  "es\030\001 \003(\0132\016.DATA.Variableb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_fragment_2eproto_deps[1] = {
 };
@@ -277,7 +278,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_fra
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_fragment_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_fragment_2eproto = {
-  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 1132,
+  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 1152,
   &descriptor_table_fragment_2eproto_once, descriptor_table_fragment_2eproto_sccs, descriptor_table_fragment_2eproto_deps, 6, 0,
   schemas, file_default_instances, TableStruct_fragment_2eproto::offsets,
   file_level_metadata_fragment_2eproto, 6, file_level_enum_descriptors_fragment_2eproto, file_level_service_descriptors_fragment_2eproto,
@@ -1758,8 +1759,8 @@ Fragment::Fragment(const Fragment& from)
     var_squared_errors_ = nullptr;
   }
   ::memcpy(&k_, &from.k_,
-    static_cast<size_t>(reinterpret_cast<char*>(&var_tiers_) -
-    reinterpret_cast<char*>(&k_)) + sizeof(var_tiers_));
+    static_cast<size_t>(reinterpret_cast<char*>(&chunk_size_) -
+    reinterpret_cast<char*>(&k_)) + sizeof(chunk_size_));
   // @@protoc_insertion_point(copy_constructor:DATA.Fragment)
 }
 
@@ -1770,8 +1771,8 @@ void Fragment::SharedCtor() {
   var_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   var_type_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   ::memset(&var_table_content_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&var_tiers_) -
-      reinterpret_cast<char*>(&var_table_content_)) + sizeof(var_tiers_));
+      reinterpret_cast<char*>(&chunk_size_) -
+      reinterpret_cast<char*>(&var_table_content_)) + sizeof(chunk_size_));
 }
 
 Fragment::~Fragment() {
@@ -1827,8 +1828,8 @@ void Fragment::Clear() {
   }
   var_squared_errors_ = nullptr;
   ::memset(&k_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&var_tiers_) -
-      reinterpret_cast<char*>(&k_)) + sizeof(var_tiers_));
+      reinterpret_cast<char*>(&chunk_size_) -
+      reinterpret_cast<char*>(&k_)) + sizeof(chunk_size_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -2033,6 +2034,13 @@ const char* Fragment::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::i
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
+      // uint32 chunk_size = 26;
+      case 26:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 208)) {
+          chunk_size_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
       default: {
       handle_unusual:
         if ((tag & 7) == 4 || tag == 0) {
@@ -2223,6 +2231,12 @@ failure:
   if (this->var_tiers() != 0) {
     target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(25, this->_internal_var_tiers(), target);
+  }
+
+  // uint32 chunk_size = 26;
+  if (this->chunk_size() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(26, this->_internal_chunk_size(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -2431,6 +2445,13 @@ size_t Fragment::ByteSizeLong() const {
         this->_internal_var_tiers());
   }
 
+  // uint32 chunk_size = 26;
+  if (this->chunk_size() != 0) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt32Size(
+        this->_internal_chunk_size());
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
         _internal_metadata_, total_size, &_cached_size_);
@@ -2531,6 +2552,9 @@ void Fragment::MergeFrom(const Fragment& from) {
   if (from.var_tiers() != 0) {
     _internal_set_var_tiers(from._internal_var_tiers());
   }
+  if (from.chunk_size() != 0) {
+    _internal_set_chunk_size(from._internal_chunk_size());
+  }
 }
 
 void Fragment::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -2562,8 +2586,8 @@ void Fragment::InternalSwap(Fragment* other) {
   var_name_.Swap(&other->var_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   var_type_.Swap(&other->var_type_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(Fragment, var_tiers_)
-      + sizeof(Fragment::var_tiers_)
+      PROTOBUF_FIELD_OFFSET(Fragment, chunk_size_)
+      + sizeof(Fragment::chunk_size_)
       - PROTOBUF_FIELD_OFFSET(Fragment, var_table_content_)>(
           reinterpret_cast<char*>(&var_table_content_),
           reinterpret_cast<char*>(&other->var_table_content_));
