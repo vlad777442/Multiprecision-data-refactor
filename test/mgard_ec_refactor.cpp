@@ -45,7 +45,7 @@ using namespace ROCKSDB_NAMESPACE;
 // #define IPADDRESS "127.0.0.1" // "192.168.1.64"
 // #define UDP_PORT 13251
 #define IPADDRESS "10.51.197.229" // "192.168.1.64"
-#define UDP_PORT 33898
+#define UDP_PORT 34565
 
 using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
@@ -264,14 +264,15 @@ std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& origin
     return splitVectors;
 }
 
-void senderBoost(boost::asio::io_service& io_service, udp::socket& socket, const DATA::Fragment& message) {
+void senderBoost(boost::asio::io_service& io_service, udp::socket& socket, udp::endpoint& remote_endpoint, 
+                                                                        const DATA::Fragment& message) {
     std::string serialized_data;
     if (!message.SerializeToString(&serialized_data)) {
         std::cerr << "Failed to serialize the protobuf message." << std::endl;
         return;
     }
 
-    udp::endpoint remote_endpoint = udp::endpoint(address::from_string(IPADDRESS), UDP_PORT);
+    // udp::endpoint remote_endpoint = udp::endpoint(address::from_string(IPADDRESS), UDP_PORT);
 
     boost::system::error_code err;
     auto sent = socket.send_to(boost::asio::buffer(serialized_data), remote_endpoint, 0, err);
@@ -371,6 +372,8 @@ int main(int argc, char *argv[])
     boost::asio::io_service io_service;
     udp::socket socket(io_service);
     socket.open(udp::v4());
+    // Receiver endpoint
+    udp::endpoint receiver_endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT); // Receiver IP and port
     // tcp::socket socket2(io_service);
     //udp boost end
 
@@ -1318,7 +1321,7 @@ int main(int argc, char *argv[])
                         // ENet
                         // sendProtobufMessageEnet(peer, protoFragment1);
                         // enet_host_flush(client);
-                        senderBoost(io_service, socket, protoFragment1);
+                        senderBoost(io_service, socket, receiver_endpoint, protoFragment1);
                         // std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
                     for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
@@ -1383,7 +1386,7 @@ int main(int argc, char *argv[])
                         // sendProtobufMessageEnet(peer, protoFragment2);
                         // enet_host_flush(client);
 
-                        senderBoost(io_service, socket, protoFragment2);
+                        senderBoost(io_service, socket, receiver_endpoint, protoFragment2);
                         // senderZmq(socket, protoFragment2);
                         // std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
