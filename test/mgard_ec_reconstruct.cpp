@@ -856,6 +856,7 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
                     if (rc != 0)
                     {
                         std::cout << "Tier: " << i << " cannot be reconstructed due to a corrupted fragment. Skipping Tier..." << std::endl;
+                        dataTiersRecovered--;
                         break;
                     }
 
@@ -993,6 +994,11 @@ struct BoostReceiver
     std::vector<Fragment> fragments;
     std::vector<Variable> variables;
 
+    std::vector<int> totalLostPackets;
+    std::vector<int> receivedPackets;
+    int lostPackets = 0;
+    int receivedPacketsCounter = 0;
+
     void handle_receive(const boost::system::error_code &error, size_t bytes_transferred)
     {
         if (error)
@@ -1010,6 +1016,7 @@ struct BoostReceiver
         {
             if (previousVarName == received_message.var_name() && !variables.empty())
             {
+                receivedPacketsCounter++;
                 Variable &latestVariable = variables.back();
                 Tier &latestTier = latestVariable.tiers.back();
 
@@ -1069,6 +1076,12 @@ struct BoostReceiver
             }
             else
             {
+                if (receivedPacketsCounter != 0)
+                {
+                    receivedPackets.push_back(receivedPacketsCounter);
+                }
+                
+                receivedPacketsCounter = 1;
                 Variable var1 = setVariable(received_message);
 
                 Fragment myFragment = setFragment(received_message);
@@ -1140,6 +1153,92 @@ struct BoostReceiver
 
         std::cout << "Receiving\n";
         io_service.run();
+        std::cout << "Receiver exit\nStarting recovery\n";
+        for (int i = 0; i < variables.size(); i++)
+        {
+            restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
+        }
+
+        for (size_t i = 0; i < receivedPackets.size(); i++)
+        {
+            std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
+        }
+        
+    }
+};
+
+struct BoostReceiver2
+{
+    boost::asio::io_service io_service;
+    udp::socket socket{io_service};
+    boost::array<char, 8192> recv_buffer;
+    udp::endpoint remote_endpoint;
+    boost::asio::deadline_timer timer{io_service};
+
+    std::string previousVarName = "null";
+    std::int32_t previousTierId = -1;
+    std::int32_t previousChunkId = -1;
+    std::string rawDataName;
+    std::int32_t totalSites;
+    std::int32_t unavailableSites;
+    std::vector<Fragment> fragments;
+    std::vector<Variable> variables;
+
+    void Receiver()
+    {
+        try {
+        boost::asio::io_context io_context;
+
+        udp::socket socket(io_context, udp::endpoint(udp::v4(), 34565)); // Listen on port 9876
+
+        boost::asio::deadline_timer timer(io_context);
+        const int timeoutSeconds = 20; // Adjust timeout as needed
+
+        while (true) {
+            // Set the timer for the timeout period
+            timer.expires_from_now(boost::posix_time::seconds(timeoutSeconds));
+
+            // Receive a Fragment message
+            std::array<char, 8192> recv_buffer;
+            udp::endpoint sender_endpoint;
+            boost::system::error_code error;
+
+            // Wait for data or timeout
+            socket.async_receive_from(
+                boost::asio::buffer(recv_buffer), sender_endpoint,
+                [&error](const boost::system::error_code& ec, std::size_t bytes_transferred) {
+                    error = ec;
+                });
+
+            // Wait for completion of the receive operation or timeout
+            io_context.run_one();
+
+            if (error == boost::asio::error::operation_aborted) {
+                std::cout << "Receive operation timed out." << std::endl;
+                break; // Exit the loop if timeout occurs
+            } else if (error) {
+                std::cerr << "Error receiving data: " << error.message() << std::endl;
+                continue; // Skip processing this message
+            }
+
+            // Deserialize the received Fragment message
+            DATA::Fragment receivedFragment;
+            if (!receivedFragment.ParseFromArray(recv_buffer.data(), recv_buffer.size())) {
+                std::cerr << "Failed to parse received Fragment message." << std::endl;
+                continue; // Skip processing this message
+            }
+
+            // Process the received Fragment message
+            std::cout << "Received Fragment message from " << sender_endpoint.address().to_string() << ":" << sender_endpoint.port() << std::endl;
+
+            // std::cout << "received frag data id:" << received_message.fragment_id() << ";chunk:" << received_message.chunk_id() << ";tier:" << received_message.tier_id() << std::endl;
+            // Access fields of receivedFragment as needed
+        }
+    } catch (std::exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+    }
+
+        
         std::cout << "Receiver exit\nStarting recovery\n";
         for (int i = 0; i < variables.size(); i++)
         {
@@ -1984,6 +2083,7 @@ int main(int argc, char *argv[])
     // Receiving values from UDP connection
     // ClientTCP client;
     BoostReceiver client;
+    // BoostReceiver2 client;
     // ZmqTCP client;
     // ReceiverENet client;
     client.rawDataName = rawDataFileName;

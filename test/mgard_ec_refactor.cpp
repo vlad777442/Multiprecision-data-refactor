@@ -365,6 +365,8 @@ int main(int argc, char *argv[])
     size_t num_bitplanes = 0;
     std::string rocksDBPath;
     std::vector<DATA::Fragment> fragments_vector;
+    std::vector<int> totalPacketsSent;
+    int packetsSent = 0;
 
     ec_backend_id_t backendID;
     size_t fragmentSize;
@@ -1322,6 +1324,7 @@ int main(int argc, char *argv[])
                         // sendProtobufMessageEnet(peer, protoFragment1);
                         // enet_host_flush(client);
                         senderBoost(io_service, socket, receiver_endpoint, protoFragment1);
+                        packetsSent++;
                         // std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
                     for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
@@ -1377,6 +1380,7 @@ int main(int argc, char *argv[])
                         *protoFragment2.mutable_var_squared_errors() = protoAllSquaredErrors;
                         protoFragment2.set_var_tiers(numTiers);
                         protoFragment2.set_encoded_fragment_length(encoded_fragment_len);
+                        packetsSent++;
 
                         // senderTcp(io_service, socket2, protoFragment2);
                         // fragments_vector.push_back(protoFragment2);
@@ -1563,6 +1567,8 @@ int main(int argc, char *argv[])
                 // assert(rc == 0);    
                 // assert(0 == liberasurecode_instance_destroy(desc));                 
             }
+            totalPacketsSent.push_back(packetsSent);
+            packetsSent = 0;
             *variableCollection.add_variables() = protoVariable;
         } 
     }
@@ -1592,6 +1598,11 @@ int main(int argc, char *argv[])
     // enet_host_destroy(client);
     // enet_deinitialize();
     // //enet end
+    for (size_t i = 0; i < totalPacketsSent.size(); i++)
+    {
+        std::cout << "Variable: " << i << "received packets: " << totalPacketsSent[i] << std::endl;
+    }
+    
 
     std::cout << "Completed!" << std::endl;
     for (auto it : data_writer_engines)
