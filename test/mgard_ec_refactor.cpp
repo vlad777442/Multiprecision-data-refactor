@@ -1567,6 +1567,7 @@ int main(int argc, char *argv[])
                 // assert(rc == 0);    
                 // assert(0 == liberasurecode_instance_destroy(desc));                 
             }
+            std::cout << "split data tiers size " << splitDataTiers.size() << std::endl;
             totalPacketsSent.push_back(packetsSent);
             packetsSent = 0;
             *variableCollection.add_variables() = protoVariable;
@@ -1598,9 +1599,10 @@ int main(int argc, char *argv[])
     // enet_host_destroy(client);
     // enet_deinitialize();
     // //enet end
+    
     for (size_t i = 0; i < totalPacketsSent.size(); i++)
     {
-        std::cout << "Variable: " << i << "received packets: " << totalPacketsSent[i] << std::endl;
+        std::cout << "Variable: " << i << "; packets sent: " << totalPacketsSent[i] << std::endl;
     }
     
 
