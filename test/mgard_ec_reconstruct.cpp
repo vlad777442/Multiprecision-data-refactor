@@ -1581,6 +1581,95 @@ struct ServerTCP
     }
 };
 
+struct BoostReceiver3
+{
+    boost::asio::io_service io_service;
+    udp::socket socket{io_service};
+    boost::array<char, 8192> recv_buffer;
+    udp::endpoint remote_endpoint;
+    boost::asio::deadline_timer timer{io_service};
+
+    std::string previousVarName = "null";
+    std::int32_t previousTierId = -1;
+    std::int32_t previousChunkId = -1;
+    std::string rawDataName;
+    std::int32_t totalSites;
+    std::int32_t unavailableSites;
+    std::vector<Fragment> fragments;
+    std::vector<Variable> variables;
+
+    std::vector<int> totalLostPackets;
+    std::vector<int> receivedPackets;
+    int lostPackets = 0;
+    int receivedPacketsCounter = 0;
+
+    void handle_receive(const boost::system::error_code &error, size_t bytes_transferred)
+    {
+        if (error)
+        {
+            std::cout << "Receive failed: " << error.message() << "\n";
+            return;
+        }
+
+        DATA::Fragment received_message;
+        if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred)))
+        {
+            std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
+        }
+        else
+        {
+            receivedPacketsCounter++;
+        }
+        // std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
+
+        // Restart the timer for another TIMEOUT_DURATION_SECONDS seconds
+        timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
+        timer.async_wait(boost::bind(&BoostReceiver3::handle_timeout, this, boost::asio::placeholders::error));
+        wait();
+    }
+
+    void wait()
+    {
+        socket.async_receive_from(boost::asio::buffer(recv_buffer),
+                                  remote_endpoint,
+                                  boost::bind(&BoostReceiver3::handle_receive,
+                                              this,
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred));
+    }
+
+    void handle_timeout(const boost::system::error_code &error)
+    {
+        if (!error)
+        {
+            std::cout << "No new data received for " << TIMEOUT_DURATION_SECONDS << " seconds. Stopping.\n";
+            socket.cancel();
+        }
+    }
+
+    void Receiver()
+    {
+        socket.open(udp::v4());
+        socket.bind(udp::endpoint(address::from_string(IPADDRESS), UDP_PORT));
+
+        wait();
+
+        // Set initial timer for TIMEOUT_DURATION_SECONDS seconds
+        timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
+        timer.async_wait(boost::bind(&BoostReceiver3::handle_timeout, this, boost::asio::placeholders::error));
+
+        std::cout << "Receiving\n";
+        io_service.run();
+        std::cout << "Receiver exit\nStarting recovery\n";
+        std::cout << receivedPacketsCounter << std::endl;
+        // for (size_t i = 0; i < receivedPackets.size(); i++)
+        // {
+        //     std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
+        // }
+        
+    }
+};
+
 struct ZmqTCP
 {
     std::string previousVarName = "null";
@@ -1941,42 +2030,6 @@ struct ReceiverENet
     }
 };
 
-// void receiveZmq() {
-//     // initialize the ZeroMQ context with a single IO thread
-//     zmq::context_t context{1};
-
-//     // construct a REQ (request) socket and connect to the interface
-//     zmq::socket_t socket{context, zmq::socket_type::req};
-//     socket.connect("tcp://localhost:5555");
-
-//     // create an instance of your Protobuf message
-//     PROTO::MyMessage request_message; // Replace with your actual message name and namespace
-
-//     for (auto request_num = 0; request_num < 10; ++request_num) {
-//         // Set up data in the Protobuf message
-//         request_message.set_id(request_num);
-//         request_message.set_name("Hello from Client!");
-
-//         // Serialize the message
-//         std::string serialized_request;
-//         request_message.SerializeToString(&serialized_request);
-
-//         // send the request message
-//         socket.send(zmq::buffer(serialized_request), zmq::send_flags::none);
-
-//         // wait for reply from server
-//         zmq::message_t reply;
-//         (void)socket.recv(reply, zmq::recv_flags::none);
-
-//         // Deserialize the received message into the protobuf object
-//         PROTO::MyMessage received_response; // Replace with your actual message name and namespace
-//         received_response.ParseFromArray(reply.data(), reply.size());
-
-//         // Print received data
-//         std::cout << "Received: ID - " << received_response.id() << ", Message - " << received_response.name() << std::endl;
-//     }
-// }
-
 int main(int argc, char *argv[])
 {
     // std::string rocksDBPath;
@@ -2082,7 +2135,7 @@ int main(int argc, char *argv[])
 
     // Receiving values from UDP connection
     // ClientTCP client;
-    BoostReceiver client;
+    BoostReceiver3 client;
     // BoostReceiver2 client;
     // ZmqTCP client;
     // ReceiverENet client;

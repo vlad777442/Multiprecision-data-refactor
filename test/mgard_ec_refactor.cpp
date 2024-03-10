@@ -51,6 +51,7 @@ using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
 using boost::asio::ip::address;
 
+int packetsSentTotal = 0;
 
 struct UnitErrorGain{
     double unit_error_gain;
@@ -280,6 +281,7 @@ void senderBoost(boost::asio::io_service& io_service, udp::socket& socket, udp::
     if (err) {
         std::cerr << "Error sending data: " << err.message() << std::endl;
     } else {
+        packetsSentTotal++;
         // Data sent successfully
         // std::cout << "Sent Payload --- " << sent << "\n";
     }
@@ -1605,6 +1607,7 @@ int main(int argc, char *argv[])
         std::cout << "Variable: " << i << "; packets sent: " << totalPacketsSent[i] << std::endl;
     }
     
+    std::cout << "Total packets sent: " << packetsSentTotal << std::endl;
 
     std::cout << "Completed!" << std::endl;
     for (auto it : data_writer_engines)
