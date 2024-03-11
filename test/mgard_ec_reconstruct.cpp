@@ -1617,7 +1617,7 @@ struct ZmqTCP
 
         // construct a REP (reply) socket and bind to interface
         zmq::socket_t socket{context, zmq::socket_type::pull};
-        socket.bind("tcp://*:5555");
+        socket.bind("tcp://*:33898");
 
         // create an instance of your Protobuf message
         DATA::Fragment received_message; // Replace with your actual message name and namespace
@@ -1964,13 +1964,14 @@ public:
                 buffer[n] = '\0'; // Null-terminate the received data
                 std::cout << "Received data from " << sender.toString() << std::endl;
 
+                receivedPacketsCounter++;
                 // Deserialize the received data into a Fragment object
                 DATA::Fragment receivedFragment;
                 if (!receivedFragment.ParseFromArray(buffer, n)) {
                     std::cerr << "Failed to parse the received data." << std::endl;
                     continue; // Skip further processing if parsing failed
                 }
-                receivedPacketsCounter++;
+                // receivedPacketsCounter++;
 
                 // Check if the variable name is "stop"
                 if (receivedFragment.var_name() == "stop") {
@@ -2101,28 +2102,28 @@ int main(int argc, char *argv[])
     // ClientTCP client;
     
     // BoostReceiver2 client;
-    // ZmqTCP client;
+    ZmqTCP client;
     // ReceiverENet client;
-    // client.rawDataName = rawDataFileName;
-    // client.totalSites = totalSites;
-    // client.unavailableSites = unavaialbleSites;
+    client.rawDataName = rawDataFileName;
+    client.totalSites = totalSites;
+    client.unavailableSites = unavaialbleSites;
 
-    // // client.run();
-    // std::thread r([&]
-    //               { client.Receiver(); });
+    // client.run();
+    std::thread r([&]
+                  { client.Receiver(); });
 
-    // r.join();
+    r.join();
 
-    try {
-        PocoReceiver receiver("10.51.197.229", 34565);
-        receiver.start();
-    }
-    catch (Poco::Exception& ex) {
-        std::cerr << "Exception: " << ex.displayText() << std::endl;
-        return 1;
-    }
-    std::cout << "Finished receiving" << std::endl;
-    // Free the random number generator
+    // try {
+    //     PocoReceiver receiver("10.51.197.229", 34565);
+    //     receiver.start();
+    // }
+    // catch (Poco::Exception& ex) {
+    //     std::cerr << "Exception: " << ex.displayText() << std::endl;
+    //     return 1;
+    // }
+    // std::cout << "Finished receiving" << std::endl;
+    // // Free the random number generator
 
     return 0;
 }

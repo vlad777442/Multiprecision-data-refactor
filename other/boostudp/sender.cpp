@@ -5,6 +5,7 @@
 using boost::asio::ip::udp;
 
 int main() {
+    int packetsSent = 0;
     try {
         boost::asio::io_context io_context;
 
@@ -27,11 +28,13 @@ int main() {
         // Receiver endpoint
         udp::endpoint receiver_endpoint(boost::asio::ip::address::from_string("10.51.197.229"), 34565); // Receiver IP and port
 
-        while (true)
+        for (size_t i = 0; i < 500000; i++)
         {
             socket.send_to(boost::asio::buffer(serializedFragment), receiver_endpoint);
             std::cout << "Fragment message sent successfully to " << receiver_endpoint.address().to_string() << ":" << receiver_endpoint.port() << std::endl;
+            packetsSent++;
         }
+        std::cout << "Packets sent: " << packetsSent << std::endl;
         
 
     } catch (std::exception& e) {

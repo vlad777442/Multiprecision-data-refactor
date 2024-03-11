@@ -5,6 +5,7 @@
 using boost::asio::ip::udp;
 
 int main() {
+    int packetsReceived = 0;
     try {
         boost::asio::io_context io_context;
 
@@ -22,10 +23,11 @@ int main() {
                 std::cerr << "Failed to parse received Fragment message." << std::endl;
                 continue; // Skip processing this message
             }
-
+            packetsReceived++;
             // Process the received Fragment message
             std::cout << "Received Fragment message from " << sender_endpoint.address().to_string() << ":" << sender_endpoint.port() << std::endl;
             // Access fields of receivedFragment as needed
+            std::cout << "Packets received: " << packetsReceived << std::endl;
         }
 
     } catch (std::exception& e) {
