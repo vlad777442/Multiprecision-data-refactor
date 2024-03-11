@@ -209,6 +209,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_fragment_2eproto::offsets[] PR
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_table_content_),
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_squared_errors_),
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_tiers_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, numbers_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::DATA::VariableCollection, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -222,7 +223,7 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 16, -1, sizeof(::DATA::Variable)},
   { 30, -1, sizeof(::DATA::Tier)},
   { 42, -1, sizeof(::DATA::Fragment)},
-  { 72, -1, sizeof(::DATA::VariableCollection)},
+  { 73, -1, sizeof(::DATA::VariableCollection)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -247,7 +248,7 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "rrorsTable\022\r\n\005tiers\030\t \001(\r\"y\n\004Tier\022\n\n\002id\030"
   "\001 \001(\005\022\t\n\001k\030\002 \001(\005\022\t\n\001m\030\003 \001(\005\022\t\n\001w\030\004 \001(\005\022\n"
   "\n\002hd\030\005 \001(\005\022\027\n\017ec_backend_name\030\006 \001(\t\022\037\n\027e"
-  "ncoded_fragment_length\030\007 \001(\004\"\254\004\n\010Fragmen"
+  "ncoded_fragment_length\030\007 \001(\004\"\275\004\n\010Fragmen"
   "t\022\t\n\001k\030\001 \001(\005\022\t\n\001m\030\002 \001(\005\022\t\n\001w\030\003 \001(\005\022\n\n\002hd"
   "\030\004 \001(\005\022\027\n\017ec_backend_name\030\005 \001(\014\022\037\n\027encod"
   "ed_fragment_length\030\006 \001(\r\022\013\n\003idx\030\007 \001(\r\022\014\n"
@@ -261,9 +262,9 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "\034\n\024var_stopping_indices\030\026 \003(\014\022+\n\021var_tab"
   "le_content\030\027 \001(\0132\020.DATA.QueryTable\0224\n\022va"
   "r_squared_errors\030\030 \001(\0132\030.DATA.SquaredErr"
-  "orsTable\022\021\n\tvar_tiers\030\031 \001(\r\"7\n\022VariableC"
-  "ollection\022!\n\tvariables\030\001 \003(\0132\016.DATA.Vari"
-  "ableb\006proto3"
+  "orsTable\022\021\n\tvar_tiers\030\031 \001(\r\022\017\n\007numbers\030\032"
+  " \003(\005\"7\n\022VariableCollection\022!\n\tvariables\030"
+  "\001 \003(\0132\016.DATA.Variableb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_fragment_2eproto_deps[1] = {
 };
@@ -277,7 +278,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_fra
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_fragment_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_fragment_2eproto = {
-  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 1132,
+  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 1149,
   &descriptor_table_fragment_2eproto_once, descriptor_table_fragment_2eproto_sccs, descriptor_table_fragment_2eproto_deps, 6, 0,
   schemas, file_default_instances, TableStruct_fragment_2eproto::offsets,
   file_level_metadata_fragment_2eproto, 6, file_level_enum_descriptors_fragment_2eproto, file_level_service_descriptors_fragment_2eproto,
@@ -1716,7 +1717,8 @@ Fragment::Fragment(::PROTOBUF_NAMESPACE_ID::Arena* arena)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena),
   var_dimensions_(arena),
   var_level_error_bounds_(arena),
-  var_stopping_indices_(arena) {
+  var_stopping_indices_(arena),
+  numbers_(arena) {
   SharedCtor();
   RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:DATA.Fragment)
@@ -1725,7 +1727,8 @@ Fragment::Fragment(const Fragment& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
       var_dimensions_(from.var_dimensions_),
       var_level_error_bounds_(from.var_level_error_bounds_),
-      var_stopping_indices_(from.var_stopping_indices_) {
+      var_stopping_indices_(from.var_stopping_indices_),
+      numbers_(from.numbers_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   ec_backend_name_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (!from._internal_ec_backend_name().empty()) {
@@ -1814,6 +1817,7 @@ void Fragment::Clear() {
   var_dimensions_.Clear();
   var_level_error_bounds_.Clear();
   var_stopping_indices_.Clear();
+  numbers_.Clear();
   ec_backend_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   frag_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   var_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
@@ -2033,6 +2037,16 @@ const char* Fragment::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::i
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
+      // repeated int32 numbers = 26;
+      case 26:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 210)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedInt32Parser(_internal_mutable_numbers(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 208) {
+          _internal_add_numbers(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
       default: {
       handle_unusual:
         if ((tag & 7) == 4 || tag == 0) {
@@ -2225,6 +2239,15 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(25, this->_internal_var_tiers(), target);
   }
 
+  // repeated int32 numbers = 26;
+  {
+    int byte_size = _numbers_cached_byte_size_.load(std::memory_order_relaxed);
+    if (byte_size > 0) {
+      target = stream->WriteInt32Packed(
+          26, _internal_numbers(), byte_size, target);
+    }
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -2277,6 +2300,21 @@ size_t Fragment::ByteSizeLong() const {
   for (int i = 0, n = var_stopping_indices_.size(); i < n; i++) {
     total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
       var_stopping_indices_.Get(i));
+  }
+
+  // repeated int32 numbers = 26;
+  {
+    size_t data_size = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      Int32Size(this->numbers_);
+    if (data_size > 0) {
+      total_size += 2 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+            static_cast<::PROTOBUF_NAMESPACE_ID::int32>(data_size));
+    }
+    int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(data_size);
+    _numbers_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
   }
 
   // bytes ec_backend_name = 5;
@@ -2465,6 +2503,7 @@ void Fragment::MergeFrom(const Fragment& from) {
   var_dimensions_.MergeFrom(from.var_dimensions_);
   var_level_error_bounds_.MergeFrom(from.var_level_error_bounds_);
   var_stopping_indices_.MergeFrom(from.var_stopping_indices_);
+  numbers_.MergeFrom(from.numbers_);
   if (from.ec_backend_name().size() > 0) {
     _internal_set_ec_backend_name(from._internal_ec_backend_name());
   }
@@ -2557,6 +2596,7 @@ void Fragment::InternalSwap(Fragment* other) {
   var_dimensions_.InternalSwap(&other->var_dimensions_);
   var_level_error_bounds_.InternalSwap(&other->var_level_error_bounds_);
   var_stopping_indices_.InternalSwap(&other->var_stopping_indices_);
+  numbers_.InternalSwap(&other->numbers_);
   ec_backend_name_.Swap(&other->ec_backend_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   frag_.Swap(&other->frag_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   var_name_.Swap(&other->var_name_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());

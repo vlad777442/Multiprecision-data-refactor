@@ -79,6 +79,7 @@ message Fragment {
   QueryTable var_table_content = 23;
   SquaredErrorsTable var_squared_errors = 24;
   uint32 var_tiers = 25;
+  repeated int32 numbers = 26;
 }
 //add chunk or add to fragment
 message VariableCollection {

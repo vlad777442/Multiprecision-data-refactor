@@ -1084,6 +1084,7 @@ class Fragment PROTOBUF_FINAL :
     kVarDimensionsFieldNumber = 18,
     kVarLevelErrorBoundsFieldNumber = 21,
     kVarStoppingIndicesFieldNumber = 22,
+    kNumbersFieldNumber = 26,
     kEcBackendNameFieldNumber = 5,
     kFragFieldNumber = 12,
     kVarNameFieldNumber = 17,
@@ -1174,6 +1175,28 @@ class Fragment PROTOBUF_FINAL :
   const std::string& _internal_var_stopping_indices(int index) const;
   std::string* _internal_add_var_stopping_indices();
   public:
+
+  // repeated int32 numbers = 26;
+  int numbers_size() const;
+  private:
+  int _internal_numbers_size() const;
+  public:
+  void clear_numbers();
+  private:
+  ::PROTOBUF_NAMESPACE_ID::int32 _internal_numbers(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >&
+      _internal_numbers() const;
+  void _internal_add_numbers(::PROTOBUF_NAMESPACE_ID::int32 value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >*
+      _internal_mutable_numbers();
+  public:
+  ::PROTOBUF_NAMESPACE_ID::int32 numbers(int index) const;
+  void set_numbers(int index, ::PROTOBUF_NAMESPACE_ID::int32 value);
+  void add_numbers(::PROTOBUF_NAMESPACE_ID::int32 value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >&
+      numbers() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >*
+      mutable_numbers();
 
   // bytes ec_backend_name = 5;
   void clear_ec_backend_name();
@@ -1467,6 +1490,8 @@ class Fragment PROTOBUF_FINAL :
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > var_level_error_bounds_;
   mutable std::atomic<int> _var_level_error_bounds_cached_byte_size_;
   ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField<std::string> var_stopping_indices_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 > numbers_;
+  mutable std::atomic<int> _numbers_cached_byte_size_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr ec_backend_name_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr frag_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr var_name_;
@@ -3517,6 +3542,53 @@ inline void Fragment::_internal_set_var_tiers(::PROTOBUF_NAMESPACE_ID::uint32 va
 inline void Fragment::set_var_tiers(::PROTOBUF_NAMESPACE_ID::uint32 value) {
   _internal_set_var_tiers(value);
   // @@protoc_insertion_point(field_set:DATA.Fragment.var_tiers)
+}
+
+// repeated int32 numbers = 26;
+inline int Fragment::_internal_numbers_size() const {
+  return numbers_.size();
+}
+inline int Fragment::numbers_size() const {
+  return _internal_numbers_size();
+}
+inline void Fragment::clear_numbers() {
+  numbers_.Clear();
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 Fragment::_internal_numbers(int index) const {
+  return numbers_.Get(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 Fragment::numbers(int index) const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.numbers)
+  return _internal_numbers(index);
+}
+inline void Fragment::set_numbers(int index, ::PROTOBUF_NAMESPACE_ID::int32 value) {
+  numbers_.Set(index, value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.numbers)
+}
+inline void Fragment::_internal_add_numbers(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  numbers_.Add(value);
+}
+inline void Fragment::add_numbers(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  _internal_add_numbers(value);
+  // @@protoc_insertion_point(field_add:DATA.Fragment.numbers)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >&
+Fragment::_internal_numbers() const {
+  return numbers_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >&
+Fragment::numbers() const {
+  // @@protoc_insertion_point(field_list:DATA.Fragment.numbers)
+  return _internal_numbers();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >*
+Fragment::_internal_mutable_numbers() {
+  return &numbers_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >*
+Fragment::mutable_numbers() {
+  // @@protoc_insertion_point(field_mutable_list:DATA.Fragment.numbers)
+  return _internal_mutable_numbers();
 }
 
 // -------------------------------------------------------------------

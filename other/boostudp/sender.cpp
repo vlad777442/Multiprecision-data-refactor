@@ -7,6 +7,14 @@ using boost::asio::ip::udp;
 int main() {
     int packetsSent = 0;
     try {
+        std::vector<int> numbers;
+    
+        // Resize the vector to contain ten elements
+        numbers.resize(10);
+        for (int i = 0; i < 10; ++i) {
+            numbers.push_back(i);
+        }
+
         boost::asio::io_context io_context;
 
         udp::socket socket(io_context, udp::endpoint(udp::v4(), 0)); // Use any available port for sender
@@ -17,6 +25,9 @@ int main() {
         fragment.set_k(10);
         fragment.set_m(20);
         // Set other fields as needed
+        for (int num : numbers) {
+            fragment.add_numbers(num);
+        }
 
         // Serialize the Fragment message
         std::string serializedFragment;
