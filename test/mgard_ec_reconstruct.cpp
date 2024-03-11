@@ -39,6 +39,8 @@
 #include <chrono>
 #include <zmq.hpp>
 #include <enet/enet.h>
+#include "Poco/Net/DatagramSocket.h"
+#include "Poco/Net/SocketAddress.h"
 
 #define IPADDRESS "10.51.197.229" // "192.168.1.64"
 #define UDP_PORT 34565
@@ -50,6 +52,7 @@ using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
 
 using namespace ROCKSDB_NAMESPACE;
+using namespace Poco::Net;
 
 std::vector<std::vector<uint32_t>> get_level_sizes(uint32_t levels, const std::vector<std::vector<uint64_t>> &query_table)
 {
@@ -1581,95 +1584,6 @@ struct ServerTCP
     }
 };
 
-struct BoostReceiver3
-{
-    boost::asio::io_service io_service;
-    udp::socket socket{io_service};
-    boost::array<char, 8192> recv_buffer;
-    udp::endpoint remote_endpoint;
-    boost::asio::deadline_timer timer{io_service};
-
-    std::string previousVarName = "null";
-    std::int32_t previousTierId = -1;
-    std::int32_t previousChunkId = -1;
-    std::string rawDataName;
-    std::int32_t totalSites;
-    std::int32_t unavailableSites;
-    std::vector<Fragment> fragments;
-    std::vector<Variable> variables;
-
-    std::vector<int> totalLostPackets;
-    std::vector<int> receivedPackets;
-    int lostPackets = 0;
-    int receivedPacketsCounter = 0;
-
-    void handle_receive(const boost::system::error_code &error, size_t bytes_transferred)
-    {
-        if (error)
-        {
-            std::cout << "Receive failed: " << error.message() << "\n";
-            return;
-        }
-
-        DATA::Fragment received_message;
-        if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred)))
-        {
-            std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
-        }
-        else
-        {
-            receivedPacketsCounter++;
-        }
-        // std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
-
-        // Restart the timer for another TIMEOUT_DURATION_SECONDS seconds
-        timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
-        timer.async_wait(boost::bind(&BoostReceiver3::handle_timeout, this, boost::asio::placeholders::error));
-        wait();
-    }
-
-    void wait()
-    {
-        socket.async_receive_from(boost::asio::buffer(recv_buffer),
-                                  remote_endpoint,
-                                  boost::bind(&BoostReceiver3::handle_receive,
-                                              this,
-                                              boost::asio::placeholders::error,
-                                              boost::asio::placeholders::bytes_transferred));
-    }
-
-    void handle_timeout(const boost::system::error_code &error)
-    {
-        if (!error)
-        {
-            std::cout << "No new data received for " << TIMEOUT_DURATION_SECONDS << " seconds. Stopping.\n";
-            socket.cancel();
-        }
-    }
-
-    void Receiver()
-    {
-        socket.open(udp::v4());
-        socket.bind(udp::endpoint(address::from_string(IPADDRESS), UDP_PORT));
-
-        wait();
-
-        // Set initial timer for TIMEOUT_DURATION_SECONDS seconds
-        timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
-        timer.async_wait(boost::bind(&BoostReceiver3::handle_timeout, this, boost::asio::placeholders::error));
-
-        std::cout << "Receiving\n";
-        io_service.run();
-        std::cout << "Receiver exit\nStarting recovery\n";
-        std::cout << receivedPacketsCounter << std::endl;
-        // for (size_t i = 0; i < receivedPackets.size(); i++)
-        // {
-        //     std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
-        // }
-        
-    }
-};
-
 struct ZmqTCP
 {
     std::string previousVarName = "null";
@@ -2030,6 +1944,56 @@ struct ReceiverENet
     }
 };
 
+class PocoReceiver {
+    int receivedPacketsCounter = 0;
+public:
+    PocoReceiver(const std::string& address, int port) : m_address(address), m_port(port) {}
+
+    void start() {
+        try {
+            // Create a DatagramSocket for receiving data
+            DatagramSocket socket;
+            SocketAddress sa(m_address, m_port); // Server address and port
+            socket.bind(sa);
+
+            char buffer[8192];
+            while (true) {
+                // Receive data
+                SocketAddress sender;
+                int n = socket.receiveFrom(buffer, sizeof(buffer), sender);
+                buffer[n] = '\0'; // Null-terminate the received data
+                std::cout << "Received data from " << sender.toString() << std::endl;
+
+                // Deserialize the received data into a Fragment object
+                DATA::Fragment receivedFragment;
+                if (!receivedFragment.ParseFromArray(buffer, n)) {
+                    std::cerr << "Failed to parse the received data." << std::endl;
+                    continue; // Skip further processing if parsing failed
+                }
+                receivedPacketsCounter++;
+
+                // Check if the variable name is "stop"
+                if (receivedFragment.var_name() == "stop") {
+                    std::cout << "Received stop signal. Stopping receiver." << std::endl;
+                    std::cout << "Total packets received Poco: " << receivedPacketsCounter << std::endl;
+                    break; // Exit the loop
+                }
+
+                // Do something with the received Fragment object
+                std::cout << "Received Variable: " << receivedFragment.var_name() << std::endl;
+            }
+        }
+        catch (Poco::Exception& ex) {
+            std::cerr << "Exception: " << ex.displayText() << std::endl;
+        }
+    }
+
+private:
+    std::string m_address;
+    int m_port;
+};
+
+
 int main(int argc, char *argv[])
 {
     // std::string rocksDBPath;
@@ -2135,19 +2099,28 @@ int main(int argc, char *argv[])
 
     // Receiving values from UDP connection
     // ClientTCP client;
-    BoostReceiver3 client;
+    
     // BoostReceiver2 client;
     // ZmqTCP client;
     // ReceiverENet client;
-    client.rawDataName = rawDataFileName;
-    client.totalSites = totalSites;
-    client.unavailableSites = unavaialbleSites;
+    // client.rawDataName = rawDataFileName;
+    // client.totalSites = totalSites;
+    // client.unavailableSites = unavaialbleSites;
 
-    // client.run();
-    std::thread r([&]
-                  { client.Receiver(); });
+    // // client.run();
+    // std::thread r([&]
+    //               { client.Receiver(); });
 
-    r.join();
+    // r.join();
+
+    try {
+        PocoReceiver receiver("10.51.197.229", 34565);
+        receiver.start();
+    }
+    catch (Poco::Exception& ex) {
+        std::cerr << "Exception: " << ex.displayText() << std::endl;
+        return 1;
+    }
     std::cout << "Finished receiving" << std::endl;
     // Free the random number generator
 

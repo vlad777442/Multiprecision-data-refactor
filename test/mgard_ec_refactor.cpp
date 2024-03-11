@@ -41,15 +41,19 @@ using namespace ROCKSDB_NAMESPACE;
 #include <thread>
 #include <chrono>
 #include <enet/enet.h>
+#include "Poco/Net/DatagramSocket.h"
+#include "Poco/Net/SocketAddress.h"
 
 // #define IPADDRESS "127.0.0.1" // "192.168.1.64"
 // #define UDP_PORT 13251
 #define IPADDRESS "10.51.197.229" // "192.168.1.64"
 #define UDP_PORT 34565
 
+
 using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
 using boost::asio::ip::address;
+using namespace Poco::Net;
 
 int packetsSentTotal = 0;
 
@@ -344,6 +348,28 @@ void sendProtobufMessageEnet(ENetPeer* peer, const DATA::Fragment& message) {
     std::cout << "Protobuf message with fragment id sent: " << message.fragment_id() << std::endl;
 }
 
+// Method to send a protobuf variable over UDP
+void sendProtobufVariablePoco(const DATA::Fragment& variable, const SocketAddress& serverAddress) {
+    try {
+        // Create a DatagramSocket for sending data
+        DatagramSocket socket;
+
+        // Serialize the Variable object to a string
+        std::string serializedVariable;
+        variable.SerializeToString(&serializedVariable);
+
+        // Send the serialized Variable object over UDP
+        
+        socket.sendTo(serializedVariable.data(), serializedVariable.size(), serverAddress);
+        std::cout << "Variable sent successfully." << std::endl;
+        packetsSentTotal++;
+        
+    }
+    catch (Poco::Exception& ex) {
+        std::cerr << "Exception: " << ex.displayText() << std::endl;
+    }
+}
+
 void adjustParameters(int& k, int& m) {
     // Adjust parameters based on packet loss rate or other criteria
     k += 1;  // Increase the number of data fragments
@@ -433,8 +459,9 @@ int main(int argc, char *argv[])
     //     sendProtobufMessageEnet(peer, tmp);
     // //Enet End
 
-    //
-
+    //Poco
+    SocketAddress serverAddress("10.51.197.229", 34565); // Server address and port
+    //Poco end
     for (size_t i = 0; i < argc; i++)
     {
         std::string arg = argv[i];
@@ -1325,8 +1352,8 @@ int main(int argc, char *argv[])
                         // ENet
                         // sendProtobufMessageEnet(peer, protoFragment1);
                         // enet_host_flush(client);
-                        senderBoost(io_service, socket, receiver_endpoint, protoFragment1);
-                        packetsSent++;
+                        // senderBoost(io_service, socket, receiver_endpoint, protoFragment1);
+                        sendProtobufVariablePoco(protoFragment1, serverAddress);
                         // std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
                     for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
@@ -1382,7 +1409,7 @@ int main(int argc, char *argv[])
                         *protoFragment2.mutable_var_squared_errors() = protoAllSquaredErrors;
                         protoFragment2.set_var_tiers(numTiers);
                         protoFragment2.set_encoded_fragment_length(encoded_fragment_len);
-                        packetsSent++;
+                       
 
                         // senderTcp(io_service, socket2, protoFragment2);
                         // fragments_vector.push_back(protoFragment2);
@@ -1391,8 +1418,8 @@ int main(int argc, char *argv[])
                         // ENet
                         // sendProtobufMessageEnet(peer, protoFragment2);
                         // enet_host_flush(client);
-
-                        senderBoost(io_service, socket, receiver_endpoint, protoFragment2);
+                        sendProtobufVariablePoco(protoFragment2, serverAddress);
+                        // senderBoost(io_service, socket, receiver_endpoint, protoFragment2);
                         // senderZmq(socket, protoFragment2);
                         // std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
@@ -1601,7 +1628,10 @@ int main(int argc, char *argv[])
     // enet_host_destroy(client);
     // enet_deinitialize();
     // //enet end
-    
+    DATA::Fragment stopping;
+    stopping.set_var_name("stop");
+    sendProtobufVariablePoco(stopping, serverAddress);
+
     for (size_t i = 0; i < totalPacketsSent.size(); i++)
     {
         std::cout << "Variable: " << i << "; packets sent: " << totalPacketsSent[i] << std::endl;
