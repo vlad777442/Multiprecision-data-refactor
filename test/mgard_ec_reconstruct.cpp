@@ -1617,7 +1617,7 @@ struct ZmqTCP
 
         // construct a REP (reply) socket and bind to interface
         zmq::socket_t socket{context, zmq::socket_type::pull};
-        socket.bind("tcp://*:33898");
+        socket.bind("tcp://*:4343");
 
         // create an instance of your Protobuf message
         DATA::Fragment received_message; // Replace with your actual message name and namespace

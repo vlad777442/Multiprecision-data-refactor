@@ -418,7 +418,7 @@ int main(int argc, char *argv[])
 
     // construct a REQ (request) socket and connect to the interface
     zmq::socket_t socket{context, zmq::socket_type::push};
-    socket.connect("tcp://10.51.197.229:33898");
+    socket.connect("tcp://10.51.197.229:4343");
     // socket.connect("tcp://localhost:5555");
     // //zmq end
 
@@ -1630,7 +1630,7 @@ int main(int argc, char *argv[])
     // enet_host_destroy(client);
     // enet_deinitialize();
     // //enet end
-    
+
     // End the timer
     auto end = std::chrono::steady_clock::now();
 
