@@ -10,8 +10,8 @@ int main() {
         std::vector<int> numbers;
     
         // Resize the vector to contain ten elements
-        numbers.resize(10);
-        for (int i = 0; i < 10; ++i) {
+        numbers.resize(250);
+        for (int i = 0; i < 250; ++i) {
             numbers.push_back(i);
         }
 
@@ -36,6 +36,12 @@ int main() {
             return 1;
         }
 
+        // Measure the size of the serialized message
+        size_t messageSize = serializedFragment.size();
+        std::cout << "Message size: " << messageSize << " bytes" << std::endl;
+
+        int sizeCounter = 0;
+
         // Receiver endpoint
         udp::endpoint receiver_endpoint(boost::asio::ip::address::from_string("10.51.197.229"), 34565); // Receiver IP and port
 
@@ -43,9 +49,15 @@ int main() {
         {
             socket.send_to(boost::asio::buffer(serializedFragment), receiver_endpoint);
             std::cout << "Fragment message sent successfully to " << receiver_endpoint.address().to_string() << ":" << receiver_endpoint.port() << std::endl;
+            if (messageSize > 1500)
+            {
+                sizeCounter++;
+            }
+            
             packetsSent++;
         }
         std::cout << "Packets sent: " << packetsSent << std::endl;
+        std::cout << "Size counter: " << sizeCounter << std::endl;
         
 
     } catch (std::exception& e) {
