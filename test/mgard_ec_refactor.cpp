@@ -1356,7 +1356,7 @@ int main(int argc, char *argv[])
                         // enet_host_flush(client);
                         // senderBoost(io_service, socket, receiver_endpoint, protoFragment1);
                         // sendProtobufVariablePoco(protoFragment1, serverAddress);
-                        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                        // std::this_thread::sleep_for(std::chrono::milliseconds(20));
                     }
                     for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
                     {
