@@ -398,6 +398,8 @@ int main(int argc, char *argv[])
 
     ec_backend_id_t backendID;
     size_t fragmentSize;
+    // Start the timer
+    auto start = std::chrono::steady_clock::now();
     // udp boost start
     boost::asio::io_service io_service;
     udp::socket socket(io_service);
@@ -1629,6 +1631,16 @@ int main(int argc, char *argv[])
     // enet_host_destroy(client);
     // enet_deinitialize();
     // //enet end
+
+    // End the timer
+    auto end = std::chrono::steady_clock::now();
+
+    // Calculate the elapsed time
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+
+    // Output the elapsed time
+    std::cout << "Work completed in " << duration.count() << " seconds." << std::endl;
+    
     DATA::Fragment stopping;
     stopping.set_var_name("stop");
     // sendProtobufVariablePoco(stopping, serverAddress);

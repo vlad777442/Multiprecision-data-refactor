@@ -1159,6 +1159,13 @@ struct BoostReceiver
         std::cout << "Receiving\n";
         io_service.run();
         std::cout << "Receiver exit\nStarting recovery\n";
+        
+        for (size_t i = 0; i < receivedPackets.size(); i++)
+        {
+            std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
+        }
+        std::cout << "Total received: " << totalReceived << std::endl;
+
         for (int i = 0; i < variables.size(); i++)
         {
             restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
@@ -2103,8 +2110,8 @@ int main(int argc, char *argv[])
     // Receiving values from UDP connection
     // ClientTCP client;
     
-    // BoostReceiver2 client;
-    ZmqTCP client;
+    BoostReceiver client;
+    // ZmqTCP client;
     // ReceiverENet client;
     client.rawDataName = rawDataFileName;
     client.totalSites = totalSites;
