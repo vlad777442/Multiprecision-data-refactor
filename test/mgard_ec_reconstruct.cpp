@@ -999,6 +999,7 @@ struct BoostReceiver
 
     std::vector<int> totalLostPackets;
     std::vector<int> receivedPackets;
+    int totalReceived = 0;
     int lostPackets = 0;
     int receivedPacketsCounter = 0;
 
@@ -1017,6 +1018,7 @@ struct BoostReceiver
         }
         else
         {
+            totalReceived++;
             if (previousVarName == received_message.var_name() && !variables.empty())
             {
                 receivedPacketsCounter++;
@@ -1166,7 +1168,7 @@ struct BoostReceiver
         {
             std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
         }
-        
+        std::cout << "Total received: " << totalReceived << std::endl;
     }
 };
 
@@ -1617,7 +1619,7 @@ struct ZmqTCP
 
         // construct a REP (reply) socket and bind to interface
         zmq::socket_t socket{context, zmq::socket_type::pull};
-        socket.bind("tcp://*:33898");
+        socket.bind("tcp://*:4343");
 
         // create an instance of your Protobuf message
         DATA::Fragment received_message; // Replace with your actual message name and namespace
