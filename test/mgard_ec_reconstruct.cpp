@@ -1011,7 +1011,9 @@ struct BoostReceiver
         {
             std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
         }
-        else
+        else if (!received_message.var_name().empty() && 
+                received_message.tier_id() != -1 && 
+                received_message.chunk_id() != -1)
         {
             totalReceived++;
             if (previousVarName == received_message.var_name())
@@ -1113,6 +1115,9 @@ struct BoostReceiver
             previousChunkId = received_message.chunk_id();
             // std::cout << "received frag data id:" << received_message.fragment_id() << ";chunk:" << received_message.chunk_id() << ";tier:" << received_message.tier_id() << std::endl;
             // std::cout << "received frag size: " << received_message.frag().size() << std::endl;
+        }
+        else {
+            std::cerr << "Received message is null or incomplete." << std::endl;
         }
         // std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
 

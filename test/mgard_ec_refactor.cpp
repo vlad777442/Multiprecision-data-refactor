@@ -56,7 +56,7 @@ using boost::asio::ip::address;
 using namespace Poco::Net;
 
 int packetsSentTotal = 0;
-int send_rate = 500;
+int send_rate = 1000;
 
 struct UnitErrorGain{
     double unit_error_gain;
