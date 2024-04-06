@@ -56,6 +56,7 @@ using boost::asio::ip::address;
 using namespace Poco::Net;
 
 int packetsSentTotal = 0;
+int send_rate = 500;
 
 struct UnitErrorGain{
     double unit_error_gain;
@@ -289,6 +290,8 @@ void senderBoost(boost::asio::io_service& io_service, udp::socket& socket, udp::
         // Data sent successfully
         // std::cout << "Sent Payload --- " << sent << "\n";
     }
+    // Sleep to limit sending rate
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000 / send_rate));
 }
 
 
