@@ -1117,8 +1117,8 @@ struct BoostReceiver
             // std::cout << "received frag size: " << received_message.frag().size() << std::endl;
         }
         else {
-            std::cerr << "Received message is null or incomplete." << std::endl;
-        }
+        std::cerr << "Received message is null or incomplete." << std::endl;
+    }
         // std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
 
         // Restart the timer for another TIMEOUT_DURATION_SECONDS seconds
