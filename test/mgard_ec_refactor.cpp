@@ -44,10 +44,10 @@ using namespace ROCKSDB_NAMESPACE;
 #include "Poco/Net/DatagramSocket.h"
 #include "Poco/Net/SocketAddress.h"
 
-// #define IPADDRESS "127.0.0.1" // "192.168.1.64"
-// #define UDP_PORT 13251
-#define IPADDRESS "10.51.197.229" // "192.168.1.64"
-#define UDP_PORT 34565
+#define IPADDRESS "127.0.0.1" // "192.168.1.64"
+#define UDP_PORT 13251
+// #define IPADDRESS "10.51.197.229" // "192.168.1.64"
+// #define UDP_PORT 34565
 
 
 using boost::asio::ip::tcp;

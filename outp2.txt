@@ -1,0 +1,1146 @@
+Receiving
+baryon_density
+dark_matter_density
+temperature
+velocity_x
+velocity_y
+velocity_z
+No new data received for 30 seconds. Stopping.
+Receive failed: Operation canceled
+Receiver exit
+Starting recovery
+Variable: 0 received packets: 4918
+Variable: 1 received packets: 30567
+Variable: 2 received packets: 47604
+Variable: 3 received packets: 63948
+Variable: 4 received packets: 66977
+Total received: 256093
+baryon_density:Dimensions, 512 512 512 
+baryon_density:Levels, 4
+baryon_density:Tiers, 4
+baryon_density:Tier:0:K, 28
+baryon_density:Tier:0:M, 4
+baryon_density:Tier:0:W, 4
+baryon_density:Tier:0:HD, 5
+baryon_density:Tier:1:K, 27
+baryon_density:Tier:1:M, 5
+baryon_density:Tier:1:W, 3
+baryon_density:Tier:1:HD, 6
+baryon_density:Tier:2:K, 26
+baryon_density:Tier:2:M, 6
+baryon_density:Tier:2:W, 2
+baryon_density:Tier:2:HD, 7
+baryon_density:Tier:3:K, 25
+baryon_density:Tier:3:M, 7
+baryon_density:Tier:3:W, 1
+baryon_density:Tier:3:HD, 8
+baryon_density:Type, float
+baryon_density:QueryTable:Shape, 87 5 
+baryon_density:QueryTable, 
+0 0 0 0 28 
+1 0 0 28 42 
+2 0 0 70 198 
+3 0 0 268 1363 
+2 1 0 1631 208 
+2 2 0 1839 208 
+1 1 0 2047 58 
+2 3 0 2105 238 
+0 1 0 2343 37 
+1 2 0 2380 75 
+3 1 0 2455 1392 
+2 4 0 3847 250 
+0 2 0 4097 37 
+3 2 0 4134 1392 
+1 3 0 5526 187 
+3 3 0 5713 1511 
+2 5 0 7224 505 
+3 4 0 7729 1534 
+0 3 0 9263 106 
+2 6 0 9369 718 
+1 4 0 10087 429 
+3 5 0 10516 2192 
+0 4 0 12708 146 
+3 6 0 12854 2550 
+1 5 0 15404 668 
+2 7 0 16072 1615 
+0 5 0 17687 440 
+3 7 0 18127 4720 
+2 8 0 22847 2630 
+1 6 0 25477 1342 
+0 6 0 26819 574 
+3 8 0 27393 6163 
+2 9 0 33556 4368 
+1 7 0 37924 2646 
+3 9 0 40570 11274 
+2 10 0 51844 7038 
+0 7 0 58882 2032 
+1 8 0 60914 4791 
+3 10 0 65705 15615 
+0 8 0 81320 2448 
+2 11 0 83768 14028 
+1 9 0 97796 9866 
+3 11 1 0 27233 
+2 12 1 27233 22686 
+0 9 1 49919 8283 
+1 10 1 58202 17184 
+3 12 1 75386 40126 
+0 10 1 115512 9020 
+2 13 1 124532 44870 
+1 11 1 169402 32286 
+3 13 1 201688 78546 
+2 14 1 280234 71998 
+0 11 1 352232 21274 
+1 12 1 373506 50620 
+3 14 1 424126 130029 
+0 12 2 0 21504 
+2 15 2 21504 140734 
+1 13 2 162238 77275 
+3 15 2 239513 264348 
+0 13 2 503861 34350 
+1 14 2 538211 107768 
+2 16 2 645979 217544 
+0 14 2 863523 34332 
+3 16 2 897855 469917 
+0 15 2 1367772 34332 
+1 15 2 1402104 139337 
+2 17 2 1541441 362242 
+0 16 2 1903683 34332 
+1 16 2 1938015 178063 
+3 17 2 2116078 896581 
+2 18 3 0 539985 
+0 17 3 539985 34332 
+1 17 3 574317 201726 
+0 18 3 776043 34332 
+2 19 3 810375 746706 
+3 18 3 1557081 1552881 
+1 18 3 3109962 234031 
+0 19 3 3343993 34332 
+1 19 3 3378325 234008 
+2 20 3 3612333 1081077 
+0 20 3 4693410 34332 
+3 19 3 4727742 2529206 
+1 20 3 7256948 234008 
+0 21 3 7490956 34332 
+2 21 3 7525288 1336921 
+1 21 3 8862209 234008 
+3 20 3 9096217 4050807 
+baryon_density:SquaredErrors:Shape, 4 33 
+baryon_density:SquaredErrors, 
+2.58039e+07 2.58039e+07 2.75891e+07 1.83079e+07 1.33796e+07 9.38234e+06 6.79356e+06 4.01114e+06 2.58651e+06 1.41117e+06 889176 419499 232125 87440.5 34231.8 8269.72 1914.61 475.567 119.413 29.8196 7.44654 1.86029 0.466396 0.117006 0.0288491 0.00736055 0.00177222 0.000479965 0.00010304 3.60306e-05 5.6697e-06 4.84565e-06 1.26601e-06 
+5.97951e+08 5.97951e+08 7.10744e+08 5.04194e+08 3.95768e+08 2.65169e+08 1.41342e+08 7.91067e+07 4.20186e+07 2.24887e+07 1.15239e+07 5.73778e+06 2.74458e+06 1.25111e+06 526712 216670 83017.8 31728.5 10438.9 3102.92 806.381 202.816 50.7885 12.7035 3.17083 0.795067 0.197588 0.0501665 0.0122827 0.00331106 0.000832078 0.000327486 0.000143805 
+1.23694e+10 1.23694e+10 1.52947e+10 5.24215e+09 6.64393e+09 3.25582e+09 2.28292e+09 1.38208e+09 7.78475e+08 4.46759e+08 2.14663e+08 1.05933e+08 5.29878e+07 2.60026e+07 1.26705e+07 6.18753e+06 2.94459e+06 1.3579e+06 587604 258870 107662 45260.7 16641.7 5575.42 1546.91 401.282 100.048 25.3918 6.22558 1.68007 0.420938 0.167511 0.0735213 
+3.62706e+10 3.62706e+10 4.03752e+10 1.6848e+10 1.62987e+10 7.42316e+09 5.77863e+09 2.7619e+09 1.49917e+09 7.84852e+08 3.89195e+08 1.95441e+08 9.4793e+07 4.76862e+07 2.40314e+07 1.24084e+07 6.28724e+06 3.24091e+06 1.55877e+06 723136 316202 140526 58501 24275.7 8739.45 2832.28 767.516 199.878 49.1012 13.2761 3.31444 1.32857 0.579997 
+baryon_density:StopIndices, 13 18 23 25 
+baryon_density:ErrorBounds, 2399.15 8641.96 74707.4 75850.2 
+
+K:28;M:4;W:4;HD:5
+baryon_density:Tier:0:EncodedFragmentLength, 2004
+baryon_density:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 18
+encoded_fragment_len: 2004
+Tier: 0 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:27;M:5;W:3;HD:6
+baryon_density:Tier:1:EncodedFragmentLength, 1946
+baryon_density:Tier:1:ECBackendName, liberasurecode_rs_vand
+K:27; M:5
+checking data
+checking parities
+num_avail_frags: 12
+encoded_fragment_len: 1946
+Tier: 1 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:26;M:6;W:2;HD:7
+baryon_density:Tier:2:EncodedFragmentLength, 2114
+baryon_density:Tier:2:ECBackendName, liberasurecode_rs_vand
+K:26; M:6
+checking data
+checking parities
+num_avail_frags: 10
+encoded_fragment_len: 2114
+Tier: 2 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:25;M:7;W:1;HD:8
+baryon_density:Tier:3:EncodedFragmentLength, 2128
+baryon_density:Tier:3:ECBackendName, liberasurecode_rs_vand
+K:25; M:7
+checking data
+checking parities
+num_avail_frags: 20
+encoded_fragment_len: 2128
+Tier: 3 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+0 data tiers recovered!
+dark_matter_density:Dimensions, 512 512 512 
+dark_matter_density:Levels, 4
+dark_matter_density:Tiers, 4
+dark_matter_density:Tier:0:K, 28
+dark_matter_density:Tier:0:M, 4
+dark_matter_density:Tier:0:W, 4
+dark_matter_density:Tier:0:HD, 5
+dark_matter_density:Tier:1:K, 27
+dark_matter_density:Tier:1:M, 5
+dark_matter_density:Tier:1:W, 3
+dark_matter_density:Tier:1:HD, 6
+dark_matter_density:Tier:2:K, 26
+dark_matter_density:Tier:2:M, 6
+dark_matter_density:Tier:2:W, 2
+dark_matter_density:Tier:2:HD, 7
+dark_matter_density:Tier:3:K, 25
+dark_matter_density:Tier:3:M, 7
+dark_matter_density:Tier:3:W, 1
+dark_matter_density:Tier:3:HD, 8
+dark_matter_density:Type, float
+dark_matter_density:QueryTable:Shape, 93 5 
+dark_matter_density:QueryTable, 
+0 0 0 0 28 
+1 0 0 28 42 
+2 0 0 70 198 
+3 0 0 268 1363 
+2 1 0 1631 208 
+1 1 0 1839 76 
+2 2 0 1915 208 
+0 1 0 2123 55 
+0 2 0 2178 55 
+1 2 0 2233 123 
+2 3 0 2356 454 
+3 1 0 2810 1488 
+2 4 0 4298 575 
+3 2 0 4873 1482 
+0 3 0 6355 197 
+1 3 0 6552 555 
+0 4 0 7107 233 
+3 3 0 7340 3294 
+1 4 0 10634 945 
+2 5 0 11579 2885 
+3 4 0 14464 4094 
+0 5 0 18558 1048 
+2 6 0 19606 4679 
+1 5 0 24285 3156 
+0 6 0 27441 1242 
+3 5 0 28683 19392 
+1 6 0 48075 6503 
+2 7 0 54578 16704 
+3 6 0 71282 28100 
+0 7 0 99382 5227 
+2 8 0 104609 32018 
+1 7 0 136627 17551 
+0 8 0 154178 6245 
+3 7 0 160423 102785 
+1 8 0 263208 34511 
+2 9 0 297719 87529 
+0 9 0 385248 16160 
+3 8 0 401408 182689 
+1 9 0 584097 64060 
+0 10 0 648157 17627 
+2 10 0 665784 171140 
+1 10 0 836924 101224 
+0 11 0 938148 30741 
+3 9 0 968889 557496 
+2 11 0 1526385 339300 
+0 12 1 0 31025 
+1 11 1 31025 140387 
+3 10 1 171412 1005930 
+0 13 1 1177342 34350 
+2 12 1 1211692 554748 
+1 12 1 1766440 179130 
+0 14 1 1945570 34332 
+2 13 1 1979902 793654 
+1 13 1 2773556 203954 
+3 11 1 2977510 2132074 
+0 15 1 5109584 34332 
+1 14 1 5143916 228795 
+2 14 1 5372711 1075604 
+0 16 1 6448315 34332 
+3 12 1 6482647 3561679 
+1 15 1 10044326 234008 
+0 17 1 10278334 34332 
+2 15 1 10312666 1310691 
+1 16 2 0 234008 
+0 18 2 234008 34332 
+3 13 2 268340 5820588 
+2 16 2 6088928 1594611 
+1 17 2 7683539 234008 
+0 19 2 7917547 34332 
+2 17 2 7951879 1750876 
+1 18 2 9702755 234008 
+0 20 2 9936763 34332 
+3 14 2 9971095 9748191 
+2 18 2 19719286 1853551 
+1 19 2 21572837 234008 
+0 21 2 21806845 34332 
+3 15 2 21841177 13061893 
+2 19 2 34903070 1853488 
+1 20 3 0 234008 
+0 22 3 234008 34332 
+3 16 3 268340 14622496 
+2 20 3 14890836 1853488 
+1 21 3 16744324 234008 
+0 23 3 16978332 34332 
+3 17 3 17012664 14655392 
+2 21 3 31668056 1853488 
+1 22 3 33521544 234008 
+0 24 3 33755552 34332 
+3 18 3 33789884 14655392 
+2 22 3 48445276 1853488 
+1 23 3 50298764 234008 
+0 25 3 50532772 34332 
+3 19 3 50567104 14655392 
+dark_matter_density:SquaredErrors:Shape, 4 33 
+dark_matter_density:SquaredErrors, 
+1.39344e+07 1.39344e+07 1.66172e+07 1.00329e+07 8.94451e+06 6.20248e+06 4.67084e+06 2.83679e+06 1.92458e+06 986339 561826 228693 97874.3 28630.2 7877.49 1918.56 477.255 118.775 29.8285 7.44426 1.8634 0.465634 0.11597 0.0292078 0.00724882 0.0018338 0.000445225 0.00011913 2.64042e-05 8.64478e-06 1.50988e-06 1.08305e-06 2.98544e-07 
+1.78311e+08 1.78311e+08 1.74227e+08 1.52109e+08 1.21103e+08 8.82335e+07 6.09894e+07 3.86596e+07 2.40572e+07 1.36582e+07 7.01503e+06 3.26592e+06 1.34638e+06 504477 164044 48327.1 12780.7 3247.8 813.408 203.013 50.8238 12.6827 3.17513 0.793648 0.198312 0.0497346 0.0123384 0.00313801 0.000764689 0.000209269 5.06851e-05 2.09326e-05 8.5499e-06 
+1.1455e+09 1.1455e+09 1.13732e+09 1.00719e+09 8.85047e+08 7.26397e+08 6.01643e+08 4.19338e+08 2.8336e+08 1.76724e+08 1.07557e+08 6.14732e+07 3.18791e+07 1.54151e+07 6.49378e+06 2.57043e+06 919801 312160 92717.8 25368.5 6427.71 1608.9 402.128 100.616 25.1192 6.29955 1.56419 0.397574 0.0971479 0.0263991 0.00652525 0.00264934 0.00113749 
+2.15673e+09 2.15673e+09 2.1952e+09 1.75016e+09 1.65803e+09 1.23195e+09 1.02277e+09 6.72919e+08 4.49548e+08 2.79526e+08 1.73322e+08 9.98316e+07 5.47302e+07 2.962e+07 1.57167e+07 8.52796e+06 2.91739e+06 793818 201219 50611.6 12660.1 3169.09 792.1 198.284 49.4816 12.4184 3.0826 0.783623 0.19134 0.0520478 0.0128436 0.00522821 0.00223237 
+dark_matter_density:StopIndices, 13 14 18 16 
+dark_matter_density:ErrorBounds, 1354.64 2944.5 9506.42 7588.91 
+
+K:28;M:4;W:4;HD:5
+dark_matter_density:Tier:0:EncodedFragmentLength, 2100
+dark_matter_density:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 22
+encoded_fragment_len: 2100
+Tier: 0 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:27;M:5;W:3;HD:6
+dark_matter_density:Tier:1:EncodedFragmentLength, 2122
+dark_matter_density:Tier:1:ECBackendName, liberasurecode_rs_vand
+K:27; M:5
+checking data
+checking parities
+num_avail_frags: 21
+encoded_fragment_len: 2122
+Tier: 1 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:26;M:6;W:2;HD:7
+dark_matter_density:Tier:2:EncodedFragmentLength, 2126
+dark_matter_density:Tier:2:ECBackendName, liberasurecode_rs_vand
+K:26; M:6
+checking data
+checking parities
+num_avail_frags: 22
+encoded_fragment_len: 2126
+Tier: 2 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:25;M:7;W:1;HD:8
+dark_matter_density:Tier:3:EncodedFragmentLength, 2128
+dark_matter_density:Tier:3:ECBackendName, liberasurecode_rs_vand
+K:25; M:7
+checking data
+checking parities
+num_avail_frags: 20
+encoded_fragment_len: 2128
+Tier: 3 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+0 data tiers recovered!
+temperature:Dimensions, 512 512 512 
+temperature:Levels, 4
+temperature:Tiers, 4
+temperature:Tier:0:K, 28
+temperature:Tier:0:M, 4
+temperature:Tier:0:W, 4
+temperature:Tier:0:HD, 5
+temperature:Tier:1:K, 27
+temperature:Tier:1:M, 5
+temperature:Tier:1:W, 3
+temperature:Tier:1:HD, 6
+temperature:Tier:2:K, 26
+temperature:Tier:2:M, 6
+temperature:Tier:2:W, 2
+temperature:Tier:2:HD, 7
+temperature:Tier:3:K, 25
+temperature:Tier:3:M, 7
+temperature:Tier:3:W, 1
+temperature:Tier:3:HD, 8
+temperature:Type, float
+temperature:QueryTable:Shape, 95 5 
+temperature:QueryTable, 
+0 0 0 0 28 
+1 0 0 28 42 
+2 0 0 70 219 
+3 0 0 289 1363 
+0 1 0 1652 52 
+0 2 0 1704 48 
+1 1 0 1752 157 
+0 3 0 1909 99 
+2 1 0 2008 456 
+1 2 0 2464 245 
+0 4 0 2709 121 
+2 2 0 2830 670 
+3 1 0 3500 1503 
+1 3 0 5003 408 
+3 2 0 5411 2089 
+0 5 0 7500 262 
+1 4 0 7762 556 
+2 3 0 8318 1408 
+0 6 0 9726 297 
+1 5 0 10023 945 
+2 4 0 10968 2106 
+3 3 0 13074 4539 
+1 6 0 17613 1684 
+3 4 0 19297 6794 
+2 5 0 26091 4495 
+3 5 0 30586 14068 
+2 6 0 44654 8614 
+1 7 0 53268 6630 
+0 7 0 59898 8631 
+3 6 0 68529 20770 
+0 8 0 89299 8606 
+2 7 0 97905 28028 
+1 8 0 125933 17047 
+3 7 0 142980 72714 
+2 8 0 215694 58941 
+0 9 0 274635 30069 
+1 9 0 304704 58109 
+0 10 0 362813 32256 
+3 8 0 395069 136337 
+2 9 0 531406 137377 
+0 11 0 668783 34350 
+1 10 0 703133 97764 
+0 12 0 800897 34332 
+3 9 0 835229 333501 
+0 13 0 1168730 34332 
+2 10 0 1203062 275339 
+1 11 0 1478401 147038 
+0 14 0 1625439 34332 
+3 10 0 1659771 659913 
+1 12 0 2319684 202099 
+2 11 1 0 516835 
+0 15 1 516835 34332 
+1 13 1 551167 227564 
+0 16 1 778731 34332 
+3 11 1 813063 1257108 
+2 12 1 2070171 879793 
+1 14 1 2949964 234008 
+0 17 1 3183972 34332 
+1 15 1 3218304 234008 
+0 18 1 3452312 34332 
+2 13 1 3486644 1261457 
+3 12 1 4748101 2535751 
+1 16 1 7283852 234008 
+0 19 1 7517860 34332 
+2 14 1 7552192 1683440 
+1 17 1 9235632 234008 
+0 20 1 9469640 34332 
+3 13 1 9503972 4444098 
+2 15 2 0 1848662 
+1 18 2 1848662 234008 
+0 21 2 2082670 34332 
+2 16 2 2117002 1853488 
+3 14 2 3970490 7462885 
+1 19 2 11433375 234008 
+0 22 2 11667383 34332 
+2 17 2 11701715 1853488 
+1 20 2 13555203 234008 
+0 23 2 13789211 34332 
+3 15 2 13823543 10624298 
+2 18 2 24447841 1853488 
+1 21 2 26301329 234008 
+0 24 2 26535337 34332 
+3 16 2 26569669 13604961 
+2 19 3 0 1853488 
+1 22 3 1853488 234008 
+0 25 3 2087496 34332 
+3 17 3 2121828 14646047 
+2 20 3 16767875 1853488 
+1 23 3 18621363 234008 
+0 26 3 18855371 34332 
+3 18 3 18889703 14655392 
+2 21 3 33545095 1853488 
+1 24 3 35398583 234008 
+0 27 3 35632591 34332 
+3 19 3 35666923 14655392 
+temperature:SquaredErrors:Shape, 4 33 
+temperature:SquaredErrors, 
+9.80635e+13 9.80635e+13 8.56418e+13 5.19876e+13 3.80564e+13 3.3289e+13 3.06505e+13 2.83793e+13 3.02253e+13 1.95039e+13 1.35693e+13 2.43455e+12 5.0539e+11 1.27474e+11 3.20279e+10 7.98501e+09 2.0026e+09 5.00741e+08 1.25141e+08 3.11662e+07 7.8172e+06 1.95152e+06 486124 122275 30316 7747.22 1856.2 502.626 107.935 37.4719 5.6565 4.76101 1.01792 
+3.39247e+14 3.39247e+14 3.68981e+14 1.68618e+14 8.46323e+13 4.60748e+13 3.01935e+13 2.16989e+13 1.76244e+13 1.28834e+13 7.69695e+12 3.94414e+12 1.79456e+12 7.13449e+11 2.11139e+11 5.4393e+10 1.36461e+10 3.40649e+09 8.51767e+08 2.12886e+08 5.32695e+07 1.33184e+07 3.32551e+06 832983 207676 52177.3 12954.5 3292.14 799.711 217.178 51.4459 20.0449 7.17441 
+1.35704e+15 1.42687e+15 1.3804e+15 8.74992e+14 3.99111e+14 2.19404e+14 1.32167e+14 8.43703e+13 5.43649e+13 3.15247e+13 1.77182e+13 9.64666e+12 5.03956e+12 2.51801e+12 1.09196e+12 3.83072e+11 1.05992e+11 2.69759e+10 6.74684e+09 1.68769e+09 4.21721e+08 1.05432e+08 2.63606e+07 6.59346e+06 1.6455e+06 413198 102361 26105.8 6310.47 1734.79 402.111 163.335 56.6604 
+1.84568e+15 1.84568e+15 1.94298e+15 1.92368e+15 1.28111e+15 6.78371e+14 3.59112e+14 2.06021e+14 1.28212e+14 7.58101e+13 4.02124e+13 2.11652e+13 1.11084e+13 6.00863e+12 3.06581e+12 1.46009e+12 5.97732e+11 1.95607e+11 5.26953e+10 1.33384e+10 3.33496e+09 8.33974e+08 2.08298e+08 5.21621e+07 1.3003e+07 3.26853e+06 809032 206619 49846.7 13738.9 3171.8 1300.89 447.525 
+temperature:StopIndices, 11 13 15 17 
+temperature:ErrorBounds, 3.5366e+06 3.5503e+06 3.86101e+06 2.18132e+06 
+
+K:28;M:4;W:4;HD:5
+temperature:Tier:0:EncodedFragmentLength, 2128
+temperature:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 32
+encoded_fragment_len: 2128
+rc: 0
+K:28;M:4;W:4;HD:5
+temperature:Tier:0:EncodedFragmentLength, 2128
+temperature:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 32
+encoded_fragment_len: 2128
+rc: 0
+K:28;M:4;W:4;HD:5
+temperature:Tier:0:EncodedFragmentLength, 2128
+temperature:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 22
+encoded_fragment_len: 2128
+Tier: 0 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:27;M:5;W:3;HD:6
+temperature:Tier:1:EncodedFragmentLength, 2122
+temperature:Tier:1:ECBackendName, liberasurecode_rs_vand
+K:27; M:5
+checking data
+checking parities
+num_avail_frags: 24
+encoded_fragment_len: 2122
+Tier: 1 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:26;M:6;W:2;HD:7
+temperature:Tier:2:EncodedFragmentLength, 2128
+temperature:Tier:2:ECBackendName, liberasurecode_rs_vand
+K:26; M:6
+checking data
+checking parities
+num_avail_frags: 28
+encoded_fragment_len: 2128
+rc: 0
+K:26;M:6;W:2;HD:7
+temperature:Tier:2:EncodedFragmentLength, 2128
+temperature:Tier:2:ECBackendName, liberasurecode_rs_vand
+K:26; M:6
+checking data
+checking parities
+num_avail_frags: 20
+encoded_fragment_len: 2128
+Tier: 2 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:25;M:7;W:1;HD:8
+temperature:Tier:3:EncodedFragmentLength, 2128
+temperature:Tier:3:ECBackendName, liberasurecode_rs_vand
+K:25; M:7
+checking data
+checking parities
+num_avail_frags: 28
+encoded_fragment_len: 2128
+rc: 0
+K:25;M:7;W:1;HD:8
+temperature:Tier:3:EncodedFragmentLength, 2128
+temperature:Tier:3:ECBackendName, liberasurecode_rs_vand
+K:25; M:7
+checking data
+checking parities
+num_avail_frags: 24
+encoded_fragment_len: 2128
+Tier: 3 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+0 data tiers recovered!
+velocity_x:Dimensions, 512 512 512 
+velocity_x:Levels, 4
+velocity_x:Tiers, 4
+velocity_x:Tier:0:K, 28
+velocity_x:Tier:0:M, 4
+velocity_x:Tier:0:W, 4
+velocity_x:Tier:0:HD, 5
+velocity_x:Tier:1:K, 27
+velocity_x:Tier:1:M, 5
+velocity_x:Tier:1:W, 3
+velocity_x:Tier:1:HD, 6
+velocity_x:Tier:2:K, 26
+velocity_x:Tier:2:M, 6
+velocity_x:Tier:2:W, 2
+velocity_x:Tier:2:HD, 7
+velocity_x:Tier:3:K, 25
+velocity_x:Tier:3:M, 7
+velocity_x:Tier:3:W, 1
+velocity_x:Tier:3:HD, 8
+velocity_x:Type, float
+velocity_x:QueryTable:Shape, 97 5 
+velocity_x:QueryTable, 
+0 0 0 0 28 
+1 0 0 28 42 
+2 0 0 70 248 
+3 0 0 318 1363 
+1 1 0 1681 91 
+0 1 0 1772 145 
+1 2 0 1917 349 
+2 1 0 2266 591 
+3 1 0 2857 1410 
+1 3 0 4267 1024 
+0 2 0 5291 2245 
+2 2 0 7536 1844 
+3 2 0 9380 2312 
+0 3 0 11692 7340 
+1 4 0 19032 4075 
+3 3 0 23107 6965 
+2 3 0 30072 7740 
+0 4 0 37812 11759 
+1 5 0 49571 12488 
+0 5 0 62059 18353 
+2 4 0 80412 29559 
+3 4 0 109971 31845 
+0 6 0 141816 24894 
+1 6 0 166710 32867 
+0 7 0 199577 30926 
+2 5 0 230503 84148 
+3 5 0 314651 129823 
+0 8 0 444474 34350 
+1 7 0 478824 72598 
+0 9 0 551422 34332 
+2 6 0 585754 203269 
+1 8 0 789023 135132 
+0 10 0 924155 34332 
+3 6 0 958487 374090 
+0 11 0 1332577 34332 
+1 9 0 1366909 195846 
+2 7 0 1562755 432096 
+0 12 0 1994851 34332 
+3 7 0 2029183 921737 
+1 10 0 2950920 230845 
+0 13 0 3181765 34332 
+2 8 0 3216097 816758 
+1 11 0 4032855 234008 
+0 14 0 4266863 34332 
+1 12 0 4301195 234008 
+3 8 0 4535203 2055983 
+0 15 0 6591186 34332 
+2 9 0 6625518 1301522 
+1 13 0 7927040 234008 
+0 16 0 8161048 34332 
+2 10 0 8195380 1700860 
+1 14 0 9896240 234008 
+3 9 0 10130248 4273721 
+0 17 1 0 34332 
+2 11 1 34332 1853551 
+1 15 1 1887883 234008 
+0 18 1 2121891 34332 
+2 12 1 2156223 1853488 
+1 16 1 4009711 234008 
+3 10 1 4243719 7801814 
+0 19 1 12045533 34332 
+2 13 1 12079865 1853488 
+1 17 1 13933353 234008 
+0 20 1 14167361 34332 
+3 11 1 14201693 11599217 
+2 14 1 25800910 1853488 
+1 18 1 27654398 234008 
+0 21 1 27888406 34332 
+3 12 1 27922738 14061991 
+2 15 2 0 1853488 
+1 19 2 1853488 234008 
+0 22 2 2087496 34332 
+3 13 2 2121828 14655392 
+2 16 2 16777220 1853488 
+1 20 2 18630708 234008 
+0 23 2 18864716 34332 
+3 14 2 18899048 14655392 
+2 17 2 33554440 1853488 
+1 21 2 35407928 234008 
+0 24 2 35641936 34332 
+3 15 2 35676268 14655392 
+2 18 2 50331660 1853488 
+1 22 2 52185148 234008 
+0 25 2 52419156 34332 
+3 16 2 52453488 14655392 
+2 19 3 0 1853488 
+1 23 3 1853488 234008 
+0 26 3 2087496 34332 
+3 17 3 2121828 14655392 
+2 20 3 16777220 1853488 
+1 24 3 18630708 234008 
+0 27 3 18864716 34332 
+3 18 3 18899048 14655392 
+2 21 3 33554440 1853488 
+1 25 3 35407928 234008 
+0 28 3 35641936 34332 
+3 19 3 35676268 14655392 
+velocity_x:SquaredErrors:Shape, 4 33 
+velocity_x:SquaredErrors, 
+1.14855e+19 1.14855e+19 1.15434e+19 1.38343e+19 8.56617e+18 2.23191e+18 5.32159e+17 1.33581e+17 3.36117e+16 8.41873e+15 2.10387e+15 5.22644e+14 1.31292e+14 3.26911e+13 8.17704e+12 2.05387e+12 5.10463e+11 1.27639e+11 3.20182e+10 7.99429e+09 2.00213e+09 5.00745e+08 1.24922e+08 3.10791e+07 7.81066e+06 1.94452e+06 480295 118460 24631.3 3603.12 426.447 70.3622 10.3806 
+2.53489e+17 2.53489e+17 2.64e+17 2.54822e+17 2.26505e+17 1.89182e+17 1.36799e+17 8.93936e+16 5.41293e+16 2.86518e+16 1.17425e+16 3.48984e+15 8.9205e+14 2.23322e+14 5.58353e+13 1.39678e+13 3.49214e+12 8.72119e+11 2.18142e+11 5.44603e+10 1.36314e+10 3.40968e+09 8.52347e+08 2.13001e+08 5.3102e+07 1.33067e+07 3.27782e+06 809590 169975 25196.3 3054.91 509.707 77.3105 
+5.0499e+17 5.1185e+17 5.12534e+17 4.80158e+17 4.41394e+17 3.442e+17 2.23453e+17 1.34978e+17 7.76044e+16 4.17874e+16 1.90008e+16 6.43875e+15 1.75369e+15 4.4214e+14 1.10609e+14 2.76261e+13 6.91215e+12 1.72767e+12 4.31955e+11 1.07971e+11 2.70047e+10 6.74874e+09 1.68796e+09 4.21169e+08 1.05477e+08 2.59448e+07 6.40037e+06 1.34912e+06 195458 24859.5 3085.51 508.591 78.1595 
+5.66639e+17 5.66639e+17 5.68254e+17 5.72233e+17 5.51672e+17 5.19781e+17 4.06974e+17 2.63882e+17 1.61044e+17 9.43872e+16 5.3462e+16 2.73805e+16 1.0939e+16 3.33356e+15 8.71136e+14 2.18619e+14 5.46452e+13 1.36596e+13 3.41545e+12 8.53633e+11 2.13496e+11 5.33338e+10 1.33459e+10 3.32854e+09 8.33969e+08 2.05217e+08 5.05907e+07 1.06657e+07 1.54146e+06 196357 24440.6 4076.21 656.326 
+velocity_x:StopIndices, 8 10 11 12 
+velocity_x:ErrorBounds, 3.91853e+07 3.66601e+07 3.28365e+07 1.94937e+07 
+
+K:28;M:4;W:4;HD:5
+velocity_x:Tier:0:EncodedFragmentLength, 2122
+velocity_x:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 17
+encoded_fragment_len: 2122
+Tier: 0 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:27;M:5;W:3;HD:6
+velocity_x:Tier:1:EncodedFragmentLength, 2128
+velocity_x:Tier:1:ECBackendName, liberasurecode_rs_vand
+K:27; M:5
+checking data
+checking parities
+num_avail_frags: 16
+encoded_fragment_len: 2128
+Tier: 1 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:26;M:6;W:2;HD:7
+velocity_x:Tier:2:EncodedFragmentLength, 2128
+velocity_x:Tier:2:ECBackendName, liberasurecode_rs_vand
+K:26; M:6
+checking data
+checking parities
+num_avail_frags: 11
+encoded_fragment_len: 2128
+Tier: 2 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:25;M:7;W:1;HD:8
+velocity_x:Tier:3:EncodedFragmentLength, 2128
+velocity_x:Tier:3:ECBackendName, liberasurecode_rs_vand
+K:25; M:7
+checking data
+checking parities
+num_avail_frags: 27
+encoded_fragment_len: 2128
+rc: 0
+K:25;M:7;W:1;HD:8
+velocity_x:Tier:3:EncodedFragmentLength, 2128
+velocity_x:Tier:3:ECBackendName, liberasurecode_rs_vand
+K:25; M:7
+checking data
+checking parities
+num_avail_frags: 22
+encoded_fragment_len: 2128
+Tier: 3 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+0 data tiers recovered!
+velocity_y:Dimensions, 512 512 512 
+velocity_y:Levels, 4
+velocity_y:Tiers, 4
+velocity_y:Tier:0:K, 28
+velocity_y:Tier:0:M, 4
+velocity_y:Tier:0:W, 4
+velocity_y:Tier:0:HD, 5
+velocity_y:Tier:1:K, 27
+velocity_y:Tier:1:M, 5
+velocity_y:Tier:1:W, 3
+velocity_y:Tier:1:HD, 6
+velocity_y:Tier:2:K, 26
+velocity_y:Tier:2:M, 6
+velocity_y:Tier:2:W, 2
+velocity_y:Tier:2:HD, 7
+velocity_y:Tier:3:K, 25
+velocity_y:Tier:3:M, 7
+velocity_y:Tier:3:W, 1
+velocity_y:Tier:3:HD, 8
+velocity_y:Type, float
+velocity_y:QueryTable:Shape, 98 5 
+velocity_y:QueryTable, 
+0 0 0 0 28 
+1 0 0 28 42 
+2 0 0 70 198 
+3 0 0 268 1363 
+1 1 0 1631 103 
+0 1 0 1734 165 
+2 1 0 1899 226 
+1 2 0 2125 307 
+2 2 0 2432 578 
+0 2 0 3010 1291 
+3 1 0 4301 1473 
+1 3 0 5774 1119 
+2 3 0 6893 1867 
+3 2 0 8760 2517 
+0 3 0 11277 5165 
+1 4 0 16442 3787 
+2 4 0 20229 7248 
+3 3 0 27477 7342 
+0 4 0 34819 11030 
+1 5 0 45849 11627 
+0 5 0 57476 18328 
+2 5 0 75804 26192 
+3 4 0 101996 29733 
+0 6 0 131729 24842 
+1 6 0 156571 31981 
+0 7 0 188552 30804 
+2 6 0 219356 80659 
+3 5 0 300015 117151 
+0 8 0 417166 34350 
+1 7 0 451516 75158 
+0 9 0 526674 34332 
+2 7 0 561006 205136 
+0 10 0 766142 34332 
+1 8 0 800474 141066 
+3 6 0 941540 364416 
+0 11 0 1305956 34332 
+1 9 0 1340288 200405 
+2 8 0 1540693 455698 
+0 12 0 1996391 34332 
+1 10 0 2030723 234031 
+3 7 0 2264754 942819 
+0 13 0 3207573 34332 
+2 9 0 3241905 864250 
+1 11 0 4106155 234008 
+0 14 0 4340163 34332 
+1 12 0 4374495 234008 
+3 8 0 4608503 2168191 
+0 15 0 6776694 34332 
+2 10 0 6811026 1355070 
+1 13 0 8166096 234008 
+0 16 0 8400104 34332 
+2 11 0 8434436 1733425 
+1 14 0 10167861 234008 
+0 17 0 10401869 34332 
+3 9 0 10436201 4492625 
+2 12 1 0 1853551 
+1 15 1 1853551 234008 
+0 18 1 2087559 34332 
+2 13 1 2121891 1853488 
+1 16 1 3975379 234008 
+3 10 1 4209387 8111141 
+0 19 1 12320528 34332 
+2 14 1 12354860 1853488 
+1 17 1 14208348 234008 
+0 20 1 14442356 34332 
+3 11 1 14476688 11888908 
+2 15 1 26365596 1853488 
+1 18 1 28219084 234008 
+0 21 1 28453092 34332 
+3 12 1 28487424 14198016 
+2 16 2 0 1853488 
+1 19 2 1853488 234008 
+0 22 2 2087496 34332 
+3 13 2 2121828 14655392 
+2 17 2 16777220 1853488 
+1 20 2 18630708 234008 
+0 23 2 18864716 34332 
+3 14 2 18899048 14655392 
+2 18 2 33554440 1853488 
+1 21 2 35407928 234008 
+0 24 2 35641936 34332 
+3 15 2 35676268 14655392 
+2 19 2 50331660 1853488 
+1 22 3 0 234008 
+0 25 3 234008 34332 
+3 16 3 268340 14655392 
+2 20 3 14923732 1853488 
+1 23 3 16777220 234008 
+0 26 3 17011228 34332 
+3 17 3 17045560 14655392 
+2 21 3 31700952 1853488 
+1 24 3 33554440 234008 
+0 27 3 33788448 34332 
+3 18 3 33822780 14655392 
+2 22 3 48478172 1853488 
+1 25 3 50331660 234008 
+0 28 3 50565668 34332 
+3 19 3 50600000 14655392 
+velocity_y:SquaredErrors:Shape, 4 33 
+velocity_y:SquaredErrors, 
+6.29628e+18 6.29628e+18 6.36371e+18 7.06204e+18 5.35798e+18 1.87283e+18 5.27019e+17 1.35404e+17 3.35219e+16 8.39428e+15 2.09082e+15 5.24573e+14 1.31201e+14 3.27213e+13 8.15358e+12 2.04469e+12 5.11232e+11 1.27664e+11 3.21387e+10 7.99411e+09 2.00038e+09 4.99165e+08 1.24693e+08 3.13201e+07 7.78466e+06 1.95573e+06 484267 119644 27537.4 5193.8 792.087 137.413 20.4344 
+2.43275e+17 2.43275e+17 2.50926e+17 2.34248e+17 2.094e+17 1.70582e+17 1.27016e+17 8.82373e+16 5.58945e+16 3.0341e+16 1.21182e+16 3.50898e+15 8.92526e+14 2.22968e+14 5.58819e+13 1.39491e+13 3.48713e+12 8.7351e+11 2.17918e+11 5.4605e+10 1.36214e+10 3.4147e+09 8.51514e+08 2.12998e+08 5.31954e+07 1.33008e+07 3.31061e+06 814697 188898 35745.5 5620.11 1019.46 154.292 
+4.62658e+17 4.62658e+17 4.67646e+17 4.59429e+17 4.30654e+17 3.84282e+17 3.01453e+17 2.11806e+17 1.33776e+17 8.03166e+16 4.43255e+16 1.97899e+16 6.52254e+15 1.75419e+15 4.42227e+14 1.1055e+14 2.76414e+13 6.91083e+12 1.72741e+12 4.31896e+11 1.07959e+11 2.69865e+10 6.74302e+09 1.68681e+09 4.21634e+08 1.05382e+08 2.61852e+07 6.46195e+06 1.49497e+06 282822 44336.1 8077.77 1276.71 
+5.2285e+17 5.2285e+17 5.29011e+17 5.31479e+17 4.97898e+17 4.51101e+17 3.56786e+17 2.48044e+17 1.57526e+17 9.57502e+16 5.55451e+16 2.86434e+16 1.119e+16 3.33832e+15 8.70283e+14 2.18584e+14 5.46336e+13 1.36619e+13 3.41468e+12 8.53663e+11 2.13455e+11 5.33571e+10 1.33399e+10 3.33389e+09 8.32524e+08 2.07311e+08 5.095e+07 1.18754e+07 2.18859e+06 361025 48012.8 7951.68 1275.56 
+velocity_y:StopIndices, 8 10 12 12 
+velocity_y:ErrorBounds, 3.78236e+07 4.34104e+07 4.0707e+07 1.96488e+07 
+
+K:28;M:4;W:4;HD:5
+velocity_y:Tier:0:EncodedFragmentLength, 2124
+velocity_y:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 32
+encoded_fragment_len: 2124
+rc: 0
+K:28;M:4;W:4;HD:5
+velocity_y:Tier:0:EncodedFragmentLength, 2124
+velocity_y:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 32
+encoded_fragment_len: 2124
+rc: 0
+K:28;M:4;W:4;HD:5
+velocity_y:Tier:0:EncodedFragmentLength, 2124
+velocity_y:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 31
+encoded_fragment_len: 2124
+rc: 0
+K:28;M:4;W:4;HD:5
+velocity_y:Tier:0:EncodedFragmentLength, 2124
+velocity_y:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 32
+encoded_fragment_len: 2124
+rc: 0
+K:28;M:4;W:4;HD:5
+velocity_y:Tier:0:EncodedFragmentLength, 2124
+velocity_y:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 32
+encoded_fragment_len: 2124
+rc: 0
+K:28;M:4;W:4;HD:5
+velocity_y:Tier:0:EncodedFragmentLength, 2124
+velocity_y:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 30
+encoded_fragment_len: 2124
+rc: 0
+K:28;M:4;W:4;HD:5
+velocity_y:Tier:0:EncodedFragmentLength, 2124
+velocity_y:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 24
+encoded_fragment_len: 2124
+Tier: 0 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:27;M:5;W:3;HD:6
+velocity_y:Tier:1:EncodedFragmentLength, 2128
+velocity_y:Tier:1:ECBackendName, liberasurecode_rs_vand
+K:27; M:5
+checking data
+checking parities
+num_avail_frags: 22
+encoded_fragment_len: 2128
+Tier: 1 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:26;M:6;W:2;HD:7
+velocity_y:Tier:2:EncodedFragmentLength, 2126
+velocity_y:Tier:2:ECBackendName, liberasurecode_rs_vand
+K:26; M:6
+checking data
+checking parities
+num_avail_frags: 24
+encoded_fragment_len: 2126
+Tier: 2 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:25;M:7;W:1;HD:8
+velocity_y:Tier:3:EncodedFragmentLength, 2128
+velocity_y:Tier:3:ECBackendName, liberasurecode_rs_vand
+K:25; M:7
+checking data
+checking parities
+num_avail_frags: 17
+encoded_fragment_len: 2128
+Tier: 3 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+0 data tiers recovered!
+velocity_z:Dimensions, 512 512 512 
+velocity_z:Levels, 4
+velocity_z:Tiers, 4
+velocity_z:Tier:0:K, 28
+velocity_z:Tier:0:M, 4
+velocity_z:Tier:0:W, 4
+velocity_z:Tier:0:HD, 5
+velocity_z:Tier:1:K, 27
+velocity_z:Tier:1:M, 5
+velocity_z:Tier:1:W, 3
+velocity_z:Tier:1:HD, 6
+velocity_z:Tier:2:K, 26
+velocity_z:Tier:2:M, 6
+velocity_z:Tier:2:W, 2
+velocity_z:Tier:2:HD, 7
+velocity_z:Tier:3:K, 25
+velocity_z:Tier:3:M, 7
+velocity_z:Tier:3:W, 1
+velocity_z:Tier:3:HD, 8
+velocity_z:Type, float
+velocity_z:QueryTable:Shape, 98 5 
+velocity_z:QueryTable, 
+0 0 0 0 28 
+1 0 0 28 53 
+2 0 0 81 203 
+3 0 0 284 1363 
+1 1 0 1647 85 
+0 1 0 1732 110 
+2 1 0 1842 265 
+1 2 0 2107 380 
+2 2 0 2487 596 
+0 2 0 3083 733 
+3 1 0 3816 1541 
+1 3 0 5357 1080 
+2 3 0 6437 1898 
+3 2 0 8335 2623 
+0 3 0 10958 4839 
+1 4 0 15797 3607 
+2 4 0 19404 7032 
+3 3 0 26436 7046 
+0 4 0 33482 12848 
+1 5 0 46330 12586 
+0 5 0 58916 21634 
+2 5 0 80550 28264 
+3 4 0 108814 30242 
+0 6 0 139056 29365 
+1 6 0 168421 36615 
+0 7 0 205036 34350 
+2 6 0 239386 93361 
+3 5 0 332747 126755 
+0 8 0 459502 34332 
+1 7 0 493834 82202 
+0 9 0 576036 34332 
+2 7 0 610368 244959 
+0 10 0 855327 34332 
+1 8 0 889659 146839 
+3 6 0 1036498 425767 
+0 11 0 1462265 34332 
+1 9 0 1496597 202750 
+2 8 0 1699347 515342 
+0 12 0 2214689 34332 
+1 10 0 2249021 234031 
+0 13 0 2483052 34332 
+3 7 0 2517384 1123221 
+2 9 0 3640605 920974 
+1 11 0 4561579 234008 
+0 14 0 4795587 34332 
+1 12 0 4829919 234008 
+0 15 0 5063927 34332 
+3 8 0 5098259 2503207 
+2 10 0 7601466 1384386 
+1 13 0 8985852 234008 
+0 16 0 9219860 34332 
+2 11 0 9254192 1745553 
+1 14 0 10999745 234008 
+0 17 0 11233753 34332 
+3 9 0 11268085 4937738 
+2 12 0 16205823 1853551 
+1 15 0 18059374 234008 
+0 18 1 0 34332 
+2 13 1 34332 1853488 
+1 16 1 1887820 234008 
+3 10 1 2121828 8496251 
+0 19 1 10618079 34332 
+2 14 1 10652411 1853488 
+1 17 1 12505899 234008 
+0 20 1 12739907 34332 
+3 11 1 12774239 12149733 
+2 15 1 24923972 1853488 
+1 18 1 26777460 234008 
+0 21 1 27011468 34332 
+3 12 1 27045800 14292747 
+2 16 1 41338547 1853488 
+1 19 1 43192035 234008 
+0 22 1 43426043 34332 
+3 13 1 43460375 14655392 
+2 17 2 0 1853488 
+1 20 2 1853488 234008 
+0 23 2 2087496 34332 
+3 14 2 2121828 14655392 
+2 18 2 16777220 1853488 
+1 21 2 18630708 234008 
+0 24 2 18864716 34332 
+3 15 2 18899048 14655392 
+2 19 2 33554440 1853488 
+1 22 2 35407928 234008 
+0 25 2 35641936 34332 
+3 16 2 35676268 14655392 
+2 20 3 0 1853488 
+1 23 3 1853488 234008 
+0 26 3 2087496 34332 
+3 17 3 2121828 14655392 
+2 21 3 16777220 1853488 
+1 24 3 18630708 234008 
+0 27 3 18864716 34332 
+3 18 3 18899048 14655392 
+2 22 3 33554440 1853488 
+1 25 3 35407928 234008 
+0 28 3 35641936 34332 
+3 19 3 35676268 14655392 
+velocity_z:SquaredErrors:Shape, 4 33 
+velocity_z:SquaredErrors, 
+3.11196e+18 3.11196e+18 3.13647e+18 3.31792e+18 3.11361e+18 1.78166e+18 5.28284e+17 1.33951e+17 3.36312e+16 8.39252e+15 2.10283e+15 5.24876e+14 1.30938e+14 3.27502e+13 8.18215e+12 2.05658e+12 5.1224e+11 1.2815e+11 3.19852e+10 7.98139e+09 1.9975e+09 5.00486e+08 1.25347e+08 3.11998e+07 7.83736e+06 1.95267e+06 487222 120501 28896.5 6377.55 980.948 169.89 25.4612 
+2.41574e+17 2.51552e+17 2.40715e+17 2.37727e+17 2.02696e+17 1.65873e+17 1.26842e+17 8.8806e+16 5.62941e+16 3.05722e+16 1.22125e+16 3.5178e+15 8.93367e+14 2.23402e+14 5.5814e+13 1.39698e+13 3.48872e+12 8.731e+11 2.17765e+11 5.44884e+10 1.36278e+10 3.40637e+09 8.52423e+08 2.12959e+08 5.31973e+07 1.33024e+07 3.31285e+06 824200 198931 44331.5 7012.24 1267.34 193.671 
+4.72927e+17 4.78847e+17 4.84037e+17 4.72894e+17 4.21654e+17 3.69175e+17 2.98853e+17 2.14146e+17 1.36676e+17 8.16577e+16 4.49938e+16 1.9995e+16 6.5352e+15 1.75395e+15 4.42071e+14 1.10623e+14 2.76448e+13 6.91005e+12 1.72774e+12 4.31834e+11 1.07958e+11 2.699e+10 6.74498e+09 1.68705e+09 4.21459e+08 1.0543e+08 2.62732e+07 6.53409e+06 1.57371e+06 350893 55338.4 10097.7 1623.88 
+5.28944e+17 5.28944e+17 5.38225e+17 5.29629e+17 4.86115e+17 4.35047e+17 3.54085e+17 2.51466e+17 1.60108e+17 9.70074e+16 5.62067e+16 2.8933e+16 1.12454e+16 3.33649e+15 8.69829e+14 2.18556e+14 5.46448e+13 1.36593e+13 3.41476e+12 8.53883e+11 2.13433e+11 5.33685e+10 1.33377e+10 3.33556e+09 8.32824e+08 2.08101e+08 5.14614e+07 1.25223e+07 2.71663e+06 451175 59990.1 10147.9 1629.6 
+velocity_z:StopIndices, 7 10 12 12 
+velocity_z:ErrorBounds, 3.96279e+07 5.00955e+07 4.50571e+07 1.73957e+07 
+
+K:28;M:4;W:4;HD:5
+velocity_z:Tier:0:EncodedFragmentLength, 2122
+velocity_z:Tier:0:ECBackendName, liberasurecode_rs_vand
+K:28; M:4
+checking data
+checking parities
+num_avail_frags: 16
+encoded_fragment_len: 2122
+Tier: 0 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:27;M:5;W:3;HD:6
+velocity_z:Tier:1:EncodedFragmentLength, 2128
+velocity_z:Tier:1:ECBackendName, liberasurecode_rs_vand
+K:27; M:5
+checking data
+checking parities
+num_avail_frags: 21
+encoded_fragment_len: 2128
+Tier: 1 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:26;M:6;W:2;HD:7
+velocity_z:Tier:2:EncodedFragmentLength, 2128
+velocity_z:Tier:2:ECBackendName, liberasurecode_rs_vand
+K:26; M:6
+checking data
+checking parities
+num_avail_frags: 16
+encoded_fragment_len: 2128
+Tier: 2 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+K:25;M:7;W:1;HD:8
+velocity_z:Tier:3:EncodedFragmentLength, 2128
+velocity_z:Tier:3:ECBackendName, liberasurecode_rs_vand
+K:25; M:7
+checking data
+checking parities
+num_avail_frags: 16
+encoded_fragment_len: 2128
+Tier: 3 cannot be reconstructed due to a corrupted fragment. Skipping Tier...
+Data tiers recovered: 0
+Null fragments: 0
+0 data tiers recovered!
+Variable: 0 received packets: 4918
+Variable: 1 received packets: 30567
+Variable: 2 received packets: 47604
+Variable: 3 received packets: 63948
+Variable: 4 received packets: 66977
+Total received: 256093
