@@ -38,9 +38,9 @@ def expected_total_transmission_time(S0, s, t, Tretrans, m0, lam):
     
     # Calculate the probabilities P(N <= m0) and P(N > m0)
     P_N_leq_m0 = poisson_cdf(lam, m0)
-    p = P_N_leq_m0
+    
     P_N_gt_m0 = 1 - P_N_leq_m0
-    print("P_N_leq_m0", P_N_leq_m0, "P_N_gt_m0", P_N_gt_m0)
+    print("m:", m0, "P_N_leq_m0", P_N_leq_m0, "P_N_gt_m0", P_N_gt_m0)
 
     # Calculate the expected total transmission time for tier 0
     E_Ttotal0 = 0
@@ -99,14 +99,14 @@ def calculate_m_for_tiers(n, p, base_R, tiers, importance_factor):
 n = 32
 frag_size = 2048
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
-tier_m = [16, 8, 4, 2]
+tier_m = [16,8,4,2]
 number_of_chunks = []
 
-t = 0.1     # Time to transmit one fragment in seconds
-Tretrans = 0.1  # Retransmission time in seconds
-lam = 50    # Expected number of events in a given interval
+t = 0.001     # Time to transmit one fragment in seconds
+Tretrans = 0.0001  # Retransmission time in seconds
+lam = 10    # Expected number of events in a given interval
 
-E_Toverall = calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_size, t, Tretrans, [16, 8, 4, 2], lam)
+E_Toverall = calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_size, t, Tretrans, tier_m, lam)
 print(f"Expected total transmission time for all tiers: {E_Toverall} seconds")
 
 p = 0.1  # Packet loss rate (10%)
