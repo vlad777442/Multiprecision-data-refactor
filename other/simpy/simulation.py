@@ -237,7 +237,7 @@ number_of_chunks = []
 
 tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
 
-all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, tier_m, n)
+# all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, tier_m, n)
 
 
 min_time = float('inf')
@@ -250,7 +250,7 @@ for i in range(32):
             for l in range(32):
                 current_m = [i, j, k, l]
                 print("m:", current_m)
-                # all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
+                all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
 
                 env = simpy.Environment()
                 link = Link(env, 0.001)
