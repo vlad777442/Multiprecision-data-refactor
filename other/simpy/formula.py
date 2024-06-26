@@ -2,6 +2,7 @@ import math
 from scipy.special import comb, gammaln, factorial
 from scipy.stats import binom
 from decimal import Decimal
+import numpy as np
 
 
 def poisson_pmf(lam, m):
@@ -28,33 +29,62 @@ def get_chunk_transmission_time(t):
     Ttrans = fragments_per_chunk * t
     return Ttrans
 
+def g(n, p):
+    """
+    Calculate the recursive function g(n, p).
+    """
+    print("funcg", n, p)
+    n = int(n)
+    result = 0
+    for k in range(n + 1):
+        result += k * comb(n, k, exact=True) * (1 - p) ** k * p ** (n - k)
+    return result
+
 def expected_total_transmission_time(S0, s, t, Tretrans, m0, lam):
     """Calculate the expected total transmission time for tier 0."""
     Nchunk = S0 / ((32 - m0) * s)
     Nchunk = math.ceil(Nchunk)
-    print("Nchunk: ", Nchunk)
+    print("Nchunk", Nchunk)
     
     Ttrans = get_chunk_transmission_time(t)
     
-    # Calculate the probabilities P(N <= m0) and P(N > m0)
-    P_N_leq_m0 = poisson_cdf(lam, m0)
     
-    P_N_gt_m0 = 1 - P_N_leq_m0
-    print("m:", m0, "P_N_leq_m0", P_N_leq_m0, "P_N_gt_m0", P_N_gt_m0)
-
-    # Calculate the expected total transmission time for tier 0
-    E_Ttotal0 = 0
-    for k in range(int(Nchunk) + 1):
-        tmp = comb(Nchunk, k, exact=True)
-        tmp = Decimal(tmp)
-        P_lose_k_chunks_tmp = tmp * Decimal(P_N_gt_m0 ** k) * Decimal(P_N_leq_m0 ** (Nchunk - k))
-        P_lose_k_chunks = float(P_lose_k_chunks_tmp)
-        E_Ttotal0 += P_lose_k_chunks * (Nchunk * Ttrans + k * Tretrans)
-        # if (Nchunk == 2456):
-            # print(P_N_leq_m0, P_N_gt_m0)
-            # print("k", k, "P_lose_k_chunks:", P_lose_k_chunks)
+    P_N_leq_m0 = poisson_cdf(lam, m0)
+    p = P_N_leq_m0
+    print("Res: ", Nchunk * Ttrans, p)
+    # E_Ttotal0 = Nchunk * Ttrans
+    
+    # g1 = Decimal(g(Nchunk, p)) * Decimal(Ttrans)
+    # g2 = Decimal(g(g(Nchunk, p), p)) * Decimal(Ttrans)
+    # g3 = Decimal(g(g(g(Nchunk, p), p), p)) * Decimal(Ttrans)
+    
+    # E_Ttotal0 += float(g1 + g2 + g3)
+    E_Ttotal0 = Nchunk * Ttrans / p
     
     return E_Ttotal0
+
+# def expected_total_transmission_time(S0, s, t, Tretrans, m0, lam):
+#     """Calculate the expected total transmission time for tier 0."""
+#     Nchunk = S0 / ((32 - m0) * s)
+#     Nchunk = math.ceil(Nchunk)
+#     print("Nchunk: ", Nchunk)
+    
+#     Ttrans = get_chunk_transmission_time(t)
+    
+#     # Calculate the probabilities P(N <= m0) and P(N > m0)
+#     P_N_leq_m0 = poisson_cdf(lam, m0)
+    
+#     P_N_gt_m0 = 1 - P_N_leq_m0
+#     print("m:", m0, "P_N_leq_m0", P_N_leq_m0, "P_N_gt_m0", P_N_gt_m0)
+
+#     # Calculate the expected total transmission time for tier 0
+#     E_Ttotal0 = 0
+#     for k in range(int(Nchunk) + 1):
+#         P_lose_k_chunks_tmp = Decimal(comb(Nchunk, k, exact=True)) * Decimal(P_N_gt_m0 ** k) * Decimal(P_N_leq_m0 ** (Nchunk - k))
+#         P_lose_k_chunks = float(P_lose_k_chunks_tmp)
+#         E_Ttotal0 += P_lose_k_chunks * (Nchunk * Ttrans + k * Tretrans)
+    
+#     return E_Ttotal0
 
 def calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_size, t, Tretrans, ms, lam):
     """Calculate the expected total transmission time for all tiers."""
