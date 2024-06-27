@@ -1,6 +1,6 @@
 import simpy
 import random
-
+import math
 
 SIM_DURATION = 100000
 
@@ -34,9 +34,14 @@ class Sender:
         self.link = link
         self.rate = rate
         self.all_tier_frags = all_tier_frags
+        self.start_time = None
+        # self.env.end_time = {}
 
     def send(self):
         """A process which randomly generates packets."""
+        if self.start_time is None:
+            self.start_time = self.env.now
+
         for t in self.all_tier_frags:
             for f in t:
                 # wait for next transmission
@@ -73,9 +78,8 @@ class Receiver:
         self.tier_start_times = {}
         self.tier_end_times = {}
         self.fragment_count = 0
-        # self.chunk_start_times = {}
-        # self.chunk_end_times = {}
         self.lost_chunk_per_tier = {}
+        self.end_time = None
 
     def receive(self):
         """A process which consumes packets."""
@@ -103,11 +107,7 @@ class Receiver:
                     self.all_tier_frags_received[tier] = {chunk: 1}
 
                 self.fragment_count += 1
-
-                # # Record the chunk start and end times
-                # if (tier, chunk) not in self.chunk_start_times:
-                #     self.chunk_start_times[(tier, chunk)] = start_time
-                # self.chunk_end_times[(tier, chunk)] = end_time
+                self.end_time = self.env.now
 
     def get_result(self):
         return self.all_tier_frags_received
@@ -122,10 +122,11 @@ class Receiver:
         for tier, chunks in self.all_tier_frags_received.items():
             for chunk, count in chunks.items():
                 if count < all_tier_per_chunk_data_frags_num[tier][chunk]:
-                    # if self.lost_chunk_per_tier[chunk]:
-                    #     self.lost_chunk_per_tier[chunk] += 1
-                    # else:
-                    #     self.lost_chunk_per_tier[chunk] = 1
+                    # Checking lost chunks
+                    if tier in self.lost_chunk_per_tier:
+                        self.lost_chunk_per_tier[tier] += 1
+                    else:
+                        self.lost_chunk_per_tier[tier] = 1
                     print(f"Tier {tier}, Chunk {chunk} is incomplete.")
                     lost_fragments += 1
                     self.request_retransmission_from_sender(tier, chunk)
@@ -143,7 +144,8 @@ class Receiver:
             end_time = self.tier_end_times.get(tier, start_time)  # Handle case where no end time
             total += end_time - start_time
             print(f"Tier {tier} receiving time: {end_time - start_time}")
-        print(f"Total receiving time: {total}")
+        print(f"Total receiving time, which includes retransmission time for other tiers: {total}")
+        print(f"Total time from the beginning to the end: {self.end_time - self.sender.start_time}")
 
         return total
 
@@ -167,8 +169,9 @@ class Receiver:
     #         print("No chunks received.")
 
     def print_lost_chunks_per_tier(self):
-        for chunk, val in self.lost_chunk_per_tier.keys():
-            print(chunk, val)
+        for tier in self.lost_chunk_per_tier:
+            print(f"Tier: {tier}, amount of retransmitted chunks: {self.lost_chunk_per_tier[tier]}")
+
 
 class PacketLossGen:
 
@@ -245,7 +248,7 @@ env = simpy.Environment()
 n = 32
 frag_size = 2048
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
-tier_m = [2,8,8,8]
+tier_m = [16,8,4,2]
 number_of_chunks = []
 
 tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
@@ -265,7 +268,17 @@ env.run(until=SIM_DURATION)
 print(tier_frags_num)
 print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
 receiver.print_tier_receiving_times()
+receiver.print_lost_chunks_per_tier()
+chunks_per_tier = {}
+for t in all_tier_frags:
+    for f in t:
+        if f["tier"] in chunks_per_tier:
+            chunks_per_tier[f["tier"]] += 1
+        else:
+            chunks_per_tier[f["tier"]] = 1
 
+for i in chunks_per_tier:
+    print(f"Tier: {i}, total amount of chunks: {math.ceil(chunks_per_tier[i] / 32)}")
 
 # min_time = float('inf')
 # best_m = []

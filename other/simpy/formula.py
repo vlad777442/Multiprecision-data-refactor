@@ -5,23 +5,25 @@ from decimal import Decimal
 import numpy as np
 
 
-def poisson_pmf(lam, m):
+def poisson_pmf(lambda_val, T, m0):
     """
-    Calculate the Poisson probability P(N=m) for given λ and m.
+    Calculate the Poisson probability P(N=m) for given λ, T and m.
     """
-    return (lam ** m * math.exp(-lam)) / factorial(m)
+    return (lambda_val * T)**m0 * math.exp(-lambda_val * T) / math.factorial(m0)
 
-def poisson_cdf(lam, m):
+def poisson_cdf(lambda_val, T, m0):
     """
-    Calculate the cumulative Poisson probability P(N <= m) for given λ and m.
+    Calculate the cumulative Poisson probability P(N <= m) for given λ, T and m.
     """
-    return sum(poisson_pmf(lam, k) for k in range(m + 1))
+    cumulative_sum = sum((lambda_val * T)**k * math.exp(-lambda_val * T) / math.factorial(k) for k in range(m0 + 1))
+    return cumulative_sum
 
-def poisson_tail(lam, m):
+def poisson_tail(lambda_val, T, m0):
     """
-    Calculate the complementary cumulative Poisson probability P(N > m) for given λ and m.
+    Calculate the complementary cumulative Poisson probability P(N > m) for given λ, T and m.
     """
-    return 1 - poisson_cdf(lam, m)
+    cumulative_sum = sum((lambda_val * T)**k * math.exp(-lambda_val * T) / math.factorial(k) for k in range(m0 + 1))
+    return 1 - cumulative_sum
 
 def get_chunk_transmission_time(t):
     fragments_per_chunk = 32
@@ -33,7 +35,6 @@ def g(n, p):
     """
     Calculate the recursive function g(n, p).
     """
-    print("funcg", n, p)
     n = int(n)
     result = 0
     for k in range(n + 1):
@@ -44,14 +45,13 @@ def expected_total_transmission_time(S0, s, t, Tretrans, m0, lam):
     """Calculate the expected total transmission time for tier 0."""
     Nchunk = S0 / ((32 - m0) * s)
     Nchunk = math.ceil(Nchunk)
-    print("Nchunk", Nchunk)
     
     Ttrans = get_chunk_transmission_time(t)
     
     
-    P_N_leq_m0 = poisson_cdf(lam, m0)
+    P_N_leq_m0 = poisson_cdf(lam, Ttrans, m0)
     p = P_N_leq_m0
-    print("Res: ", Nchunk * Ttrans, p)
+    print(f"Nchunk * Ttrans: {Nchunk * Ttrans} p: {p}")
     # E_Ttotal0 = Nchunk * Ttrans
     
     # g1 = Decimal(g(Nchunk, p)) * Decimal(Ttrans)
@@ -63,6 +63,7 @@ def expected_total_transmission_time(S0, s, t, Tretrans, m0, lam):
     
     return E_Ttotal0
 
+# Old formula
 # def expected_total_transmission_time(S0, s, t, Tretrans, m0, lam):
 #     """Calculate the expected total transmission time for tier 0."""
 #     Nchunk = S0 / ((32 - m0) * s)
@@ -92,39 +93,12 @@ def calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_si
     E_Toverall = 0
     for i, S in enumerate(tier_sizes):
         m = ms[i]
-        print(i)
-        print(S, frag_size, t, Tretrans, m, lam)
         E_Ttotal_tier = expected_total_transmission_time(S, frag_size, t, Tretrans, m, lam)
         times.append(E_Ttotal_tier)
         E_Toverall += E_Ttotal_tier
     for i in range(len(times)):
         print(f"Expected time for Tier {i} is {times[i]} seconds")
     return E_Toverall
-
-def calculate_m(n, p, R):
-    """
-    Calculate the parameter m for error correction to achieve the desired reliability R.
-    """
-    for m in range(0, 32):
-        success_probability = 0
-        for k in range(m + 1):
-            success_probability += comb(n + m, k) * (p ** k) * ((1 - p) ** (n + m - k))
-        
-        if success_probability >= R:
-            return m
-
-    return None
-
-def calculate_m_for_tiers(n, p, base_R, tiers, importance_factor):
-    """
-    Calculate the parameter m for each tier based on its importance.
-    """
-    m_values = []
-    for i in range(tiers):
-        R = base_R * importance_factor[i]
-        m = calculate_m(n, p, R)
-        m_values.append(m)
-    return m_values
 
 n = 32
 frag_size = 2048
@@ -139,70 +113,42 @@ lam = 10    # Expected number of events in a given interval
 E_Toverall = calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_size, t, Tretrans, tier_m, lam)
 print(f"Expected total transmission time for all tiers: {E_Toverall} seconds")
 
-p = 0.1  # Packet loss rate (10%)
-base_R = 0.99  # Base reliability for the most important tier (99%)
-tiers = 4  # Number of tiers
-importance_factor = [1.5, 1.2, 1.0, 1.0]  # Importance multipliers for each tier
-
-m_values = calculate_m_for_tiers(32, p, base_R, tiers, importance_factor)
-print(f"Number of parities needed for each tier: {m_values}")
-
-
-def calculate_m(desired_reliability, packet_loss_rate, num_fragments=32):
-    """
-    Calculate the parameter m for error correction.
-    """
-    # Probability of successfully receiving a fragment
-    p = 1 - packet_loss_rate
-    
-    for m in range(num_fragments):
-        k = num_fragments - m
-        # Calculate the probability of receiving at least k fragments
-        prob_success = binom.cdf(k - 1, num_fragments, p)
-        if 1 - prob_success >= desired_reliability:
-            return m
-    return num_fragments
-
-# Example usage
-desired_reliability = 0.98
-packet_loss_rate = 0.1
-m = calculate_m(desired_reliability, packet_loss_rate)
-print(f"Calculated parameter m for error correction: {m}")
-
-
-
-# def log_comb(n, k):
-#     """Calculate the logarithm of the binomial coefficient comb(n, k)."""
-#     if k > n:
-#         return -math.inf
-#     return gammaln(n + 1) - gammaln(k + 1) - gammaln(n - k + 1)
-
-# def expected_total_transmission_time(S, s, t, Tretrans, m, lam):
+# def calculate_m_for_tiers(n, p, base_R, tiers, importance_factor):
 #     """
-#     Calculate the expected total transmission time for a given tier.
+#     Calculate the parameter m for each tier based on its importance.
 #     """
-#     Nchunk = S / ((32 - m) * s)
+#     m_values = []
+#     for i in range(tiers):
+#         R = base_R * importance_factor[i]
+#         m = calculate_m(n, p, R)
+#         m_values.append(m)
+#     return m_values
 
-#     Ttrans = get_chunk_transmission_time(t)
+# def calculate_m(desired_reliability, packet_loss_rate, num_fragments=32):
+#     """
+#     Calculate the parameter m for error correction.
+#     """
+#     # Probability of successfully receiving a fragment
+#     p = 1 - packet_loss_rate
     
-#     # Calculate the probabilities P(N <= m) and P(N > m)
-#     P_N_leq_m = poisson_cdf(lam, m)
-#     P_N_gt_m = 1 - P_N_leq_m
+#     for m in range(num_fragments):
+#         k = num_fragments - m
+#         # Calculate the probability of receiving at least k fragments
+#         prob_success = binom.cdf(k - 1, num_fragments, p)
+#         if 1 - prob_success >= desired_reliability:
+#             return m
+#     return num_fragments
 
-#     E_Ttotal = 0
-    
-#     # Loop through the possible number of lost chunks
-#     for k in range(int(Nchunk) + 1):
-#         log_P_lose_k_chunks = log_comb(Nchunk, k) + k * math.log(P_N_gt_m) + (Nchunk - k) * math.log(P_N_leq_m)
-#         P_lose_k_chunks = math.exp(log_P_lose_k_chunks) if log_P_lose_k_chunks > -math.inf else 0
-        
-#         E_Ttotal += P_lose_k_chunks * (Nchunk * Ttrans + k * Tretrans)
-    
-#     return E_Ttotal
+# # Example usage
+# desired_reliability = 0.98
+# packet_loss_rate = 0.1
+# m = calculate_m(desired_reliability, packet_loss_rate)
+# print(f"Calculated parameter m for error correction: {m}")
 
+# p = 0.1  # Packet loss rate (10%)
+# base_R = 0.99  # Base reliability for the most important tier (99%)
+# tiers = 4  # Number of tiers
+# importance_factor = [1.5, 1.2, 1.0, 1.0]  # Importance multipliers for each tier
 
-    
-# for i in range(2456):
-#     print(f"i: {i} ", comb(2456, i, exact=True))
-
-# Setup and start the simulation
+# m_values = calculate_m_for_tiers(32, p, base_R, tiers, importance_factor)
+# print(f"Number of parities needed for each tier: {m_values}")
