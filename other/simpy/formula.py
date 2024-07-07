@@ -51,6 +51,7 @@ def expected_total_transmission_time(S0, s, t, Tretrans, m0, lam):
     
     P_N_leq_m0 = poisson_cdf(lam, Ttrans, m0)
     p = P_N_leq_m0
+    print("NChunk", Nchunk)
     print(f"Nchunk * Ttrans: {Nchunk * Ttrans} p: {p}")
     # E_Ttotal0 = Nchunk * Ttrans
     
@@ -101,13 +102,13 @@ def calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_si
     return E_Toverall
 
 n = 32
-frag_size = 2048
+frag_size = 1024
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
 tier_m = [16,8,4,2]
 number_of_chunks = []
 
 t = 0.001     # Time to transmit one fragment in seconds
-Tretrans = 0.0001  # Retransmission time in seconds
+Tretrans = 0.001  # Retransmission time in seconds
 lam = 10    # Expected number of events in a given interval
 
 E_Toverall = calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_size, t, Tretrans, tier_m, lam)

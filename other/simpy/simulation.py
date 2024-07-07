@@ -15,7 +15,7 @@ class Link:
 
     def transfer(self, value):
         yield self.env.timeout(self.delay)
-        if len(self.loss.items) and value["tier"] != -1 and value["tier"] != -2:
+        if len(self.loss.items) and value["tier"] != -1:
             loss = yield self.loss.get()
             print(f'{loss}, {value} got dropped')
         else:
@@ -35,7 +35,6 @@ class Sender:
         self.rate = rate
         self.all_tier_frags = all_tier_frags
         self.start_time = None
-        # self.env.end_time = {}
 
     def send(self):
         """A process which randomly generates packets."""
@@ -45,59 +44,56 @@ class Sender:
         for t in self.all_tier_frags:
             for f in t:
                 # wait for next transmission
-                yield self.env.timeout(1.0/self.rate)
+                yield self.env.timeout(1.0 / self.rate)
                 f["time"] = self.env.now
                 self.link.put(f)
-            
-        last_frag = {"tier":-1, "chunk":0, "fragment":0, "type":"data"}
-        # yield self.link.packets.put(last_frag)
+
+        last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "data"}
         self.link.put(last_frag)
 
-    def handle_retransmission_request(self, tier, chunk):
-        if tier == -1:
-            self.link.put({"tier":-1, "chunk":0, "fragment":0, "type":"data"})
-        # elif tier == -2:
-        #     self.link.put({"tier":-2, "chunk":0, "fragment":0, "type":"data"})
-        else:
-            print(f"handle retransmission request. Retransmitting data. Tier {tier}, Chunk {chunk}")
-            for t in self.all_tier_frags:
-                for pkt in t:
-                    if pkt["tier"] == tier and pkt["chunk"] == chunk:
-                        print(f"Retransmitting tier {tier}, chunk {chunk}, fragment {pkt['fragment']}")
-                        yield self.env.timeout(1.0/self.rate)
-                        self.link.put(pkt)
+    def retransmit_chunks(self, missing_chunks):
+        """Retransmit all fragments of missing chunks."""
+        for tier, chunks in missing_chunks.items():
+            for chunk_id in chunks:
+                print(f"Retransmitting tier {tier} chunk {chunk_id}")
+                for frag in self.all_tier_frags[tier]:
+                    if frag["chunk"] == chunk_id:
+                        yield self.env.timeout(1.0 / self.rate)
+                        frag["time"] = self.env.now
+                        self.link.put(frag)
+        
+        last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "data"}
+        self.link.put(last_frag)
 
 class Receiver:
 
-    def __init__(self, env, link, sender, error):
+    def __init__(self, env, link, sender, all_tier_per_chunk_data_frags_num):
         self.env = env
         self.link = link
         self.all_tier_frags_received = {}
         self.sender = sender
-        self.error = error
         self.tier_start_times = {}
         self.tier_end_times = {}
         self.fragment_count = 0
         self.lost_chunk_per_tier = {}
         self.end_time = None
+        self.all_tier_per_chunk_data_frags_num = all_tier_per_chunk_data_frags_num
+        self.all_frags_received = False
 
     def receive(self):
         """A process which consumes packets."""
         while True:
             pkt = yield self.link.get()
-            # print(f'Received {pkt} at {self.env.now}')
-            # Check for retransmission
+            print(f'Received {pkt} at {self.env.now}')
             if pkt["tier"] == -1:
                 self.check_all_fragments_received()
-            # elif pkt["tier"] == -2:
-            #     break
             else:
                 tier = pkt["tier"]
                 chunk = pkt["chunk"]
                 if tier not in self.tier_start_times:
                     self.tier_start_times[tier] = self.env.now
                 self.tier_end_times[tier] = self.env.now
-                
+
                 if tier in self.all_tier_frags_received:
                     if chunk in self.all_tier_frags_received[tier]:
                         self.all_tier_frags_received[tier][chunk] += 1
@@ -107,41 +103,43 @@ class Receiver:
                     self.all_tier_frags_received[tier] = {chunk: 1}
 
                 self.fragment_count += 1
-                self.end_time = self.env.now
+                # self.end_time = self.env.now
+
+                # if self.all_frags_received:
+                #     break
 
     def get_result(self):
         return self.all_tier_frags_received
-    
-    def request_retransmission_from_sender(self, tier, chunk):
-        # print(f"retransmission request {tier} {chunk}")
-        self.env.process(self.sender.handle_retransmission_request(tier, chunk))
 
     def check_all_fragments_received(self):
-        lost_fragments = 0
-        
+        print("Checking received fragments")
+        missing_chunks = {}
         for tier, chunks in self.all_tier_frags_received.items():
             for chunk, count in chunks.items():
-                if count < all_tier_per_chunk_data_frags_num[tier][chunk]:
-                    # Checking lost chunks
+                if count < self.all_tier_per_chunk_data_frags_num[tier][chunk]:
+                    if tier not in missing_chunks:
+                        missing_chunks[tier] = []
+                    missing_chunks[tier].append(chunk)
+                    
+                    self.all_tier_frags_received[tier][chunk] = 0
+
                     if tier in self.lost_chunk_per_tier:
                         self.lost_chunk_per_tier[tier] += 1
                     else:
                         self.lost_chunk_per_tier[tier] = 1
-                    print(f"Tier {tier}, Chunk {chunk} is incomplete.")
-                    lost_fragments += 1
-                    self.request_retransmission_from_sender(tier, chunk)
-        
-        if lost_fragments != 0:
-            self.request_retransmission_from_sender(-1, -1)
+
+        if missing_chunks:
+            self.env.process(self.sender.retransmit_chunks(missing_chunks))
+        else:
+            self.end_time = self.env.now
         # else:
-        #     self.request_retransmission_from_sender(-2, -2)
-        print("Transmission ended. All tiers' fragments checked.")
+        #     self.all_frags_received = True
 
     def print_tier_receiving_times(self):
         total = 0
         for tier in self.tier_start_times:
             start_time = self.tier_start_times[tier]
-            end_time = self.tier_end_times.get(tier, start_time)  # Handle case where no end time
+            end_time = self.tier_end_times.get(tier, start_time)
             total += end_time - start_time
             print(f"Tier {tier} receiving time: {end_time - start_time}")
         print(f"Total receiving time, which includes retransmission time for other tiers: {total}")
@@ -149,29 +147,9 @@ class Receiver:
 
         return total
 
-    # def print_average_transmission_time(self):
-    #     if self.fragment_count > 0:
-    #         average_time = self.total_transmission_time / self.fragment_count
-    #         print(f"Average transmission time: {average_time}")
-    #     else:
-    #         print("No fragments received.")
-
-    # def print_average_chunk_transmission_time(self):
-    #     if self.chunk_start_times:
-    #         total_chunk_time = 0
-    #         chunk_count = len(self.chunk_start_times)
-    #         for (tier, chunk), start_time in self.chunk_start_times.items():
-    #             end_time = self.chunk_end_times[(tier, chunk)]
-    #             total_chunk_time += end_time - start_time
-    #         average_chunk_time = total_chunk_time / chunk_count
-    #         print(f"Average chunk transmission time: {average_chunk_time}")
-    #     else:
-    #         print("No chunks received.")
-
     def print_lost_chunks_per_tier(self):
         for tier in self.lost_chunk_per_tier:
             print(f"Tier: {tier}, amount of retransmitted chunks: {self.lost_chunk_per_tier[tier]}")
-
 
 class PacketLossGen:
 
@@ -248,7 +226,7 @@ env = simpy.Environment()
 n = 32
 frag_size = 2048
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
-tier_m = [16,8,4,2]
+tier_m = [0,0,0,0]
 number_of_chunks = []
 
 tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
@@ -257,18 +235,19 @@ all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num,
 
 link = Link(env, 0.001)
 sender = Sender(env, link, 1000, all_tier_frags)
-receiver = Receiver(env, link, sender, 0.1)
+receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
 pkt_loss = PacketLossGen(env, link)
 
 env.process(sender.send())
 env.process(receiver.receive())
-env.process(pkt_loss.expovariate_loss_gen(10))
+env.process(pkt_loss.expovariate_loss_gen(50))
 
 env.run(until=SIM_DURATION)
 print(tier_frags_num)
 print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
 receiver.print_tier_receiving_times()
 receiver.print_lost_chunks_per_tier()
+
 chunks_per_tier = {}
 for t in all_tier_frags:
     for f in t:
@@ -276,9 +255,11 @@ for t in all_tier_frags:
             chunks_per_tier[f["tier"]] += 1
         else:
             chunks_per_tier[f["tier"]] = 1
-
+res = 0
 for i in chunks_per_tier:
     print(f"Tier: {i}, total amount of chunks: {math.ceil(chunks_per_tier[i] / 32)}")
+    res += math.ceil(chunks_per_tier[i] / 32)
+print("Total:", res)
 
 # min_time = float('inf')
 # best_m = []
