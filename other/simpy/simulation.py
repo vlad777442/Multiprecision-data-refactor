@@ -261,37 +261,44 @@ for i in chunks_per_tier:
     res += math.ceil(chunks_per_tier[i] / 32)
 print("Total:", res)
 
-# min_time = float('inf')
-# best_m = []
+min_time = float('inf')
+best_m = []
+min_times = []
 
-# # Iterations
-# for i in range(32):
-#     for j in range(32):
-#         for k in range(32):
-#             for l in range(32):
-#                 current_m = [i, j, k, l]
-#                 print("m:", current_m)
-#                 all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
+# Iterations
+for i in range(32):
+    for j in range(32):
+        for k in range(32):
+            for l in range(32):
+                current_m = [i, j, k, l]
+                print("m:", current_m)
+                all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
 
-#                 env = simpy.Environment()
-#                 link = Link(env, 0.001)
-#                 sender = Sender(env, link, 1000, all_tier_frags)
-#                 receiver = Receiver(env, link, sender, 0.1)
-#                 pkt_loss = PacketLossGen(env, link)
+                env = simpy.Environment()
+                link = Link(env, 0.001)
+                sender = Sender(env, link, 1000, all_tier_frags)
+                receiver = Receiver(env, link, sender, 0.1)
+                pkt_loss = PacketLossGen(env, link)
 
-#                 env.process(sender.send())
-#                 env.process(receiver.receive())
-#                 env.process(pkt_loss.expovariate_loss_gen(10))
+                env.process(sender.send())
+                env.process(receiver.receive())
+                env.process(pkt_loss.expovariate_loss_gen(10))
 
-#                 env.run(until=SIM_DURATION)
+                env.run(until=SIM_DURATION)
 
-#                 total_receiving_time = receiver.print_tier_reception_times()
+                total_receiving_time = receiver.print_tier_reception_times()
                 
-#                 if total_receiving_time < min_time:
-#                     min_time = total_receiving_time
-#                     best_m = current_m
+                if total_receiving_time < min_time:
+                    min_time = total_receiving_time
+                    best_m = current_m
 
-# print(f"Minimal receiving time: {min_time} with parameters m: {best_m}")
-# print(tier_frags_num)
-# print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
-# receiver.print_average_transmission_time()
+                min_times.append((total_receiving_time, current_m))
+                min_times = sorted(min_times, key=lambda x: x[0])[:10]
+
+print(f"Minimal receiving time: {min_time} with parameters m: {best_m}")
+print("Top 10 configurations with minimum receiving times:")
+for time, config in min_times:
+    print(f"Time: {time}, Configuration: {config}")
+print(tier_frags_num)
+print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
+receiver.print_average_transmission_time()

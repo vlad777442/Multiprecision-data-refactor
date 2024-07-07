@@ -114,6 +114,31 @@ lam = 10    # Expected number of events in a given interval
 E_Toverall = calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_size, t, Tretrans, tier_m, lam)
 print(f"Expected total transmission time for all tiers: {E_Toverall} seconds")
 
+min_time = float('inf')
+best_m = []
+min_times = []
+
+for i in range(32):
+    for j in range(32):
+        for k in range(32):
+            for l in range(32):
+                current_m = [i, j, k, l]
+                print("m:", current_m)
+
+                E_Toverall = calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_size, t, Tretrans, current_m, lam)
+
+                if E_Toverall < min_time:
+                    min_time = E_Toverall
+                    best_m = current_m
+
+                min_times.append((E_Toverall, current_m))
+                min_times = sorted(min_times, key=lambda x: x[0])[:10]
+
+print(f"Minimal receiving time: {min_time} with parameters m: {best_m}")
+print("Top 10 configurations with minimum receiving times:")
+for time, config in min_times:
+    print(f"Time: {time}, Configuration: {config}")
+    
 # def calculate_m_for_tiers(n, p, base_R, tiers, importance_factor):
 #     """
 #     Calculate the parameter m for each tier based on its importance.
