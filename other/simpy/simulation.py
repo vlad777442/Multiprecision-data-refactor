@@ -143,7 +143,8 @@ class Receiver:
             total += end_time - start_time
             print(f"Tier {tier} receiving time: {end_time - start_time}")
         print(f"Total receiving time, which includes retransmission time for other tiers: {total}")
-        print(f"Total time from the beginning to the end: {self.end_time - self.sender.start_time}")
+        total_overall = self.end_time - self.sender.start_time
+        print(f"Total time from the beginning to the end: {total_overall}")
 
         return total
 

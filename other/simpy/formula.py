@@ -102,7 +102,7 @@ def calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_si
     return E_Toverall
 
 n = 32
-frag_size = 1024
+frag_size = 2048
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
 tier_m = [16,8,4,2]
 number_of_chunks = []
@@ -138,7 +138,7 @@ print(f"Minimal receiving time: {min_time} with parameters m: {best_m}")
 print("Top 10 configurations with minimum receiving times:")
 for time, config in min_times:
     print(f"Time: {time}, Configuration: {config}")
-    
+
 # def calculate_m_for_tiers(n, p, base_R, tiers, importance_factor):
 #     """
 #     Calculate the parameter m for each tier based on its importance.
