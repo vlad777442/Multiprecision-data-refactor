@@ -40,7 +40,6 @@ using namespace ROCKSDB_NAMESPACE;
 #include <zmq.hpp>
 #include <thread>
 #include <chrono>
-#include <enet/enet.h>
 #include "Poco/Net/DatagramSocket.h"
 #include "Poco/Net/SocketAddress.h"
 
@@ -334,23 +333,6 @@ void senderZmq(zmq::socket_t& socket, const DATA::Fragment& message) {
     socket.send(zmq::buffer(serialized_message), zmq::send_flags::none);
 }
 
-void sendProtobufMessageEnet(ENetPeer* peer, const DATA::Fragment& message) {
-    // Serialize the protobuf message to a string
-    std::string serialized_message;
-    if (!message.SerializeToString(&serialized_message)) {
-        std::cerr << "Failed to serialize protobuf message.\n";
-        return;
-    }
-
-    // Create an ENet packet with the serialized message
-    ENetPacket* packet = enet_packet_create(serialized_message.c_str(), serialized_message.size(), ENET_PACKET_FLAG_RELIABLE);
-
-    // Send the packet
-    enet_peer_send(peer, 0, packet);
-
-    std::cout << "Protobuf message with fragment id sent: " << message.fragment_id() << std::endl;
-}
-
 // Method to send a protobuf variable over UDP
 void sendProtobufVariablePoco(const DATA::Fragment& variable, const SocketAddress& serverAddress) {
     try {
@@ -424,45 +406,6 @@ int main(int argc, char *argv[])
     // socket.connect("tcp://10.51.197.229:4343");
     // socket.connect("tcp://localhost:5555");
     // //zmq end
-
-    // //Enet Start
-    // if (enet_initialize() != 0) {
-    //     std::cerr << "Failed to initialize ENet.\n";
-    //     return EXIT_FAILURE;
-    // }
-
-    // ENetAddress address;
-    // ENetHost* client;
-    // ENetPeer* peer;
-
-    // // Create a host
-    // client = enet_host_create(NULL, 1, 2, 0, 0);
-    // if (client == NULL) {
-    //     std::cerr << "Failed to create ENet client.\n";
-    //     enet_deinitialize();
-    //     return EXIT_FAILURE;
-    // }
-
-    // // Set the address and port of the server to connect to
-    // enet_address_set_host(&address, "127.0.0.1");
-    // address.port = 1234;
-
-    // // Connect to the server
-    // peer = enet_host_connect(client, &address, 2, 0);
-    // if (peer == NULL) {
-    //     std::cerr << "No available peers for initiating an ENet connection.\n";
-    //     enet_host_destroy(client);
-    //     enet_deinitialize();
-    //     return EXIT_FAILURE;
-    // }
-
-    // // Wait until the connection is established (or fails)
-    // ENetEvent event;
-    // if (enet_host_service(client, &event, 5000) > 0 && event.type == ENET_EVENT_TYPE_CONNECT) {
-    //     std::cout << "Connected to the server!\n";
-    //     DATA::Fragment tmp;
-    //     sendProtobufMessageEnet(peer, tmp);
-    // //Enet End
 
     //Poco
     SocketAddress serverAddress("10.51.197.229", 34565); // Server address and port
@@ -1273,16 +1216,6 @@ int main(int argc, char *argv[])
                     // std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = UnpackSingleElement<uint64_t>(varECParam_EncodedFragLen_Result);
                     // std::cout << varECParam_EncodedFragLen_Name << ", " << *pVarECParam_EncodedFragLen_Result << std::endl;  
 
-                    //Setting protobuf parameters
-                    // DATA::Tier protoTier;
-                    // protoTier.set_id(i);
-                    // protoTier.set_k(ec_k);
-                    // protoTier.set_m(ec_m);
-                    // protoTier.set_w(ec_w);
-                    // protoTier.set_hd(ec_hd);
-                    // protoTier.set_ec_backend_name(ECBackendName);
-                    // protoTier.set_encoded_fragment_length(encoded_fragment_len);
-
                     size_t frag_header_size =  sizeof(fragment_header_t);
                     for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
                     {
@@ -1354,9 +1287,7 @@ int main(int argc, char *argv[])
                         // fragments_vector.push_back(protoFragment1);
                         // senderZmq(socket, protoFragment1);
                         packetsSent++;
-                        // ENet
-                        // sendProtobufMessageEnet(peer, protoFragment1);
-                        // enet_host_flush(client);
+                        
                         senderBoost(io_service, socket, receiver_endpoint, protoFragment1);
                         // sendProtobufVariablePoco(protoFragment1, serverAddress);
                         // std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -1420,17 +1351,12 @@ int main(int argc, char *argv[])
                         // fragments_vector.push_back(protoFragment2);
                         // senderTcp(io_service, socket2, protoFragment2);
 
-                        // ENet
-                        // sendProtobufMessageEnet(peer, protoFragment2);
-                        // enet_host_flush(client);
                         // sendProtobufVariablePoco(protoFragment2, serverAddress);
                         senderBoost(io_service, socket, receiver_endpoint, protoFragment2);
                         // senderZmq(socket, protoFragment2);
                         packetsSent++;
                         // std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     }
-                    
-                    // *protoVariable.add_tier() = protoTier;
 
                     rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
                     assert(rc == 0);    
@@ -1471,15 +1397,6 @@ int main(int argc, char *argv[])
                 // std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = UnpackSingleElement<uint64_t>(varECParam_EncodedFragLen_Result);
                 // std::cout << varECParam_EncodedFragLen_Name << ", " << *pVarECParam_EncodedFragLen_Result << std::endl;  
 
-                // //Setting protobuf parameters
-                // DATA::Tier protoTier;
-                // protoTier.set_id(i);
-                // protoTier.set_k(ec_k);
-                // protoTier.set_m(ec_m);
-                // protoTier.set_w(ec_w);
-                // protoTier.set_hd(ec_hd);
-                // protoTier.set_ec_backend_name(ECBackendName);
-                // protoTier.set_encoded_fragment_length(encoded_fragment_len);
 
                 // size_t frag_header_size =  sizeof(fragment_header_t);
                 // for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
@@ -1623,17 +1540,6 @@ int main(int argc, char *argv[])
     // reader_engine.Close();
 
     // delete db;
-
-    // //enet end
-    // } else {
-    //     std::cerr << "Failed to connect to the server or timed out.\n";
-    //     enet_peer_reset(peer);
-    // }
-
-    // // Clean up
-    // enet_host_destroy(client);
-    // enet_deinitialize();
-    // //enet end
 
     // End the timer
     auto end = std::chrono::steady_clock::now();

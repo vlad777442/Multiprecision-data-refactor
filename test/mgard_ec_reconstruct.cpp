@@ -38,7 +38,6 @@
 #include "fragment.pb.h"
 #include <chrono>
 #include <zmq.hpp>
-#include <enet/enet.h>
 #include "Poco/Net/DatagramSocket.h"
 #include "Poco/Net/SocketAddress.h"
 
@@ -839,7 +838,7 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
                         }
                     }
                     assert(num_avail_frags > 0);
-                    // std::cout << "avail_frags: " << avail_frags << std::endl;
+                    
                     std::cout << "num_avail_frags: " << num_avail_frags << std::endl;
                     std::cout << "encoded_fragment_len: " << encoded_fragment_len << std::endl;
                     // for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
@@ -1696,186 +1695,6 @@ struct ZmqTCP
         }
 
         // io_service.run();
-        std::cout << "Receiver exit\nStarting recovery\n";
-        for (int i = 0; i < variables.size(); i++)
-        {
-            restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
-        }
-    }
-};
-
-struct ReceiverENet
-{
-    std::string previousVarName = "null";
-    std::int32_t previousTierId = -1;
-    std::int32_t previousChunkId = -1;
-    std::string rawDataName;
-    std::int32_t totalSites;
-    std::int32_t unavailableSites;
-    std::vector<Fragment> fragments;
-    std::vector<Variable> variables;
-
-    ENetHost *server;
-
-    ReceiverENet()
-    {
-        if (enet_initialize() != 0)
-        {
-            std::cerr << "Failed to initialize ENet.\n";
-            exit(EXIT_FAILURE);
-        }
-
-        ENetAddress address;
-
-        // Create a host for receiving and specify the IP address
-        if (enet_address_set_host(&address, "127.0.0.1") != 0)
-        {
-            std::cerr << "Failed to set host address.\n";
-            enet_deinitialize();
-            exit(EXIT_FAILURE);
-        }
-        address.port = 1234;
-
-        server = enet_host_create(&address, 32, 2, 0, 0);
-        if (server == NULL)
-        {
-            std::cerr << "Failed to create ENet server.\n";
-            enet_deinitialize();
-            exit(EXIT_FAILURE);
-        }
-
-        std::cout << "Waiting for connection...\n";
-    }
-
-    ~ReceiverENet()
-    {
-        // Clean up
-        enet_host_destroy(server);
-        enet_deinitialize();
-    }
-
-    void run()
-    {
-        std::cout << "Run" << std::endl;
-        // Handle events
-        ENetEvent event;
-        while (true)
-        {
-            if (enet_host_service(server, &event, 1000) > 0 && event.type == ENET_EVENT_TYPE_CONNECT)
-            {
-                std::cout << "A new client connected!\n";
-
-                while (enet_host_service(server, &event, 5000) > 0 && event.type != ENET_EVENT_TYPE_DISCONNECT)
-                {
-                    if (event.type == ENET_EVENT_TYPE_RECEIVE)
-                    {
-                        std::cout << "received" << std::endl;
-                        // Deserialize the received message
-                        DATA::Fragment received_message;
-                        if (received_message.ParseFromArray(event.packet->data, event.packet->dataLength))
-                        {
-                            // Handle the received protobuf message
-                            if (previousVarName == received_message.var_name() && !variables.empty())
-                            {
-                                Variable &latestVariable = variables.back();
-                                Tier &latestTier = latestVariable.tiers.back();
-
-                                Fragment myFragment;
-                                setFragment(received_message, myFragment);
-
-                                if (myFragment.tier_id == previousTierId)
-                                {
-                                    if (myFragment.chunk_id == previousChunkId)
-                                    {
-                                        Chunk &latestChunk = latestTier.chunks.back();
-                                        if (myFragment.is_data)
-                                        {
-                                            latestChunk.data_fragments.push_back(myFragment);
-                                        }
-                                        else
-                                        {
-                                            latestChunk.parity_fragments.push_back(myFragment);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Chunk newChunk;
-                                        newChunk.id = myFragment.chunk_id;
-                                        if (myFragment.is_data)
-                                        {
-                                            newChunk.data_fragments.push_back(myFragment);
-                                        }
-                                        else
-                                        {
-                                            newChunk.parity_fragments.push_back(myFragment);
-                                        }
-                                        latestTier.chunks.push_back(newChunk);
-                                    }
-                                }
-                                else
-                                {
-                                    Tier newTier;
-                                    newTier.id = myFragment.tier_id;
-                                    newTier.k = myFragment.k;
-                                    newTier.m = myFragment.m;
-                                    newTier.w = myFragment.w;
-                                    newTier.hd = myFragment.hd;
-
-                                    Chunk newChunk;
-                                    newChunk.id = myFragment.chunk_id;
-                                    if (myFragment.is_data)
-                                    {
-                                        newChunk.data_fragments.push_back(myFragment);
-                                    }
-                                    else
-                                    {
-                                        newChunk.parity_fragments.push_back(myFragment);
-                                    }
-                                    newTier.chunks.push_back(newChunk);
-                                    latestVariable.tiers.push_back(newTier);
-                                }
-                            }
-                            else
-                            {
-                                Variable var1;
-                                setVariable(received_message, var1);
-                                Fragment myFragment;
-                                setFragment(received_message, myFragment);
-
-                                Tier tier;
-                                Chunk chunk;
-                                setTier(myFragment, tier);
-                                chunk.id = myFragment.chunk_id;
-
-                                if (myFragment.is_data)
-                                {
-                                    chunk.data_fragments.push_back(myFragment);
-                                }
-                                else
-                                {
-                                    chunk.parity_fragments.push_back(myFragment);
-                                }
-                                tier.chunks.push_back(chunk);
-                                var1.tiers.push_back(tier);
-                                variables.push_back(var1);
-                            }
-                            previousTierId = received_message.tier_id();
-                            previousVarName = received_message.var_name();
-                            previousChunkId = received_message.chunk_id();
-                            std::cout << "received frag data id:" << received_message.fragment_id() << ";chunk:" << received_message.chunk_id() << ";tier:" << received_message.tier_id() << std::endl;
-                            std::cout << "received frag size: " << received_message.frag().size() << std::endl;
-                        }
-                        else
-                        {
-                            std::cerr << "Failed to parse received protobuf message.\n";
-                        }
-                    }
-                    enet_packet_destroy(event.packet);
-                }
-                std::cout << "Client disconnected.\n";
-                // break;
-            }
-        }
         std::cout << "Receiver exit\nStarting recovery\n";
         for (int i = 0; i < variables.size(); i++)
         {
