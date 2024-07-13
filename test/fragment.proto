@@ -13,8 +13,6 @@ message SquaredErrorsTable {
   int32 cols = 2;
   repeated double content = 3;
 }
-//Mgard reconstr
-//store buffer metadata
 
 message Variable {
   string name = 1;
@@ -40,14 +38,6 @@ message Tier {
   uint64 encoded_fragment_length = 7;
   //repeated Fragment fragment = 8;
 }
-
-//Fragment
-//id of tier
-//id of fragment
-//variable name
-//k, m, w, hd
-//data uint8
-//bool isdata
 
 message Fragment {
   int32 k = 1;

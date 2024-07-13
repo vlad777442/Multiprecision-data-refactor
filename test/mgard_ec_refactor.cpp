@@ -43,10 +43,10 @@ using namespace ROCKSDB_NAMESPACE;
 #include "Poco/Net/DatagramSocket.h"
 #include "Poco/Net/SocketAddress.h"
 
-#define IPADDRESS "127.0.0.1" // "192.168.1.64"
-#define UDP_PORT 13251
-// #define IPADDRESS "10.51.197.229" // "192.168.1.64"
-// #define UDP_PORT 34565
+// #define IPADDRESS "127.0.0.1" // "192.168.1.64"
+// #define UDP_PORT 13251
+#define IPADDRESS "10.51.197.229"
+#define UDP_PORT 34565
 
 
 using boost::asio::ip::tcp;
@@ -355,6 +355,36 @@ void sendProtobufVariablePoco(const DATA::Fragment& variable, const SocketAddres
     }
 }
 
+void send_messages_boost(boost::asio::io_service& io_service, const std::string& host, const std::string& port, const std::vector<DATA::Fragment>& fragments) {
+    udp::socket socket(io_service, udp::v4());
+    udp::resolver resolver(io_service);
+    udp::resolver::query query(udp::v4(), host, port);
+    udp::resolver::iterator iter = resolver.resolve(query);
+    int packetsSent = 0;
+
+    for (const auto& fragment : fragments) {
+        std::string serialized_fragment;
+        if (!fragment.SerializeToString(&serialized_fragment)) {
+            std::cerr << "Failed to serialize fragment." << std::endl;
+            continue;
+        }
+
+        socket.send_to(boost::asio::buffer(serialized_fragment), *iter);
+        packetsSent++;
+    }
+    // Send an EOT message
+    DATA::Fragment eot;
+    eot.set_fragment_id(-1);  // Using -1 to indicate the end of transmission
+    std::string serialized_eot;
+    eot.SerializeToString(&serialized_eot);
+    for (size_t i = 0; i < 10; i++)
+    {
+        socket.send_to(boost::asio::buffer(serialized_eot), *iter);
+    }
+
+    std::cout << "Packets sent: " << packetsSent << std::endl;
+}
+
 void adjustParameters(int& k, int& m) {
     // Adjust parameters based on packet loss rate or other criteria
     k += 1;  // Increase the number of data fragments
@@ -383,16 +413,17 @@ int main(int argc, char *argv[])
 
     ec_backend_id_t backendID;
     size_t fragmentSize;
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
     // Start the timer
     auto start = std::chrono::steady_clock::now();
-    // udp boost start
-    boost::asio::io_service io_service;
-    udp::socket socket(io_service);
-    socket.open(udp::v4());
-    // Receiver endpoint
-    udp::endpoint receiver_endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT); // Receiver IP and port
-    // tcp::socket socket2(io_service);
-    //udp boost end
+    // // udp boost start
+    // boost::asio::io_service io_service;
+    // udp::socket socket(io_service);
+    // socket.open(udp::v4());
+    // // Receiver endpoint
+    // udp::endpoint receiver_endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT); // Receiver IP and port
+    // // tcp::socket socket2(io_service);
+    // //udp boost end
 
     // tcp::endpoint remote_endpoint = tcp::endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT);
     // socket2.connect(remote_endpoint);
@@ -408,7 +439,7 @@ int main(int argc, char *argv[])
     // //zmq end
 
     //Poco
-    SocketAddress serverAddress("10.51.197.229", 34565); // Server address and port
+    // SocketAddress serverAddress("10.51.197.229", 34565); // Server address and port
     //Poco end
     for (size_t i = 0; i < argc; i++)
     {
@@ -660,6 +691,7 @@ int main(int argc, char *argv[])
     DATA::VariableCollection variableCollection;
     int cnt = 0;
     calculateKAndAddToVector(dataTiersECParam_k, dataTiersECParam_m);
+    std::vector<DATA::Fragment> fragments;
 
     for (const auto variablePair : allVariables)
     {
@@ -689,7 +721,7 @@ int main(int argc, char *argv[])
             reader_engine.Get(variable, variableData.data(), adios2::Mode::Sync);
 
             // added absolute value calculation
-//            std::vector<float>::iterator maxElement = std::max_element(variableData.begin(), variableData.end());
+            // std::vector<float>::iterator maxElement = std::max_element(variableData.begin(), variableData.end());
             std::vector<float>::iterator maxElement = std::max_element(variableData.begin(), variableData.end(),
                                                                        [](float a, float b) {
                                                                            return std::abs(a) < std::abs(b);
@@ -733,7 +765,7 @@ int main(int argc, char *argv[])
                 dimensions[i] = variable.Shape()[i];
                 //std::cout << dimensions[i] << " ";
             }
-            //std::cout << std::endl;
+            
             uint8_t target_level = total_mgard_levels-1;
             uint8_t max_level = log2(*min_element(dimensions.begin(), dimensions.end())) - 1;
             if(target_level > max_level)
@@ -856,7 +888,7 @@ int main(int argc, char *argv[])
             protoQueryTable.set_rows(queryTable.size());
             protoQueryTable.set_cols(5);
 
-//            std::cout << "Key: " << varQueryTableShapeName << "; Value: " << PackVector(varQueryTableShape) << std::endl;
+            // std::cout << "Key: " << varQueryTableShapeName << "; Value: " << PackVector(varQueryTableShape) << std::endl;
             //baryon_density : PackVector(87, 5)
             assert(s.ok()); 
             std::string varQueryTableShapeResult;
@@ -874,7 +906,7 @@ int main(int argc, char *argv[])
             //adios2::Variable<uint64_t> varQueryTable = writer_io.DefineVariable<uint64_t>(varQueryTableName, {queryTable.size(), 5}, {0, 0}, {queryTable.size(), 5});
             //metadata_writer_engine.Put(varQueryTable, queryTableContent.data(), adios2::Mode::Sync);
             s = db->Put(WriteOptions(), varQueryTableName, PackVector(queryTableContent));
-//            std::cout << "Key: " << varQueryTableName << "; Value: " << PackVector(queryTableContent) << std::endl;
+            // std::cout << "Key: " << varQueryTableName << "; Value: " << PackVector(queryTableContent) << std::endl;
             //baryon_density:QueryTable : PackVector(0 0 0 0 28 ...)
             for (const auto& data : queryTableContent) {
                 protoQueryTable.add_content(data);
@@ -910,7 +942,7 @@ int main(int argc, char *argv[])
             }
             std::cout << std::endl;
             s = db->Put(WriteOptions(), varDimensionsName, PackVector(dimensions));
-//            std::cout << "Key: " << varDimensionsName << "; Value: " << PackVector(dimensions) << std::endl;
+            // std::cout << "Key: " << varDimensionsName << "; Value: " << PackVector(dimensions) << std::endl;
             //baryon_density:Dimensions : PackVector(512 512 512)
             for (const auto& data : dimensions) {
                 protoVariable.add_dimensions(data);
@@ -932,10 +964,9 @@ int main(int argc, char *argv[])
             //adios2::Variable<std::string> varType = writer_io.DefineVariable<std::string>(varTypeName);
             //metadata_writer_engine.Put(varType, variableType, adios2::Mode::Sync); 
             s = db->Put(WriteOptions(), varTypeName, variableType);
-//            std::cout << "Key: " << varTypeName << "; Value: " << variableType << std::endl;
+
             protoVariable.set_type(variableType);
 
-            //baryon_density:Type : variablePair.second.at("Type") -- need to know
             assert(s.ok()); 
             std::string varTypeResult;
             s = db->Get(ReadOptions(), varTypeName, &varTypeResult);
@@ -947,7 +978,7 @@ int main(int argc, char *argv[])
             uint32_t numLevels = level_components.size();
             //metadata_writer_engine.Put(varLevels, numLevels, adios2::Mode::Sync);   
             s = db->Put(WriteOptions(), varLevelsName, PackSingleElement(&numLevels));
-//            std::cout << "Key: " << varLevelsName << "; Value: " << PackSingleElement(&numLevels) << std::endl;
+            // std::cout << "Key: " << varLevelsName << "; Value: " << PackSingleElement(&numLevels) << std::endl;
             protoVariable.set_levels(numLevels);
             //baryon_density:Levels : PackSingleElement(&numLevels) -- need to know
             assert(s.ok()); 
@@ -967,7 +998,7 @@ int main(int argc, char *argv[])
             }
             std::cout << std::endl;
             s = db->Put(WriteOptions(), varErrorBoundsName, PackVector(level_error_bounds));
-//            std::cout << "Key: " << varErrorBoundsName << "; Value: " << PackVector(level_error_bounds) << std::endl;
+
             for (const auto& data : level_error_bounds) {
                 protoVariable.add_level_error_bounds(data);
             }
@@ -994,7 +1025,7 @@ int main(int argc, char *argv[])
             }
             std::cout << std::endl;
             s = db->Put(WriteOptions(), varStopIndicesName, PackVector(stopping_indices));
-//            std::cout << "Key: " << varStopIndicesName << "; Value: " << PackVector(stopping_indices) << std::endl;
+            // std::cout << "Key: " << varStopIndicesName << "; Value: " << PackVector(stopping_indices) << std::endl;
             for (const auto& data : stopping_indices) {
                 protoVariable.add_stopping_indices(data);
             }
@@ -1025,7 +1056,7 @@ int main(int argc, char *argv[])
             std::string varSquaredErrorsShapeName = variableName+":SquaredErrors:Shape";   
             std::vector<size_t> varSquaredErrorsShape{level_squared_errors.size(), level_squared_errors[0].size()};
             s = db->Put(WriteOptions(), varSquaredErrorsShapeName, PackVector(varSquaredErrorsShape));
-//            std::cout << "Key: " << varSquaredErrorsShapeName << "; Value: " << PackVector(varSquaredErrorsShape) << std::endl;.
+            // std::cout << "Key: " << varSquaredErrorsShapeName << "; Value: " << PackVector(varSquaredErrorsShape) << std::endl;.
             assert(s.ok()); 
             std::string varSquaredErrorsShapeResult;
             s = db->Get(ReadOptions(), varSquaredErrorsShapeName, &varSquaredErrorsShapeResult);
@@ -1042,7 +1073,7 @@ int main(int argc, char *argv[])
             //adios2::Variable<double> varSquaredErrors = writer_io.DefineVariable<double>(varSquaredErrorsName, {level_squared_errors.size(), level_squared_errors[0].size()}, {0, 0}, {level_squared_errors.size(), level_squared_errors[0].size()});
             //metadata_writer_engine.Put(varSquaredErrors, all_squared_errors.data(), adios2::Mode::Sync);
             s = db->Put(WriteOptions(), varSquaredErrorsName, PackVector(all_squared_errors));
-//            std::cout << "Key: " << varSquaredErrorsName << "; Value: " << PackVector(all_squared_errors) << std::endl;
+            // std::cout << "Key: " << varSquaredErrorsName << "; Value: " << PackVector(all_squared_errors) << std::endl;
             DATA::SquaredErrorsTable protoAllSquaredErrors;
             protoAllSquaredErrors.set_rows(level_squared_errors.size());
             protoAllSquaredErrors.set_cols(level_squared_errors[0].size());
@@ -1075,7 +1106,7 @@ int main(int argc, char *argv[])
             uint32_t numTiers = dataTiers;
             //metadata_writer_engine.Put(varTiersName, numTiers, adios2::Mode::Sync);  
             s = db->Put(WriteOptions(), varTiersName, PackSingleElement(&numTiers));
-//            std::cout << "Key: " << varTiersName << "; Value: " << PackSingleElement(&numTiers) << std::endl;
+            // std::cout << "Key: " << varTiersName << "; Value: " << PackSingleElement(&numTiers) << std::endl;
             protoVariable.set_tiers(numTiers);
             //baryon_density:Tiers : PackSingleElement(&numTiers) 4?
             assert(s.ok()); 
@@ -1100,7 +1131,7 @@ int main(int argc, char *argv[])
                 //adios2::Variable<int> varECParam_k = writer_io.DefineVariable<int>(varECParam_k_Name); 
                 int ec_k = dataTiersECParam_k[i];
                 s = db->Put(WriteOptions(), varECParam_k_Name, PackSingleElement(&ec_k));
-//                std::cout << "Key: " << varECParam_k_Name << "; Value: " << PackSingleElement(&ec_k) << std::endl;
+                // std::cout << "Key: " << varECParam_k_Name << "; Value: " << PackSingleElement(&ec_k) << std::endl;
                 //baryon_density:Tier:i:K : PackSingleElement(&ec_k) - need to know
                 assert(s.ok()); 
                 std::string varECParam_k_Result;
@@ -1114,7 +1145,7 @@ int main(int argc, char *argv[])
                 int ec_m = dataTiersECParam_m[i];
                 s = db->Put(WriteOptions(), varECParam_m_Name, PackSingleElement(&ec_m));
                 std::cout << "Key: " << varECParam_m_Name << "; Value: " << PackSingleElement(&ec_m) << std::endl;
-                //baryon_density:Tier:i:M : PackSingleElement(&ec_m) - need to know
+                
                 assert(s.ok()); 
                 std::string varECParam_m_Result;
                 s = db->Get(ReadOptions(), varECParam_m_Name, &varECParam_m_Result);
@@ -1140,7 +1171,7 @@ int main(int argc, char *argv[])
                 int ec_hd = dataTiersECParam_m[i]+1;
                 s = db->Put(WriteOptions(), varECParam_hd_Name, PackSingleElement(&ec_hd));
                 std::cout << "Key: " << varECParam_hd_Name << "; Value: " << PackSingleElement(&ec_hd) << std::endl;
-                //baryon_density:Tier:i:HD : PackSingleElement(&ec_hd)
+               
                 assert(s.ok()); 
                 std::string varECParam_hd_Result;
                 s = db->Get(ReadOptions(), varECParam_hd_Name, &varECParam_hd_Result);
@@ -1188,12 +1219,12 @@ int main(int argc, char *argv[])
                         assert(desc > 0);
                     }   
 
-                    std::cout << "split data tiers size: " << splitDataTiers.size() << " k: " << k << std::endl;
+                    // std::cout << "split data tiers size: " << splitDataTiers.size() << " k: " << k << std::endl;
                     char **encoded_data = NULL, **encoded_parity = NULL;
                     uint64_t encoded_fragment_len = 0;
                     char *orig_data = NULL;
                     int orig_data_size = splitDataTiers[i][k].size();
-                    std::cout << "orig_data_size: " << orig_data_size << std::endl;
+                    // std::cout << "orig_data_size: " << orig_data_size << std::endl;
                     orig_data = static_cast<char*>(static_cast<void *>(splitDataTiers[i][k].data()));
 
                     // std::cout << "split data tiers size" << splitDataTiers[i][k].size() << std::endl;
@@ -1214,7 +1245,6 @@ int main(int argc, char *argv[])
                     // s = db->Get(ReadOptions(), varECParam_EncodedFragLen_Name, &varECParam_EncodedFragLen_Result);
                     // assert(s.ok());  
                     // std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = UnpackSingleElement<uint64_t>(varECParam_EncodedFragLen_Result);
-                    // std::cout << varECParam_EncodedFragLen_Name << ", " << *pVarECParam_EncodedFragLen_Result << std::endl;  
 
                     size_t frag_header_size =  sizeof(fragment_header_t);
                     for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
@@ -1287,10 +1317,12 @@ int main(int argc, char *argv[])
                         // fragments_vector.push_back(protoFragment1);
                         // senderZmq(socket, protoFragment1);
                         packetsSent++;
-                        
-                        senderBoost(io_service, socket, receiver_endpoint, protoFragment1);
+                        fragments.push_back(protoFragment1);
+                        // senderBoost(io_service, socket, receiver_endpoint, protoFragment1);
                         // sendProtobufVariablePoco(protoFragment1, serverAddress);
                         // std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+                        std::cout << "Encoded Tier: " << i << " Chunk: " << k << " Data:   " << j << std::endl;
                     }
                     for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
                     {
@@ -1352,10 +1384,12 @@ int main(int argc, char *argv[])
                         // senderTcp(io_service, socket2, protoFragment2);
 
                         // sendProtobufVariablePoco(protoFragment2, serverAddress);
-                        senderBoost(io_service, socket, receiver_endpoint, protoFragment2);
+                        // senderBoost(io_service, socket, receiver_endpoint, protoFragment2);
                         // senderZmq(socket, protoFragment2);
+                        fragments.push_back(protoFragment2);
                         packetsSent++;
                         // std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                        std::cout << "Encoded Tier: " << i << " Chunk: " << k << " Parity: " << j << std::endl;
                     }
 
                     rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
@@ -1443,21 +1477,6 @@ int main(int argc, char *argv[])
                 //     // assert(s.ok()); 
                 //     // std::cout << varDataLocationName << ", " << varDataLocationResult << std::endl;
                     
-
-                //     DATA::Fragment protoFragment1;
-                //     protoFragment1.set_k(ec_k);
-                //     protoFragment1.set_m(ec_m);
-                //     protoFragment1.set_w(ec_w);
-                //     protoFragment1.set_hd(ec_hd);
-                //     protoFragment1.set_ec_backend_name(ECBackendName);
-                //     protoFragment1.set_idx(j);
-                //     protoFragment1.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
-                //     protoFragment1.set_orig_data_size(orig_data_size);
-                //     protoFragment1.set_chksum_mismatch(0);
-                //     protoFragment1.set_frag(fragment_data.data(), fragment_data.size());
-                //     protoFragment1.set_is_data(true);
-                //     protoFragment1.set_tier_id(i);
-                //     // *protoTier.add_fragment() = protoFragment1;
                 // }
                 // for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
                 // {
@@ -1497,23 +1516,7 @@ int main(int argc, char *argv[])
                 //     // s = db->Get(ReadOptions(), varParityLocationName, &varParityLocationResult);
                 //     // assert(s.ok()); 
                 //     // std::cout << varParityLocationName << ", " << varParityLocationResult << std::endl;
-
-                //     DATA::Fragment protoFragment2;
-                //     protoFragment2.set_k(ec_k);
-                //     protoFragment2.set_m(ec_m);
-                //     protoFragment2.set_w(ec_w);
-                //     protoFragment2.set_hd(ec_hd);
-                //     protoFragment2.set_ec_backend_name(ECBackendName);
-                //     protoFragment2.set_idx(args.k+j);
-                //     protoFragment2.set_size(encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
-                //     protoFragment2.set_orig_data_size(orig_data_size);
-                //     protoFragment2.set_chksum_mismatch(0);
-                //     protoFragment2.set_frag(frag);
-                //     protoFragment2.set_is_data(false);
-                //     protoFragment2.set_tier_id(i);
-                //     // *protoTier.add_fragment() = protoFragment2;
                 // }
-                // // *protoVariable.add_tier() = protoTier;
 
                 // rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
                 // assert(rc == 0);    
@@ -1524,9 +1527,13 @@ int main(int argc, char *argv[])
             packetsSent = 0;
             *variableCollection.add_variables() = protoVariable;
         } 
+        break;
     }
+    boost::asio::io_service io_service;
+    send_messages_boost(io_service, "127.0.0.1", "9000", fragments);
+    google::protobuf::ShutdownProtobufLibrary();
 
-    // std::cout << "Completed!" << std::endl;
+    std::cout << "Completed!" << std::endl;
     // for (auto it : data_writer_engines)
     // {
     //     it.second.Close();
