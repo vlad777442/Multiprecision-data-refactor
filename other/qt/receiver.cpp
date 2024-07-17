@@ -1,32 +1,33 @@
-// receiver.cpp
-#include <Poco/Net/DatagramSocket.h>
-#include <Poco/Net/SocketAddress.h>
-#include "message.pb.h"
 #include <iostream>
-#include <string>
+#include <boost/asio.hpp>
+#include "message.pb.h" // Include your generated protobuf header
 
-MyMessage receiveProtobufMessage(int port) {
-    Poco::Net::SocketAddress address(Poco::Net::IPAddress(), port);
-    Poco::Net::DatagramSocket socket;
-    socket.bind(address);  // Bind the socket to the address
+using boost::asio::ip::udp;
 
-    const int max_length = 1024;
-    char buffer[max_length];
-    Poco::Net::SocketAddress sender;
-    int n = socket.receiveFrom(buffer, max_length, sender);
+void receive_protobuf_object(boost::asio::io_context& io_context, unsigned short port) {
+    udp::socket socket(io_context, udp::endpoint(udp::v4(), port));
+    
+    // Increase the socket buffer size
+    boost::asio::socket_base::receive_buffer_size option(65536);
+    socket.set_option(option);
 
-    MyMessage received_message;
-    if (!received_message.ParseFromArray(buffer, n)) {
-        std::cerr << "Failed to parse received message" << std::endl;
+    std::array<char, 65536> recv_buffer;
+    udp::endpoint sender_endpoint;
+    std::size_t len = socket.receive_from(boost::asio::buffer(recv_buffer), sender_endpoint);
+
+    std::string received_data(recv_buffer.data(), len);
+    MyMessage message;
+    if (message.ParseFromString(received_data)) {
+        std::cout << "Received message: " << message.data() << std::endl; // Handle your protobuf fields here
+    } else {
+        std::cerr << "Failed to parse message." << std::endl;
     }
-
-    return received_message;
 }
 
 int main() {
-    std::cout << "Waiting for message..." << std::endl;
-    MyMessage received = receiveProtobufMessage(12345);
-    std::cout << "Received: " << received.data() << std::endl;
+    boost::asio::io_context io_context;
+
+    receive_protobuf_object(io_context, 12345);
 
     return 0;
 }

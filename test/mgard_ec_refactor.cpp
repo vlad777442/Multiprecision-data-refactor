@@ -355,11 +355,9 @@ void sendProtobufVariablePoco(const DATA::Fragment& variable, const SocketAddres
     }
 }
 
-void send_messages_boost(boost::asio::io_service& io_service, const std::string& host, const std::string& port, const std::vector<DATA::Fragment>& fragments) {
-    udp::socket socket(io_service, udp::v4());
-    udp::resolver resolver(io_service);
-    udp::resolver::query query(udp::v4(), host, port);
-    udp::resolver::iterator iter = resolver.resolve(query);
+void sendProtobufVectorPoco(const std::string& host, int port, const std::vector<DATA::Fragment>& fragments) {
+    Poco::Net::SocketAddress address(host, port);
+    Poco::Net::DatagramSocket socket;
     int packetsSent = 0;
 
     for (const auto& fragment : fragments) {
@@ -369,8 +367,45 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
             continue;
         }
 
-        socket.send_to(boost::asio::buffer(serialized_fragment), *iter);
+        socket.sendTo(serialized_fragment.data(), serialized_fragment.size(), address);
         packetsSent++;
+    }
+
+    DATA::Fragment eot;
+    eot.set_fragment_id(-1);  // Using -1 to indicate the end of transmission
+    std::string serialized_eot;
+    eot.SerializeToString(&serialized_eot);
+    for (size_t i = 0; i < 10; i++)
+    {
+        socket.sendTo(serialized_eot.data(), serialized_eot.size(), address);
+    }
+
+    std::cout << "Packets sent: " << packetsSent << std::endl;
+}
+
+void send_messages_boost(boost::asio::io_service& io_service, const std::string& host, const std::string& port, const std::vector<DATA::Fragment>& fragments) {
+    udp::socket socket(io_service, udp::v4());
+    udp::resolver resolver(io_service);
+    udp::resolver::query query(udp::v4(), host, port);
+    udp::resolver::iterator iter = resolver.resolve(query);
+    int packetsSent = 0;
+    boost::system::error_code ec;
+
+    for (const auto& fragment : fragments) {
+        std::string serialized_fragment;
+        if (!fragment.SerializeToString(&serialized_fragment)) {
+            std::cerr << "Failed to serialize fragment." << std::endl;
+            continue;
+        }
+
+        socket.send_to(boost::asio::buffer(serialized_fragment), *iter);
+
+        if (ec) {
+            std::cerr << "Send failed: " << ec.message() << std::endl;
+        }
+        packetsSent++;
+        // std::this_thread::sleep_for(std::chrono::microseconds(50)); // 0.05 milliseconds
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     // Send an EOT message
     DATA::Fragment eot;
@@ -380,6 +415,38 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
     for (size_t i = 0; i < 10; i++)
     {
         socket.send_to(boost::asio::buffer(serialized_eot), *iter);
+    }
+
+    std::cout << "Packets sent: " << packetsSent << std::endl;
+}
+
+void send_protobuf_vector_boost(boost::asio::io_context& io_context, const std::string& host, const std::string& port, const std::vector<DATA::Fragment>& messages) {
+    udp::resolver resolver(io_context);
+    udp::resolver::results_type endpoints = resolver.resolve(udp::v4(), host, port);
+
+    udp::socket socket(io_context, udp::v4());
+    int packetsSent = 0;
+    
+    // Increase the socket buffer size
+    boost::asio::socket_base::send_buffer_size option(65536);
+    socket.set_option(option);
+
+    for (const auto& message : messages) {
+        std::string serialized_message;
+        message.SerializeToString(&serialized_message);
+        socket.send_to(boost::asio::buffer(serialized_message), *endpoints.begin());
+        packetsSent++;
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    // Send an EOT message
+    DATA::Fragment eot;
+    eot.set_fragment_id(-1);  // Using -1 to indicate the end of transmission
+    std::string serialized_eot;
+    eot.SerializeToString(&serialized_eot);
+    for (size_t i = 0; i < 10; i++)
+    {
+        socket.send_to(boost::asio::buffer(serialized_eot), *endpoints.begin());
     }
 
     std::cout << "Packets sent: " << packetsSent << std::endl;
@@ -1530,7 +1597,10 @@ int main(int argc, char *argv[])
         break;
     }
     boost::asio::io_service io_service;
-    send_messages_boost(io_service, "127.0.0.1", "9000", fragments);
+    send_messages_boost(io_service, "127.0.0.1", "12345", fragments);
+    // sendProtobufVectorPoco("localhost", 12345, fragments);
+    // boost::asio::io_context io_context;
+    // send_protobuf_vector_boost(io_context, "localhost", "12345", fragments);
     google::protobuf::ShutdownProtobufLibrary();
 
     std::cout << "Completed!" << std::endl;
