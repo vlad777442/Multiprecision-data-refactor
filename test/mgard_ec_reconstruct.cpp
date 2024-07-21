@@ -1122,8 +1122,23 @@ struct BoostReceiver
         wait();
     }
 
-    void checkFragments() 
+    void checkFragments(const std::vector<Variable>& variables) 
     {
+        std::unordered_map<std::string, std::unordered_map<int, std::vector<int>>> chunksToRetransmit;
+        for (const auto& var: variables)
+        {
+            for (const auto& tier: var.tiers)
+            {
+                for (const auto& chunk: tier.chunks) 
+                {
+                    if (chunk.data_fragments.size() + chunk.parity_fragments.size() < 32 - tier.m) 
+                    {
+                        chunksToRetransmit[var.var_name][tier.id].push_back(chunk.id);
+                    }
+                }
+            }       
+        }
+        
         
     }
 
@@ -1541,175 +1556,6 @@ void handle_received_fragment(const DATA::Fragment& received_message, std::strin
 //     }
 // };
 
-// struct ServerTCP
-// {
-//     std::string previousVarName = "null";
-//     std::int32_t previousTierId = -1;
-//     std::int32_t previousChunkId = -1;
-//     std::string rawDataName;
-//     std::int32_t totalSites;
-//     std::int32_t unavailableSites;
-//     std::vector<Fragment> fragments;
-//     std::vector<Variable> variables;
-
-//     DATA::Fragment receive_protobuf_message(tcp::socket &socket)
-//     {
-//         // Read the length of the incoming message
-//         boost::asio::streambuf length_buffer;
-//         boost::asio::read_until(socket, length_buffer, '\n');
-//         std::string length_str = boost::asio::buffer_cast<const char *>(length_buffer.data());
-
-//         std::cout << "Received length string: " << length_str;
-
-//         // Convert length_str to an integer
-//         std::istringstream length_stream(length_str);
-//         size_t length;
-//         if (!(length_stream >> length))
-//         {
-//             std::cout << "Invalid length format." << std::endl;
-//             throw std::invalid_argument("Invalid length format");
-//         }
-
-//         // Read the serialized protobuf message
-//         boost::asio::streambuf message_buffer;
-//         boost::asio::read(socket, message_buffer, boost::asio::transfer_exactly(length));
-
-//         // Deserialize the Fragment protobuf message
-//         DATA::Fragment message;
-//         if (!message.ParseFromString(boost::asio::buffer_cast<const char *>(message_buffer.data())))
-//         {
-//             std::cout << "Failed to parse Fragment protobuf message." << std::endl;
-//         }
-
-//         return message;
-//     }
-
-//     void Receiver()
-//     {
-//         boost::asio::io_service io_service;
-//         tcp::acceptor acceptor(io_service, tcp::endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT));
-//         tcp::socket socket(io_service);
-
-//         acceptor.accept(socket);
-
-//         try
-//         {
-//             // Continuously receive protobuf messages from the client
-//             while (true)
-//             {
-//                 DATA::Fragment received_message = receive_protobuf_message(socket);
-
-//                 if (previousVarName == received_message.var_name() && !variables.empty())
-//                 {
-//                     Variable &latestVariable = variables.back();
-//                     Tier &latestTier = latestVariable.tiers.back();
-
-//                     Fragment myFragment;
-//                     setFragment(received_message, myFragment);
-
-//                     if (myFragment.tier_id == previousTierId)
-//                     {
-//                         if (myFragment.chunk_id == previousChunkId)
-//                         {
-//                             Chunk &latestChunk = latestTier.chunks.back();
-//                             if (myFragment.is_data)
-//                             {
-//                                 latestChunk.data_fragments.push_back(myFragment);
-//                             }
-//                             else
-//                             {
-//                                 latestChunk.parity_fragments.push_back(myFragment);
-//                             }
-//                         }
-//                         else
-//                         {
-//                             Chunk newChunk;
-//                             newChunk.id = myFragment.chunk_id;
-//                             if (myFragment.is_data)
-//                             {
-//                                 newChunk.data_fragments.push_back(myFragment);
-//                             }
-//                             else
-//                             {
-//                                 newChunk.parity_fragments.push_back(myFragment);
-//                             }
-//                             latestTier.chunks.push_back(newChunk);
-//                         }
-//                     }
-//                     else
-//                     {
-//                         Tier newTier;
-//                         newTier.id = myFragment.tier_id;
-//                         newTier.k = myFragment.k;
-//                         newTier.m = myFragment.m;
-//                         newTier.w = myFragment.w;
-//                         newTier.hd = myFragment.hd;
-
-//                         Chunk newChunk;
-//                         newChunk.id = myFragment.chunk_id;
-//                         if (myFragment.is_data)
-//                         {
-//                             newChunk.data_fragments.push_back(myFragment);
-//                         }
-//                         else
-//                         {
-//                             newChunk.parity_fragments.push_back(myFragment);
-//                         }
-//                         newTier.chunks.push_back(newChunk);
-//                         latestVariable.tiers.push_back(newTier);
-//                     }
-//                 }
-//                 else
-//                 {
-//                     Variable var1;
-//                     setVariable(received_message, var1);
-
-//                     Fragment myFragment;
-//                     setFragment(received_message, myFragment);
-
-//                     Tier tier;
-//                     Chunk chunk;
-//                     tier.id = myFragment.tier_id;
-//                     tier.k = received_message.k();
-//                     tier.m = received_message.m();
-//                     tier.w = received_message.w();
-//                     tier.hd = received_message.hd();
-//                     chunk.id = myFragment.chunk_id;
-
-//                     if (myFragment.is_data)
-//                     {
-//                         chunk.data_fragments.push_back(myFragment);
-//                     }
-//                     else
-//                     {
-//                         chunk.parity_fragments.push_back(myFragment);
-//                     }
-//                     tier.chunks.push_back(chunk);
-//                     var1.tiers.push_back(tier);
-//                     variables.push_back(var1);
-//                 }
-//                 previousTierId = received_message.tier_id();
-//                 previousVarName = received_message.var_name();
-//                 previousChunkId = received_message.chunk_id();
-//                 std::cout << "received frag data id:" << received_message.fragment_id() << ";chunk:" << received_message.chunk_id() << ";tier:" << received_message.tier_id() << std::endl;
-//                 std::cout << "received frag size: " << received_message.frag().size() << std::endl;
-//             }
-//         }
-//         catch (const boost::system::system_error &)
-//         {
-//             // Handle connection closure
-//             std::cout << "Connection closed by the sender." << std::endl;
-//         }
-
-//         // io_service.run();
-//         std::cout << "Receiver exit\nStarting recovery\n";
-//         for (int i = 0; i < variables.size(); i++)
-//         {
-//             restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
-//         }
-//     }
-// };
-
 struct ZmqTCP
 {
     std::string previousVarName = "null";
@@ -1799,10 +1645,6 @@ struct ZmqTCP
                                     newChunk.parity_fragments.push_back(myFragment);
                                 }
                                 latestTier.chunks.push_back(newChunk);
-                                // if (chunk_packets > 1)
-                                // {
-                                //     calculatePacketLoss(chunk_packets);
-                                // }
                             }
                         }
                         else
@@ -2084,4 +1926,3 @@ int main(int argc, char *argv[])
     // google::protobuf::ShutdownProtobufLibrary();
     return 0;
 }
-// add sleep
