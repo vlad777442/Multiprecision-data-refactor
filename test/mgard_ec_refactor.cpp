@@ -36,6 +36,8 @@ using namespace ROCKSDB_NAMESPACE;
 
 #include <adios2.h>
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
+#include <boost/array.hpp>
 #include <iostream>
 #include <zmq.hpp>
 #include <thread>
@@ -333,28 +335,6 @@ void senderZmq(zmq::socket_t& socket, const DATA::Fragment& message) {
     socket.send(zmq::buffer(serialized_message), zmq::send_flags::none);
 }
 
-// Method to send a protobuf variable over UDP
-void sendProtobufVariablePoco(const DATA::Fragment& variable, const SocketAddress& serverAddress) {
-    try {
-        // Create a DatagramSocket for sending data
-        DatagramSocket socket;
-
-        // Serialize the Variable object to a string
-        std::string serializedVariable;
-        variable.SerializeToString(&serializedVariable);
-
-        // Send the serialized Variable object over UDP
-        
-        socket.sendTo(serializedVariable.data(), serializedVariable.size(), serverAddress);
-        std::cout << "Variable sent successfully." << std::endl;
-        packetsSentTotal++;
-        
-    }
-    catch (Poco::Exception& ex) {
-        std::cerr << "Exception: " << ex.displayText() << std::endl;
-    }
-}
-
 void sendProtobufVectorPoco(const std::string& host, int port, const std::vector<DATA::Fragment>& fragments) {
     Poco::Net::SocketAddress address(host, port);
     Poco::Net::DatagramSocket socket;
@@ -418,6 +398,42 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
     }
 
     std::cout << "Packets sent: " << packetsSent << std::endl;
+}
+
+void listen_for_retransmission_requests(boost::asio::io_service& io_service, const std::string& listen_host, const std::string& listen_port, std::vector<DATA::Fragment>& fragments) {
+    udp::socket socket(io_service, udp::v4());
+    udp::resolver resolver(io_service);
+    udp::resolver::query query(udp::v4(), listen_host, listen_port);
+    udp::resolver::iterator iter = resolver.resolve(query);
+    socket.bind(*iter);
+
+    for (;;) {
+        boost::array<char, 16384> recv_buffer;
+        udp::endpoint remote_endpoint;
+        size_t len = socket.receive_from(boost::asio::buffer(recv_buffer), remote_endpoint);
+
+        // Parse the retransmission request and retransmit the corresponding fragments
+        DATA::Fragment request_fragment;
+        if (request_fragment.ParseFromArray(recv_buffer.data(), static_cast<int>(len))) {
+            // Handle retransmission logic here
+            int chunk_id = request_fragment.chunk_id();
+            int tier_id = request_fragment.tier_id();
+            std::string var_name = request_fragment.var_name();
+            std::cout << "Retransmission request received for Variable: " << var_name << ", Tier: " << tier_id << ", Chunk: " << chunk_id << std::endl;
+
+            // Find and retransmit the requested fragment(s)
+            for (const auto& fragment : fragments) {
+                if (fragment.var_name() == var_name && fragment.tier_id() == tier_id && fragment.chunk_id() == chunk_id) {
+                    std::string serialized_fragment;
+                    if (!fragment.SerializeToString(&serialized_fragment)) {
+                        std::cerr << "Failed to serialize fragment." << std::endl;
+                        continue;
+                    }
+                    socket.send_to(boost::asio::buffer(serialized_fragment), remote_endpoint);
+                }
+            }
+        }
+    }
 }
 
 void send_protobuf_vector_boost(boost::asio::io_context& io_context, const std::string& host, const std::string& port, const std::vector<DATA::Fragment>& messages) {
@@ -505,9 +521,6 @@ int main(int argc, char *argv[])
     // socket.connect("tcp://localhost:5555");
     // //zmq end
 
-    //Poco
-    // SocketAddress serverAddress("10.51.197.229", 34565); // Server address and port
-    //Poco end
     for (size_t i = 0; i < argc; i++)
     {
         std::string arg = argv[i];
@@ -1463,131 +1476,7 @@ int main(int argc, char *argv[])
                     assert(rc == 0);    
                     assert(0 == liberasurecode_instance_destroy(desc));   
                 }
-                std::cout << "Encoded tier: " << i << std::endl;
-
-                // char **encoded_data = NULL, **encoded_parity = NULL;
-                // uint64_t encoded_fragment_len = 0;
-                // char *orig_data = NULL;
-                // int orig_data_size = dataTiersValues[i].size();
-                // std::cout << "orig_data_size: " << orig_data_size << std::endl;
-                // orig_data = static_cast<char*>(static_cast<void *>(dataTiersValues[i].data()));
-                // // for (size_t j = 0; j < 10; j++)
-                // // {
-                // //     std::cout << storageTiersValues[i][j] << " ";
-                // // }
-                // // std::cout << std::endl;
-                // // for (size_t j = 0; j < 10; j++)
-                // // {
-                // //     std::cout << orig_data[j] << " ";
-                // // }
-                // // std::cout << std::endl;                
-                // rc = liberasurecode_encode(desc, orig_data, orig_data_size,
-                //         &encoded_data, &encoded_parity, &encoded_fragment_len);    
-                // assert(0 == rc);
-                // std::cout << "encoded_fragment_len: " << encoded_fragment_len << std::endl;
-                // std::string varECParam_EncodedFragLen_Name = variableName+":Tier:"+std::to_string(i)+":EncodedFragmentLength";
-                // //adios2::Variable<uint64_t> varECParam_EncodedFragLen = writer_io.DefineVariable<uint64_t>(varECParam_EncodedFragLen_Name);
-                // //metadata_writer_engine.Put(varECParam_EncodedFragLen, encoded_fragment_len, adios2::Mode::Sync);
-                // s = db->Put(WriteOptions(), varECParam_EncodedFragLen_Name, PackSingleElement(&encoded_fragment_len));
-                // // std::cout << "Key: " << varECParam_EncodedFragLen_Name << "; Value: " << PackSingleElement(&encoded_fragment_len) << std::endl;
-                // //baryon_density:Tier:i:EncodedFragmentLength : PackSingleElement(26996)
-                // assert(s.ok()); 
-                // std::string varECParam_EncodedFragLen_Result;
-                // s = db->Get(ReadOptions(), varECParam_EncodedFragLen_Name, &varECParam_EncodedFragLen_Result);
-                // assert(s.ok());  
-                // std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = UnpackSingleElement<uint64_t>(varECParam_EncodedFragLen_Result);
-                // std::cout << varECParam_EncodedFragLen_Name << ", " << *pVarECParam_EncodedFragLen_Result << std::endl;  
-
-
-                // size_t frag_header_size =  sizeof(fragment_header_t);
-                // for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
-                // {
-                //     char *frag = NULL;
-                //     frag = encoded_data[j];
-                //     assert(frag != NULL);
-                //     fragment_header_t *header = (fragment_header_t*)frag;
-                //     assert(header != NULL);
-                //     //std::vector<char> fragment_data(frag, frag + fragment_size);
-                //     // Copy data explicitly
-                //     std::vector<char> fragment_data(encoded_fragment_len);
-                //     std::copy(frag, frag + encoded_fragment_len, fragment_data.begin());
-
-                //     fragment_metadata_t metadata = header->meta;
-                //     assert(metadata.idx == j);
-                //     assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
-                //     assert(metadata.orig_data_size == orig_data_size);
-                //     assert(metadata.backend_id == backendID);
-                //     assert(metadata.chksum_mismatch == 0);     
-
-                //     std::string varDataValuesName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j);   
-                //     adios2::Variable<char> varDataValues = writer_io.DefineVariable<char>(varDataValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});
-                //     std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
-                //     //commented to test protobuf
-                //     // data_writer_engines[idxStr].Put(varDataValues, frag, adios2::Mode::Sync);
-                //     std::string varDataLocationName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j)+":Location";
-                //     //adios2::Variable<std::string> varDataLocation = writer_io.DefineVariable<std::string>(varDataLocationName); 
-
-                //     // std::string fullDataPath = dataTiersPaths[i];
-                //     // if (!fullDataPath.empty() && fullDataPath.back() != '/')
-                //     // {
-                //     //     fullDataPath += '/';
-                //     // }
-                //     // std::string refactoredDataFileName = inputFileNamePrefix+".refactored.tier."+std::to_string(i)+".data."+std::to_string(j)+".bp";
-                //     // std::string dataPath = fullDataPath + refactoredDataFileName;    
-                //     // //metadata_writer_engine.Put(varDataLocation, dataPath, adios2::Mode::Sync);    
-                //     // s = db->Put(WriteOptions(), varDataLocationName, dataPath);
-                //     // std::cout << "Key: " << varDataLocationName << "; Value: " << dataPath << std::endl;
-                //     //baryon_density:Tier:0:Data:0:Location : /home/vesaulov1/Documents/research/Multiprecision-data-refactoring/tiers/tier-0/NYX.refactored.tier.0.data.0.bp
-                //     // assert(s.ok()); 
-                //     // std::string varDataLocationResult;
-                //     // s = db->Get(ReadOptions(), varDataLocationName, &varDataLocationResult);
-                //     // assert(s.ok()); 
-                //     // std::cout << varDataLocationName << ", " << varDataLocationResult << std::endl;
-                    
-                // }
-                // for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
-                // {
-                //     char *frag = NULL;
-                //     frag = encoded_parity[j];
-                //     assert(frag != NULL);
-                //     fragment_header_t *header = (fragment_header_t*)frag;
-                //     assert(header != NULL);
-
-                //     fragment_metadata_t metadata = header->meta;
-                //     assert(metadata.idx == args.k+j);
-                //     assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
-                //     assert(metadata.orig_data_size == orig_data_size);
-                //     assert(metadata.backend_id == backendID);
-                //     assert(metadata.chksum_mismatch == 0);     
-
-                //     std::string varParityValuesName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j);        
-                //     adios2::Variable<char> varParityValues = writer_io.DefineVariable<char>(varParityValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});  
-                //     std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
-                //     //commented to test protobuf
-                //     // parity_writer_engines[idxStr].Put(varParityValues, frag, adios2::Mode::Sync);     
-                //     std::string varParityLocationName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j)+":Location";
-                //     //adios2::Variable<std::string> varParityLocation = writer_io.DefineVariable<std::string>(varParityLocationName); 
-                //     // std::string fullParityPath = dataTiersPaths[i];
-                //     // if (!fullParityPath.empty() && fullParityPath.back() != '/')
-                //     // {
-                //     //     fullParityPath += '/';
-                //     // }
-                //     // std::string refactoredParityFileName = inputFileNamePrefix+".refactored.tier."+std::to_string(i)+".parity."+std::to_string(j)+".bp";
-                //     // std::string parityPath = fullParityPath + refactoredParityFileName;    
-                //     // //metadata_writer_engine.Put(varParityLocation, parityPath, adios2::Mode::Sync);  
-                //     // s = db->Put(WriteOptions(), varParityLocationName, parityPath);
-                //     // std::cout << "Key: " << varParityLocationName << "; Value: " << parityPath << std::endl;
-                //     //baryon_density:Tier:0:Parity:0:Location : /home/vesaulov1/Documents/research/Multiprecision-data-refactoring/tiers/tier-0/NYX.refactored.tier.0.parity.0.bp
-                //     // assert(s.ok()); 
-                //     // std::string varParityLocationResult;
-                //     // s = db->Get(ReadOptions(), varParityLocationName, &varParityLocationResult);
-                //     // assert(s.ok()); 
-                //     // std::cout << varParityLocationName << ", " << varParityLocationResult << std::endl;
-                // }
-
-                // rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
-                // assert(rc == 0);    
-                // assert(0 == liberasurecode_instance_destroy(desc));                 
+                std::cout << "Encoded tier: " << i << std::endl;            
             }
             std::cout << "split data tiers size " << splitDataTiers.size() << std::endl;
             totalPacketsSent.push_back(packetsSent);
@@ -1597,6 +1486,7 @@ int main(int argc, char *argv[])
         break;
     }
     boost::asio::io_service io_service;
+    boost::thread listen_thread(boost::bind(&listen_for_retransmission_requests, boost::ref(io_service), "127.0.0.1", "12345", boost::ref(fragments)));
     send_messages_boost(io_service, "127.0.0.1", "12345", fragments);
     // sendProtobufVectorPoco("localhost", 12345, fragments);
     // boost::asio::io_context io_context;

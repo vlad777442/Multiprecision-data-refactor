@@ -1122,23 +1122,26 @@ struct BoostReceiver
         wait();
     }
 
-    void checkFragments(const std::vector<Variable>& variables) 
+    void checkFragments(std::vector<Variable>& variables) 
     {
         std::unordered_map<std::string, std::unordered_map<int, std::vector<int>>> chunksToRetransmit;
-        for (const auto& var: variables)
+        for (auto& var: variables)
         {
-            for (const auto& tier: var.tiers)
+            for (auto& tier: var.tiers)
             {
-                for (const auto& chunk: tier.chunks) 
+                for (auto& chunk: tier.chunks) 
                 {
                     if (chunk.data_fragments.size() + chunk.parity_fragments.size() < 32 - tier.m) 
                     {
                         chunksToRetransmit[var.var_name][tier.id].push_back(chunk.id);
+                        // clear data
+                        chunk.data_fragments.clear();
+                        chunk.parity_fragments.clear();
                     }
                 }
             }       
         }
-        
+
         
     }
 
