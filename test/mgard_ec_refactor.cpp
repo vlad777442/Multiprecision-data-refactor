@@ -395,6 +395,7 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
     for (size_t i = 0; i < 10; i++)
     {
         socket.send_to(boost::asio::buffer(serialized_eot), *iter);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     std::cout << "Packets sent: " << packetsSent << std::endl;
@@ -1486,7 +1487,7 @@ int main(int argc, char *argv[])
         break;
     }
     boost::asio::io_service io_service;
-    boost::thread listen_thread(boost::bind(&listen_for_retransmission_requests, boost::ref(io_service), "127.0.0.1", "12345", boost::ref(fragments)));
+    boost::thread listen_thread(boost::bind(&listen_for_retransmission_requests, boost::ref(io_service), "127.0.0.1", "11000", boost::ref(fragments)));
     send_messages_boost(io_service, "127.0.0.1", "12345", fragments);
     // sendProtobufVectorPoco("localhost", 12345, fragments);
     // boost::asio::io_context io_context;

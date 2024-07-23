@@ -70,7 +70,17 @@ message Fragment {
   SquaredErrorsTable var_squared_errors = 24;
   uint32 var_tiers = 25;
 }
-//add chunk or add to fragment
+
 message VariableCollection {
   repeated Variable variables = 1;
+}
+
+message RetransmissionRequest {
+    repeated ChunkRequest requests = 1;
+
+    message ChunkRequest {
+        string var_name = 1;
+        int32 tier_id = 2;
+        int32 chunk_id = 3;
+    }
 }
