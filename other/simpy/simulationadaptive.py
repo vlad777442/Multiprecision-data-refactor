@@ -169,6 +169,10 @@ class PacketLossGen:
             yield self.env.timeout(inter_arrival_time)
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
+    # add packet loss generator that generates packet loss in a boundary within random interval
+    # find optimal combination for m with weibull distr
+    # compare simulation with formula
+
 def print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num):
     lost_chunks_per_tier = {}
     result = receiver.get_result()
@@ -247,8 +251,8 @@ pkt_loss = PacketLossGen(env, link)
 
 env.process(sender.send())
 env.process(receiver.receive())
-env.process(pkt_loss.expovariate_loss_gen(50))
-env.process(pkt_loss.weibullvariate_loss_gen(1.2, 20))
+# env.process(pkt_loss.expovariate_loss_gen(10))
+env.process(pkt_loss.weibullvariate_loss_gen(1.2, 10))
 
 env.run(until=SIM_DURATION)
 print(tier_frags_num)
