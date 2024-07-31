@@ -38,6 +38,7 @@ class Sender:
         self.tier_m = tier_m
         self.n = n
         self.start_time = None
+        self.number_of_chunks = []
 
     def send(self):
         """A process which generates and sends fragments by chunk."""
@@ -56,6 +57,8 @@ class Sender:
                     yield self.env.timeout(1.0 / self.rate)
                     frag["time"] = self.env.now
                     self.link.put(frag)
+
+            self.number_of_chunks.append(total_chunks)
 
         last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "data"}
         self.link.put(last_frag)
@@ -113,9 +116,10 @@ class Receiver:
         self.end_time = None
         self.all_frags_received = False
         self.calculator = calculator
-        self.monitor_interval = 2000 / 1000  # 2000 milliseconds
+        self.monitor_interval = 20 / 1000  # 20 milliseconds
         self.lost_fragments_in_interval = {}
         self.fragments_received_in_interval = {}
+        self.check_paused = False
 
     def receive(self):
         """A process which consumes packets."""
@@ -173,6 +177,7 @@ class Receiver:
 
     def check_all_fragments_received(self):
         print("Checking received fragments")
+        self.check_paused = True
         missing_chunks = {}
         for tier, chunks in self.all_tier_frags_received.items():
             for chunk, count in chunks.items():
@@ -192,6 +197,7 @@ class Receiver:
             min_time, best_m, _ = self.calculator.find_min_time_configuration()
             print(f"New m parameters: {best_m}")
             
+            self.check_paused = False
             self.env.process(self.sender.update_m_parameters(best_m))
             self.env.process(self.sender.retransmit_chunks(missing_chunks))
         else:
@@ -216,6 +222,7 @@ class Receiver:
 
         if self.lost_fragments_in_interval:
             print(f"Lost fragments in interval: {self.lost_fragments_in_interval}")
+            # update 
             min_time, best_m, _ = self.calculator.find_min_time_configuration()
             print(f"New m parameters: {best_m}")
             self.env.process(self.sender.update_m_parameters(best_m))
@@ -226,7 +233,8 @@ class Receiver:
     def periodic_check(self):
         while True:
             yield self.env.timeout(self.monitor_interval)
-            self.check_fragments_lost_in_interval()
+            if not self.check_paused:
+                self.check_fragments_lost_in_interval()
             self.fragments_received_in_interval.clear()
 
     def send_new_m_parameters(self):
@@ -266,10 +274,13 @@ class PacketLossGen:
             yield self.env.timeout(random.expovariate(lambd))
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
-    def weibullvariate_loss_gen(self, shape, scale):
+    def weibullvariate_loss_gen(self, alpha, beta):
+        # alpha is scale
+        # beta is shape. 
+        # If β < 1: This models a decreasing failure rate over time.
+        # If β > 1: This models an increasing failure rate over time
         while True:
-            inter_arrival_time = random.weibullvariate(shape, scale)
-            yield self.env.timeout(inter_arrival_time)
+            yield self.env.timeout(random.weibullvariate(alpha, beta))
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
     def random_loss_gen(self, min_time, max_time):
@@ -278,19 +289,40 @@ class PacketLossGen:
             yield self.env.timeout(interval)
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
-def print_statistics(receiver, all_tier_frags, all_tier_per_chunk_data_frags_num):
+# def print_statistics(receiver, all_tier_frags, all_tier_per_chunk_data_frags_num):
+#     lost_chunks_per_tier = {}
+#     result = receiver.get_result()
+#     for i in range(len(all_tier_frags)):
+#         for j in result[i]:
+#             if result[i][j] < all_tier_per_chunk_data_frags_num[i][j]:
+#                 print(f'Tier {i} chunk {j} cannot be recovered since {all_tier_per_chunk_data_frags_num[i][j]} fragments are needed while only {result[i][j]} fragments were received.')
+#                 if i not in lost_chunks_per_tier:
+#                     lost_chunks_per_tier[i] = []
+#                 lost_chunks_per_tier[i].append(j)
+#     print("Total error: ", get_recovery_error(lost_chunks_per_tier))
+
+def print_statistics(receiver):
+    """Print statistics of the received fragments and calculate the recovery error."""
     lost_chunks_per_tier = {}
     result = receiver.get_result()
-    for i in range(len(all_tier_frags)):
-        for j in result[i]:
-            if result[i][j] < all_tier_per_chunk_data_frags_num[i][j]:
-                print(f'Tier {i} chunk {j} cannot be recovered since {all_tier_per_chunk_data_frags_num[i][j]} fragments are needed while only {result[i][j]} fragments were received.')
-                if i not in lost_chunks_per_tier:
-                    lost_chunks_per_tier[i] = []
-                lost_chunks_per_tier[i].append(j)
-    print("Total error: ", get_recovery_error(lost_chunks_per_tier))
+    all_tier_frags_received = receiver.all_tier_frags_received
+    all_tier_per_chunk_data_frags_num = receiver.all_tier_per_chunk_data_frags_num
 
-def get_recovery_error(lost_chunks):
+    for tier in all_tier_frags_received:
+        for chunk in all_tier_frags_received[tier]:
+            received_fragments = all_tier_frags_received[tier][chunk]
+            required_fragments = all_tier_per_chunk_data_frags_num[tier][chunk]
+            if received_fragments < required_fragments:
+                print(f'Tier {tier} chunk {chunk} cannot be recovered since {required_fragments} fragments are needed while only {received_fragments} fragments were received.')
+                if tier not in lost_chunks_per_tier:
+                    lost_chunks_per_tier[tier] = []
+                lost_chunks_per_tier[tier].append(chunk)
+
+    total_error = get_recovery_error(lost_chunks_per_tier, sender.number_of_chunks)
+    print(f"Total error: {total_error}")
+
+def get_recovery_error(lost_chunks, number_of_chunks):
+    """Calculate the recovery error based on lost chunks."""
     sum_error = 0
     error_per_tier = {}
     for tier, chunks in lost_chunks.items():
@@ -299,6 +331,16 @@ def get_recovery_error(lost_chunks):
     for tier, error in error_per_tier.items():
         print(f"Tier: {tier}, error: {error}")
     return sum_error / sum(number_of_chunks)
+
+# def get_recovery_error(lost_chunks):
+#     sum_error = 0
+#     error_per_tier = {}
+#     for tier, chunks in lost_chunks.items():
+#         error_per_tier[tier] = len(chunks) / number_of_chunks[tier]
+#         sum_error += len(chunks)
+#     for tier, error in error_per_tier.items():
+#         print(f"Tier: {tier}, error: {error}")
+#     return sum_error / sum(number_of_chunks)
 
 def fragment_gen(tier_frags_num, tier_m, n):
     all_tier_frags = []
@@ -340,7 +382,6 @@ def fragment_gen(tier_frags_num, tier_m, n):
 
 
 
-
 env = simpy.Environment()
 
 n = 32
@@ -368,10 +409,11 @@ env.process(sender.send())
 env.process(receiver.receive())
 env.process(receiver.periodic_check())
 env.process(pkt_loss.expovariate_loss_gen(lambd))
-# env.process(pkt_loss.random_loss_gen(0.1, 0.1))
+# env.process(pkt_loss.weibullvariate_loss_gen(0.05, 4))
 
 env.run(until=SIM_DURATION)
 print(tier_frags_num)
+print_statistics(receiver)
 # print_statistics(receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
 receiver.print_tier_receiving_times()
 receiver.print_lost_chunks_per_tier()

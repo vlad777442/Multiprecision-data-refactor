@@ -149,6 +149,7 @@ class Receiver:
         return total
 
     def print_lost_chunks_per_tier(self):
+        print("Printing total amount of retransmitted chunks")
         for tier in self.lost_chunk_per_tier:
             print(f"Tier: {tier}, amount of retransmitted chunks: {self.lost_chunk_per_tier[tier]}")
 
@@ -163,12 +164,18 @@ class PacketLossGen:
             yield self.env.timeout(random.expovariate(lambd))
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
-    # change weibull distr
-    def weibullvariate_loss_gen(self, shape, scale):
+    def weibullvariate_loss_gen(self, alpha, beta):
+        # alpha is scale
+        # beta is shape. 
+        # If β < 1: This models a decreasing failure rate over time.
+        # If β > 1: This models an increasing failure rate over time
+        loss_count = 0
         while True:
-            inter_arrival_time = random.weibullvariate(shape, scale)
-            yield self.env.timeout(inter_arrival_time)
+            yield self.env.timeout(random.weibullvariate(alpha, beta))
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
+            # loss_count += 1
+            # if loss_count % 100 == 0:
+            #     print(f"Total packet losses generated: {loss_count}")
 
 def print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num):
     lost_chunks_per_tier = {}
@@ -235,7 +242,7 @@ env = simpy.Environment()
 n = 32
 frag_size = 2048
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
-tier_m = [2,2,2,2]
+tier_m = [4, 2, 1, 0]
 number_of_chunks = []
 
 tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
@@ -249,8 +256,9 @@ pkt_loss = PacketLossGen(env, link)
 
 env.process(sender.send())
 env.process(receiver.receive())
-env.process(pkt_loss.expovariate_loss_gen(10))
-# env.process(pkt_loss.weibullvariate_loss_gen(10, 10))
+# env.process(pkt_loss.expovariate_loss_gen(10))
+env.process(pkt_loss.weibullvariate_loss_gen(0.05, 4))
+# env.process(pkt_loss.weibullvariate_loss_gen(alpha=0.1, beta=1))
 
 env.run(until=SIM_DURATION)
 print(tier_frags_num)
