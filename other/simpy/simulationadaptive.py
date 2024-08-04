@@ -91,13 +91,16 @@ class Sender:
 
         return data_frags, parity_frags
     
-    def calculate_packet_loss(self, received_fragments_count):
+    def calculate_packet_loss(self, received_fragments_count, transmission_time):
         """Calculate the number of lost fragments."""
         lost_fragments = self.fragments_sent - received_fragments_count
         print(f"Fragments sent: {self.fragments_sent}, Fragments received: {received_fragments_count}, Fragments lost: {lost_fragments}")
         self.fragments_sent = 0
 
         if lost_fragments > 0:
+            new_lambda = self.calculator.calculate_lambda(lost_fragments, transmission_time)
+            print(f"New lambda: {new_lambda}")
+            self.calculator.lam = new_lambda
             min_time, best_m, _ = self.calculator.find_min_time_configuration()
             print(f"New m parameters: {best_m}")
             self.env.process(self.update_m_parameters(best_m))
@@ -146,6 +149,8 @@ class Receiver:
         self.fragment_count = 0
         self.lost_chunk_per_tier = {}
         self.end_time = None
+        self.first_frag_time = None
+        self.last_frag_time = None
         # self.all_frags_received = False
 
     def receive(self):
@@ -157,11 +162,16 @@ class Receiver:
                 self.check_all_fragments_received()
                 self.fragment_count = 0
             elif pkt["type"] == "control":
-                self.send_received_fragments_count(self.fragment_count)
+                self.last_frag_time = self.env.now
+                self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time)
+                self.first_frag_time = None
                 self.fragment_count = 0
             else:
                 tier = pkt["tier"]
                 chunk = pkt["chunk"]
+
+                if self.first_frag_time is None:
+                    self.first_frag_time = self.env.now
 
                 if tier not in self.tier_start_times:
                     self.tier_start_times[tier] = self.env.now
@@ -224,12 +234,12 @@ class Receiver:
         # else:
         #     self.all_frags_received = True
 
-    def send_received_fragments_count(self, received_fragments_count):
+    def send_received_fragments_count(self, received_fragments_count, transmission_time):
         """Send the count of received fragments to the sender."""
         # received_fragments_count = sum(sum(chunks.values()) for chunks in self.all_tier_frags_received.values())
         # control_msg = {"type": "receiver_back", "received_fragments_count": received_fragments_count}
         # self.link.put(control_msg)
-        self.env.process(self.sender.calculate_packet_loss(received_fragments_count))
+        self.env.process(self.sender.calculate_packet_loss(received_fragments_count, transmission_time))
 
     def print_tier_receiving_times(self):
         total = 0

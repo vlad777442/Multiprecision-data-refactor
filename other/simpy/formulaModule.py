@@ -37,6 +37,10 @@ class TransmissionTimeCalculator:
         for k in range(n + 1):
             result += k * comb(n, k, exact=True) * (1 - p) ** k * p ** (n - k)
         return result
+    
+    @staticmethod
+    def calculate_lambda(lost_fragments, Ttrans):
+        return lost_fragments / Ttrans
 
     def expected_total_transmission_time(self, S0, s, t, Tretrans, m0, lam):
         Nchunk = S0 / ((32 - m0) * s)
