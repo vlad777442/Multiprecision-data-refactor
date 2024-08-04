@@ -256,8 +256,8 @@ pkt_loss = PacketLossGen(env, link)
 
 env.process(sender.send())
 env.process(receiver.receive())
-# env.process(pkt_loss.expovariate_loss_gen(10))
-env.process(pkt_loss.weibullvariate_loss_gen(0.05, 4))
+env.process(pkt_loss.expovariate_loss_gen(10))
+# env.process(pkt_loss.weibullvariate_loss_gen(0.05, 4))
 # env.process(pkt_loss.weibullvariate_loss_gen(alpha=0.1, beta=1))
 
 env.run(until=SIM_DURATION)
