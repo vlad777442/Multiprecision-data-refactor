@@ -2,6 +2,7 @@ import simpy
 import random
 import math
 from formulaModule import TransmissionTimeCalculator
+import threading
 
 SIM_DURATION = 100000
 CHUNK_BATCH_SIZE = 10 # Number of chunks after which the sender sends a control message
@@ -53,20 +54,24 @@ class Sender:
             frags_num = int(self.tier_frags_num[t])
             last_chunk_id = frags_num // (self.n - self.tier_m[t])
             total_chunks = last_chunk_id + 1
+            batch_counter = 0 
 
             for chunk_id in range(total_chunks):
                 data_frags, parity_frags = self.generate_chunk_fragments(t, chunk_id, frags_num)
-                fragments_sent = len(data_frags) + len(parity_frags)
+                print(f"Tier {t}, chunk {chunk_id}, data fragments: {len(data_frags)}, parity fragments: {len(parity_frags)}")
+                self.fragments_sent += len(data_frags) + len(parity_frags)
                 for frag in data_frags + parity_frags:
                     yield self.env.timeout(1.0 / self.rate)
                     frag["time"] = self.env.now
                     self.link.put(frag)
-                    self.fragments_sent += 1
 
-                if (chunk_id + 1) % CHUNK_BATCH_SIZE == 0:
-                    control_msg = {"tier": t, "chunk": chunk_id, "type": "control", "fragments_sent": fragments_sent}
+                batch_counter += 1
+                
+                if batch_counter == CHUNK_BATCH_SIZE:
+                    control_msg = {"tier": t, "chunk": chunk_id, "type": "control", "fragments_sent": self.fragments_sent}
                     self.link.put(control_msg)
-                    # self.fragments_sent = 0
+                    self.fragments_sent = 0
+                    batch_counter = 0
                     # yield self.env.process(self.handle_control_messages())
 
             self.number_of_chunks.append(total_chunks)
@@ -74,6 +79,12 @@ class Sender:
         last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "last_fragment"}
         self.link.put(last_frag)
 
+    # def generate_chunk_fragments(self, tier, chunk_id, frags_num):
+    #     # Placeholder for the actual fragment generation logic
+    #     data_frags = [{"tier": tier, "chunk": chunk_id, "fragment": i, "type": "data"} for i in range(frags_num)]
+    #     parity_frags = [{"tier": tier, "chunk": chunk_id, "fragment": i, "type": "parity"} for i in range(frags_num // 2)]
+    #     return data_frags, parity_frags
+    
     def generate_chunk_fragments(self, tier, chunk_id, frags_num):
         """Generate data and parity fragments for a given chunk."""
         data_frags = []
@@ -91,11 +102,11 @@ class Sender:
 
         return data_frags, parity_frags
     
-    def calculate_packet_loss(self, received_fragments_count, transmission_time):
+    def calculate_packet_loss(self, received_fragments_count, transmission_time, fragments_sent):
         """Calculate the number of lost fragments."""
-        lost_fragments = self.fragments_sent - received_fragments_count
-        print(f"Fragments sent: {self.fragments_sent}, Fragments received: {received_fragments_count}, Fragments lost: {lost_fragments}")
-        self.fragments_sent = 0
+        lost_fragments = fragments_sent - received_fragments_count
+        print(f"Fragments sent: {fragments_sent}, Fragments received: {received_fragments_count}, Fragments lost: {lost_fragments}")
+        # self.fragments_sent = 0
 
         if lost_fragments > 0:
             new_lambda = self.calculator.calculate_lambda(lost_fragments, transmission_time)
@@ -105,15 +116,6 @@ class Sender:
             print(f"New m parameters: {best_m}")
             self.env.process(self.update_m_parameters(best_m))
         yield self.env.timeout(0)
-
-    # def handle_control_messages(self):
-    #     """Handle control messages from the receiver."""
-    #     while True:
-    #         pkt = yield self.link.get()
-    #         if pkt["type"] == "receiver_back":
-    #             print("Received fragments count")
-    #             received_fragments_count = pkt["received_fragments_count"]
-    #             self.calculate_lost_fragments(received_fragments_count)
 
     def retransmit_chunks(self, missing_chunks):
         """Retransmit all fragments of missing chunks using new erasure coding parameters."""
@@ -151,6 +153,7 @@ class Receiver:
         self.end_time = None
         self.first_frag_time = None
         self.last_frag_time = None
+        self.lock = threading.Lock()
         # self.all_frags_received = False
 
     def receive(self):
@@ -163,7 +166,9 @@ class Receiver:
                 self.fragment_count = 0
             elif pkt["type"] == "control":
                 self.last_frag_time = self.env.now
-                self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time)
+                # with self.lock:  # Acquire the lock
+                    # self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time)
+                self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time, pkt["fragments_sent"])
                 self.first_frag_time = None
                 self.fragment_count = 0
             else:
@@ -234,12 +239,12 @@ class Receiver:
         # else:
         #     self.all_frags_received = True
 
-    def send_received_fragments_count(self, received_fragments_count, transmission_time):
+    def send_received_fragments_count(self, received_fragments_count, transmission_time, fragments_sent):
         """Send the count of received fragments to the sender."""
         # received_fragments_count = sum(sum(chunks.values()) for chunks in self.all_tier_frags_received.values())
         # control_msg = {"type": "receiver_back", "received_fragments_count": received_fragments_count}
         # self.link.put(control_msg)
-        self.env.process(self.sender.calculate_packet_loss(received_fragments_count, transmission_time))
+        self.env.process(self.sender.calculate_packet_loss(received_fragments_count, transmission_time, fragments_sent))
 
     def print_tier_receiving_times(self):
         total = 0
