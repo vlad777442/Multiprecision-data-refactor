@@ -225,8 +225,12 @@ class Receiver:
         if chunk not in self.all_tier_per_chunk_data_frags_num[tier]:
             self.all_tier_per_chunk_data_frags_num[tier][chunk] = 0
 
+        # if frag_type == "data":
+        #     self.all_tier_per_chunk_data_frags_num[tier][chunk] += 1
         if frag_type == "data":
-            self.all_tier_per_chunk_data_frags_num[tier][chunk] += 1
+            self.all_tier_per_chunk_data_frags_num[tier][chunk] = fragment["k"]
+        elif frag_type == "parity" and chunk not in self.all_tier_per_chunk_data_frags_num[tier]:
+            self.all_tier_per_chunk_data_frags_num[tier][chunk] = 32 - fragment["m"]
 
     def get_result(self):
         return self.all_tier_frags_received
@@ -237,7 +241,7 @@ class Receiver:
         missing_chunks = {}
         for tier, chunks in self.all_tier_frags_received.items():
             for chunk, count in chunks.items():
-                print(count, self.all_tier_per_chunk_data_frags_num[tier][chunk])
+                # print(count, self.all_tier_per_chunk_data_frags_num[tier][chunk])
                 if count < self.all_tier_per_chunk_data_frags_num[tier][chunk]:
                     if tier not in missing_chunks:
                         missing_chunks[tier] = []
