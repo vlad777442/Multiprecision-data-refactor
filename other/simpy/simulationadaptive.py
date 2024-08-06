@@ -67,12 +67,11 @@ class Sender:
 
                 batch_counter += 1
                 
-                if batch_counter == CHUNK_BATCH_SIZE:
+                if batch_counter == CHUNK_BATCH_SIZE or chunk_id == last_chunk_id:
                     control_msg = {"tier": t, "chunk": chunk_id, "type": "control", "fragments_sent": self.fragments_sent}
                     self.link.put(control_msg)
                     self.fragments_sent = 0
                     batch_counter = 0
-                    # yield self.env.process(self.handle_control_messages())
 
             self.number_of_chunks.append(total_chunks)
 
@@ -92,12 +91,13 @@ class Sender:
 
         start_idx = chunk_id * (self.n - self.tier_m[tier])
         end_idx = min(start_idx + (self.n - self.tier_m[tier]), frags_num)
+        # print("start_idx", start_idx, end_idx)
         for i in range(start_idx, end_idx):
-            fragment = {"tier": tier, "chunk": chunk_id, "fragment": i - start_idx, "type": "data"}
+            fragment = {"tier": tier, "chunk": chunk_id, "fragment": i - start_idx, "type": "data", "k": end_idx - start_idx}
             data_frags.append(fragment)
 
         for p in range(self.tier_m[tier]):
-            fragment = {"tier": tier, "chunk": chunk_id, "fragment": len(data_frags) + p, "type": "parity"}
+            fragment = {"tier": tier, "chunk": chunk_id, "fragment": len(data_frags) + p, "type": "parity", "m": self.tier_m[tier]}
             parity_frags.append(fragment)
 
         return data_frags, parity_frags
@@ -123,13 +123,34 @@ class Sender:
             for chunk_id in chunks:
                 print(f"Retransmitting tier {tier} chunk {chunk_id}")
                 data_frags, parity_frags = self.generate_chunk_fragments(tier, chunk_id, self.tier_frags_num[tier])
+                batch_counter = 0
                 for frag in data_frags + parity_frags:
                     yield self.env.timeout(1.0 / self.rate)
                     frag["time"] = self.env.now
                     self.link.put(frag)
+                    batch_counter += 1
+                    if batch_counter == CHUNK_BATCH_SIZE or chunk_id == chunks[-1]:
+                        yield self.env.timeout(1.0 / self.rate)
+                        control_msg = {"tier": tier, "chunk": chunk_id, "type": "control", "fragments_sent": batch_counter}
+                        self.link.put(control_msg)
+                        batch_counter = 0
         
         last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "last_fragment"}
         self.link.put(last_frag)
+
+    # def retransmit_chunks(self, missing_chunks):
+    #     """Retransmit all fragments of missing chunks using new erasure coding parameters."""
+    #     for tier, chunks in missing_chunks.items():
+    #         for chunk_id in chunks:
+    #             print(f"Retransmitting tier {tier} chunk {chunk_id}")
+    #             data_frags, parity_frags = self.generate_chunk_fragments(tier, chunk_id, self.tier_frags_num[tier])
+    #             for frag in data_frags + parity_frags:
+    #                 yield self.env.timeout(1.0 / self.rate)
+    #                 frag["time"] = self.env.now
+    #                 self.link.put(frag)
+        
+    #     last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "last_fragment"}
+    #     self.link.put(last_frag)
 
     def update_m_parameters(self, new_m):
         """Update the m parameters without retransmitting immediately."""
@@ -153,7 +174,7 @@ class Receiver:
         self.end_time = None
         self.first_frag_time = None
         self.last_frag_time = None
-        self.lock = threading.Lock()
+        # self.lock = threading.Lock()
         # self.all_frags_received = False
 
     def receive(self):
@@ -216,6 +237,7 @@ class Receiver:
         missing_chunks = {}
         for tier, chunks in self.all_tier_frags_received.items():
             for chunk, count in chunks.items():
+                print(count, self.all_tier_per_chunk_data_frags_num[tier][chunk])
                 if count < self.all_tier_per_chunk_data_frags_num[tier][chunk]:
                     if tier not in missing_chunks:
                         missing_chunks[tier] = []
@@ -244,6 +266,7 @@ class Receiver:
         # received_fragments_count = sum(sum(chunks.values()) for chunks in self.all_tier_frags_received.values())
         # control_msg = {"type": "receiver_back", "received_fragments_count": received_fragments_count}
         # self.link.put(control_msg)
+        # yield self.env.timeout(self.link.delay)
         self.env.process(self.sender.calculate_packet_loss(received_fragments_count, transmission_time, fragments_sent))
 
     def print_tier_receiving_times(self):
@@ -325,7 +348,7 @@ env = simpy.Environment()
 n = 32
 frag_size = 2048
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
-tier_m = [16,8,4,2]
+tier_m = [0,0,0,0]
 t_trans = 0.001
 t_retrans = 0.001
 lambd = 10
