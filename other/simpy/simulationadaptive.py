@@ -119,6 +119,7 @@ class Sender:
 
     def retransmit_chunks(self, missing_chunks):
         """Retransmit all fragments of missing chunks using new erasure coding parameters."""
+        self.fragments_sent = 0
         for tier, chunks in missing_chunks.items():
             for chunk_id in chunks:
                 print(f"Retransmitting tier {tier} chunk {chunk_id}")
@@ -128,12 +129,15 @@ class Sender:
                     yield self.env.timeout(1.0 / self.rate)
                     frag["time"] = self.env.now
                     self.link.put(frag)
-                    batch_counter += 1
-                    if batch_counter == CHUNK_BATCH_SIZE or chunk_id == chunks[-1]:
-                        yield self.env.timeout(1.0 / self.rate)
-                        control_msg = {"tier": tier, "chunk": chunk_id, "type": "control", "fragments_sent": batch_counter}
-                        self.link.put(control_msg)
-                        batch_counter = 0
+                    self.fragments_sent += 1
+
+                batch_counter += 1
+                if batch_counter == CHUNK_BATCH_SIZE or chunk_id == chunks[-1]:
+                    yield self.env.timeout(1.0 / self.rate)
+                    control_msg = {"tier": tier, "chunk": chunk_id, "type": "control", "fragments_sent": self.fragments_sent}
+                    self.link.put(control_msg)
+                    batch_counter = 0
+                    self.fragments_sent = 0
         
         last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "last_fragment"}
         self.link.put(last_frag)
@@ -212,7 +216,7 @@ class Receiver:
                 
                 self.fragment_count += 1
 
-                self.update_data_frags_count(tier, chunk, pkt["fragment"], pkt["type"])
+                self.update_data_frags_count(tier, chunk, pkt, pkt["type"])
                 # self.end_time = self.env.now
 
                 # if self.all_frags_received:
@@ -255,10 +259,11 @@ class Receiver:
                         self.lost_chunk_per_tier[tier] = 1
 
         if missing_chunks:
-            min_time, best_m, _ = self.calculator.find_min_time_configuration()
-            print(f"New m parameters: {best_m}")
-            
-            self.env.process(self.sender.update_m_parameters(best_m))
+
+            # min_time, best_m, _ = self.calculator.find_min_time_configuration()
+            # print(f"New m parameters: {best_m}")
+
+            # self.env.process(self.sender.update_m_parameters(best_m))
             self.env.process(self.sender.retransmit_chunks(missing_chunks))
         else:
             self.end_time = self.env.now
