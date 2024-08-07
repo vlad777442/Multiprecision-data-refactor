@@ -45,10 +45,10 @@ using namespace ROCKSDB_NAMESPACE;
 #include "Poco/Net/DatagramSocket.h"
 #include "Poco/Net/SocketAddress.h"
 
-// #define IPADDRESS "127.0.0.1" // "192.168.1.64"
-// #define UDP_PORT 13251
-#define IPADDRESS "10.51.197.229"
-#define UDP_PORT 34565
+#define IPADDRESS "127.0.0.1" // "192.168.1.64"
+#define UDP_PORT 12345
+// #define IPADDRESS "10.51.197.229"
+// #define UDP_PORT 34565
 
 
 using boost::asio::ip::tcp;
@@ -363,7 +363,15 @@ void sendProtobufVectorPoco(const std::string& host, int port, const std::vector
     std::cout << "Packets sent: " << packetsSent << std::endl;
 }
 
-void send_messages_boost(boost::asio::io_service& io_service, const std::string& host, const std::string& port, const std::vector<DATA::Fragment>& fragments) {
+void addTimestamp(DATA::Fragment& message) {
+    auto now = std::chrono::high_resolution_clock::now();
+    auto duration = now.time_since_epoch();
+    // auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+    auto millis = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+    message.set_timestamp(millis);
+}
+
+void send_messages_boost(boost::asio::io_service& io_service, const std::string& host, const std::string& port, std::vector<DATA::Fragment>& fragments) {
     udp::socket socket(io_service, udp::v4());
     udp::resolver resolver(io_service);
     udp::resolver::query query(udp::v4(), host, port);
@@ -371,7 +379,9 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
     int packetsSent = 0;
     boost::system::error_code ec;
 
-    for (const auto& fragment : fragments) {
+    for (auto& fragment : fragments) {
+        addTimestamp(fragment);
+        
         std::string serialized_fragment;
         if (!fragment.SerializeToString(&serialized_fragment)) {
             std::cerr << "Failed to serialize fragment." << std::endl;
@@ -384,7 +394,6 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
             std::cerr << "Send failed: " << ec.message() << std::endl;
         }
         packetsSent++;
-        // std::this_thread::sleep_for(std::chrono::microseconds(50)); // 0.05 milliseconds
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     // Send an EOT message
@@ -392,10 +401,8 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
     eot.set_fragment_id(-1);  // Using -1 to indicate the end of transmission
     std::string serialized_eot;
     eot.SerializeToString(&serialized_eot);
-    for (size_t i = 0; i < 10; i++)
-    {
+    for (size_t i = 0; i < 10; i++) {
         socket.send_to(boost::asio::buffer(serialized_eot), *iter);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     std::cout << "Packets sent: " << packetsSent << std::endl;
@@ -1488,7 +1495,7 @@ int main(int argc, char *argv[])
     }
     boost::asio::io_service io_service;
     boost::thread listen_thread(boost::bind(&listen_for_retransmission_requests, boost::ref(io_service), "127.0.0.1", "11000", boost::ref(fragments)));
-    send_messages_boost(io_service, "127.0.0.1", "12345", fragments);
+    send_messages_boost(io_service, IPADDRESS, std::to_string(UDP_PORT), fragments);
     // sendProtobufVectorPoco("localhost", 12345, fragments);
     // boost::asio::io_context io_context;
     // send_protobuf_vector_boost(io_context, "localhost", "12345", fragments);

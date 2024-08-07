@@ -980,6 +980,17 @@ struct BoostReceiver
                 received_message.tier_id() != -1 && 
                 received_message.chunk_id() != -1) 
         {
+            auto now = std::chrono::high_resolution_clock::now();
+            auto duration = now.time_since_epoch();
+            auto receive_millis = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+            // auto receive_millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
+            auto send_millis = received_message.timestamp();
+            auto transmission_time = receive_millis - send_millis;
+
+            // std::cout << "Transmission time: " << transmission_time << " ms" << std::endl;
+            std::cout << "Transmission time: " << transmission_time << " ns" << std::endl;
+
             totalReceived++;
             // received_fragments.push_back(received_message);
             if (previousVarName == received_message.var_name())

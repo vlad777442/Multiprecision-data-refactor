@@ -69,6 +69,7 @@ message Fragment {
   QueryTable var_table_content = 23;
   SquaredErrorsTable var_squared_errors = 24;
   uint32 var_tiers = 25;
+  uint64 timestamp = 26;
 }
 
 message VariableCollection {
