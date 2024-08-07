@@ -164,12 +164,6 @@ struct Fragment
     uint32_t tier_id;
     uint32_t chunk_id;
     uint32_t fragment_id;
-
-    bool operator==(const Fragment &other) const {
-        return tier_id == other.tier_id &&
-               chunk_id == other.chunk_id &&
-               fragment_id == other.fragment_id;
-    }
 };
 
 struct Chunk
@@ -177,16 +171,6 @@ struct Chunk
     int32_t id;
     std::vector<Fragment> data_fragments;
     std::vector<Fragment> parity_fragments;
-    
-    void updateFragment(const Fragment& new_fragment) {
-        auto& fragment_list = new_fragment.is_data ? data_fragments : parity_fragments;
-        auto it = std::find(fragment_list.begin(), fragment_list.end(), new_fragment);
-        if (it != fragment_list.end()) {
-            *it = new_fragment;
-        } else {
-            fragment_list.push_back(new_fragment);
-        }
-    }
 };
 
 struct Tier
@@ -197,19 +181,6 @@ struct Tier
     int32_t w;
     int32_t hd;
     std::vector<Chunk> chunks;
-    std::unordered_map<int32_t, Chunk> chunk_map;
-
-    void updateChunk(const Fragment& new_fragment) {
-        auto it = std::find_if(chunks.begin(), chunks.end(),
-                               [&](const Chunk& chunk) { return chunk.id == new_fragment.chunk_id; });
-        if (it != chunks.end()) {
-            it->updateFragment(new_fragment);
-        } else {
-            Chunk new_chunk = {new_fragment.chunk_id};
-            new_chunk.updateFragment(new_fragment);
-            chunks.push_back(new_chunk);
-        }
-    }
 };
 
 struct QueryTable
@@ -239,19 +210,6 @@ struct Variable
     SquaredErrorsTable var_squared_errors;
     uint32_t var_tiers;
     std::vector<Tier> tiers;
-
-    void updateTier(const Fragment& new_fragment) {
-        auto it = std::find_if(tiers.begin(), tiers.end(),
-                               [&](const Tier& tier) { return tier.id == new_fragment.tier_id; });
-        if (it != tiers.end()) {
-            it->updateChunk(new_fragment);  // Update chunk in existing tier
-        } else {
-            Tier new_tier = {new_fragment.tier_id, new_fragment.k, new_fragment.m,
-                             new_fragment.w, new_fragment.hd};
-            new_tier.updateChunk(new_fragment);  // Add new chunk to new tier
-            tiers.push_back(new_tier);
-        }
-    }
 };
 
 void setFragment(const DATA::Fragment& received_message, Fragment& myFragment)
@@ -315,168 +273,6 @@ void setTier(const Fragment& myFragment, Tier& newTier) {
     newTier.w = myFragment.w;
     newTier.hd = myFragment.hd;
 }
-
-class VariableManager {
-private:
-    std::vector<Variable> variables;
-
-public:
-    void addVariable(const Variable& var) {
-        variables.push_back(var);
-    }
-
-    void updateFragment(const Fragment& fragment, const std::string& var_name) {
-        auto it = std::find_if(variables.begin(), variables.end(),
-                               [&](const Variable& var) { return var.var_name == var_name; });
-        if (it != variables.end()) {
-            for (auto& tier : it->tiers) {
-                if (tier.id == fragment.tier_id) {
-                    auto chunk_it = std::find_if(tier.chunks.begin(), tier.chunks.end(),
-                                                 [&](const Chunk& chunk) { return chunk.id == fragment.chunk_id; });
-                    if (chunk_it != tier.chunks.end()) {
-                        // Update existing chunk
-                        if (fragment.is_data) {
-                            auto frag_it = std::find_if(chunk_it->data_fragments.begin(), chunk_it->data_fragments.end(),
-                                                        [&](const Fragment& frag) { return frag.fragment_id == fragment.fragment_id; });
-                            if (frag_it != chunk_it->data_fragments.end()) {
-                                *frag_it = fragment; // Update fragment
-                            } else {
-                                chunk_it->data_fragments.push_back(fragment); // Add new fragment
-                            }
-                        } else {
-                            auto frag_it = std::find_if(chunk_it->parity_fragments.begin(), chunk_it->parity_fragments.end(),
-                                                        [&](const Fragment& frag) { return frag.fragment_id == fragment.fragment_id; });
-                            if (frag_it != chunk_it->parity_fragments.end()) {
-                                *frag_it = fragment; // Update fragment
-                            } else {
-                                chunk_it->parity_fragments.push_back(fragment); // Add new fragment
-                            }
-                        }
-                    } else {
-                        // Add new chunk
-                        Chunk newChunk;
-                        newChunk.id = fragment.chunk_id;
-                        if (fragment.is_data) {
-                            newChunk.data_fragments.push_back(fragment);
-                        } else {
-                            newChunk.parity_fragments.push_back(fragment);
-                        }
-                        tier.chunks.push_back(newChunk);
-                    }
-                    return;
-                }
-            }
-            // Add new tier if not found
-            Tier newTier;
-            setTier(fragment, newTier);
-
-            Chunk newChunk;
-            newChunk.id = fragment.chunk_id;
-            if (fragment.is_data) {
-                newChunk.data_fragments.push_back(fragment);
-            } else {
-                newChunk.parity_fragments.push_back(fragment);
-            }
-            newTier.chunks.push_back(newChunk);
-            it->tiers.push_back(newTier);
-        }
-    }
-
-    const std::vector<Variable>& getVariables() const {
-        return variables;
-    }
-
-    void printVariables() const {
-        for (const auto& variable : variables) {
-            std::cout << "Variable Name: " << variable.var_name << std::endl;
-            std::cout << "Type: " << variable.var_type << std::endl;
-            std::cout << "Levels: " << variable.var_levels << std::endl;
-            std::cout << "Tiers: " << variable.var_tiers << std::endl;
-            std::cout << "Dimensions: ";
-            for (const auto& dim : variable.var_dimensions) {
-                std::cout << dim << " ";
-            }
-            std::cout << std::endl;
-            for (const auto& tier : variable.tiers) {
-                std::cout << "  Tier ID: " << tier.id << std::endl;
-                for (const auto& chunk : tier.chunks) {
-                    std::cout << "    Chunk ID: " << chunk.id << std::endl;
-                    std::cout << "      Data Fragments:" << std::endl;
-                    for (const auto& fragment : chunk.data_fragments) {
-                        std::cout << "        Fragment ID: " << fragment.fragment_id << std::endl;
-                    }
-                    std::cout << "      Parity Fragments:" << std::endl;
-                    for (const auto& fragment : chunk.parity_fragments) {
-                        std::cout << "        Fragment ID: " << fragment.fragment_id << std::endl;
-                    }
-                }
-            }
-            std::cout << std::endl;
-        }
-    }
-
-    void setFragment(const DATA::Fragment& received_message, Fragment& myFragment)
-    {
-        myFragment.k = received_message.k();
-        myFragment.m = received_message.m();
-        myFragment.w = received_message.w();
-        myFragment.hd = received_message.hd();
-        myFragment.ec_backend_name = received_message.ec_backend_name();
-        myFragment.encoded_fragment_length = received_message.encoded_fragment_length();
-        myFragment.frag = received_message.frag();
-
-        myFragment.is_data = received_message.is_data();
-        myFragment.tier_id = received_message.tier_id();
-        myFragment.chunk_id = received_message.chunk_id();
-        myFragment.fragment_id = received_message.fragment_id();
-    }
-
-    void setVariable(const DATA::Fragment& received_message, Variable& var1)
-    {
-        var1.var_name = received_message.var_name();
-        var1.ec_backend_name = received_message.ec_backend_name();
-        var1.var_dimensions.insert(
-            var1.var_dimensions.end(),
-            received_message.var_dimensions().begin(),
-            received_message.var_dimensions().end());
-        var1.var_type = received_message.var_type();
-        var1.var_levels = received_message.var_levels();
-        var1.var_level_error_bounds.insert(
-            var1.var_level_error_bounds.end(),
-            received_message.var_level_error_bounds().begin(),
-            received_message.var_level_error_bounds().end());
-        for (const auto &bytes : received_message.var_stopping_indices())
-        {
-            var1.var_stopping_indices.insert(var1.var_stopping_indices.end(), bytes.begin(), bytes.end());
-        }
-
-        var1.var_table_content.rows = received_message.var_table_content().rows();
-        var1.var_table_content.cols = received_message.var_table_content().cols();
-        for (int i = 0; i < received_message.var_table_content().content_size(); ++i)
-        {
-            uint64_t content_value = received_message.var_table_content().content(i);
-            var1.var_table_content.content.push_back(content_value);
-        }
-
-        var1.var_squared_errors.rows = received_message.var_squared_errors().rows();
-        var1.var_squared_errors.cols = received_message.var_squared_errors().cols();
-
-        var1.var_squared_errors.content.insert(
-            var1.var_squared_errors.content.end(),
-            received_message.var_squared_errors().content().begin(),
-            received_message.var_squared_errors().content().end());
-        var1.var_tiers = received_message.var_tiers();
-    }
-
-
-    void setTier(const Fragment& myFragment, Tier& newTier) {
-        newTier.id = myFragment.tier_id;
-        newTier.k = myFragment.k;
-        newTier.m = myFragment.m;
-        newTier.w = myFragment.w;
-        newTier.hd = myFragment.hd;
-    }
-};
 
 int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unavaialbleSites = 0, std::string rawDataFileName = "NYXrestored.bp")
 {
@@ -1144,17 +940,21 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
     return 0;
 }
 
-struct BoostReceiver {
+struct BoostReceiver
+{
     boost::asio::io_service io_service;
     udp::socket socket{io_service};
     boost::array<char, 16384> recv_buffer;
     udp::endpoint remote_endpoint;
 
+    std::string previousVarName = "null";
+    std::int32_t previousTierId = -1;
+    std::int32_t previousChunkId = -1;
     std::string rawDataName;
     std::int32_t totalSites;
     std::int32_t unavailableSites;
     std::vector<Fragment> fragments;
-    VariableManager variableManager;
+    std::vector<Variable> variables;
 
     std::vector<int> totalLostPackets;
     std::vector<int> receivedPackets;
@@ -1163,72 +963,171 @@ struct BoostReceiver {
     int receivedPacketsCounter = 0;
     std::vector<DATA::Fragment> received_fragments;
 
-    void handle_receive(const boost::system::error_code &error, size_t bytes_transferred) {
-        if (error) {
+    void handle_receive(const boost::system::error_code &error, size_t bytes_transferred)
+    {
+        if (error)
+        {
             std::cout << "Receive failed: " << error.message() << "\n";
             return;
         }
 
         DATA::Fragment received_message;
-        if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred))) {
+        if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred)))
+        {
             std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
-        } else if (!received_message.var_name().empty() && 
-                   received_message.tier_id() != -1 && 
-                   received_message.chunk_id() != -1) {
+        }
+        else if (!received_message.var_name().empty() && 
+                received_message.tier_id() != -1 && 
+                received_message.chunk_id() != -1) 
+        {
             auto now = std::chrono::high_resolution_clock::now();
             auto duration = now.time_since_epoch();
             auto receive_millis = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+            // auto receive_millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
             auto send_millis = received_message.timestamp();
             auto transmission_time = receive_millis - send_millis;
 
+            // std::cout << "Transmission time: " << transmission_time << " ms" << std::endl;
             std::cout << "Transmission time: " << transmission_time << " ns" << std::endl;
 
             totalReceived++;
-            Fragment myFragment;
-            setFragment(received_message, myFragment);
+            // received_fragments.push_back(received_message);
+            if (previousVarName == received_message.var_name())
+            {
+                receivedPacketsCounter++;
+                if (variables.empty()) { 
+                    std::cout << "variables are empty!" << std::endl;
+                } else {
+                
+                    Variable &latestVariable = variables.back();
+                    Tier &latestTier = latestVariable.tiers.back();
 
-            // Check if the variable already exists
-            auto it = std::find_if(variableManager.getVariables().begin(), variableManager.getVariables().end(),
-                                   [&](const Variable& var) { return var.var_name == received_message.var_name(); });
+                    Fragment myFragment;
+                    setFragment(received_message, myFragment);
 
-            if (it != variableManager.getVariables().end()) {
-                // Update existing variable
-                variableManager.updateFragment(myFragment, received_message.var_name());
-            } else {
-                // Create a new variable and add it to the manager
+                    if (myFragment.tier_id == previousTierId)
+                    {
+                        if (myFragment.chunk_id == previousChunkId)
+                        {
+                            Chunk &latestChunk = latestTier.chunks.back();
+                            if (myFragment.is_data)
+                            {
+                                latestChunk.data_fragments.push_back(myFragment);
+                            }
+                            else
+                            {
+                                latestChunk.parity_fragments.push_back(myFragment);
+                            }
+                        }
+                        else
+                        {
+                            Chunk newChunk;
+                            newChunk.id = myFragment.chunk_id;
+                            if (myFragment.is_data)
+                            {
+                                newChunk.data_fragments.push_back(myFragment);
+                            }
+                            else
+                            {
+                                newChunk.parity_fragments.push_back(myFragment);
+                            }
+                            latestTier.chunks.push_back(newChunk);
+                        }
+                    }
+                    else
+                    {
+                        Tier newTier;
+                        setTier(myFragment, newTier);
+
+                        Chunk newChunk;
+                        newChunk.id = myFragment.chunk_id;
+                        if (myFragment.is_data)
+                        {
+                            newChunk.data_fragments.push_back(myFragment);
+                        }
+                        else
+                        {
+                            newChunk.parity_fragments.push_back(myFragment);
+                        }
+                        newTier.chunks.push_back(newChunk);
+                        latestVariable.tiers.push_back(newTier);
+                    }
+                }
+            }
+            else
+            {
+                std::cout << received_message.var_name() << std::endl;
+                if (receivedPacketsCounter != 0)
+                {
+                    receivedPackets.push_back(receivedPacketsCounter);
+                }
+                
+                receivedPacketsCounter = 1;
                 Variable var1;
                 setVariable(received_message, var1);
-                variableManager.addVariable(var1);
-                variableManager.updateFragment(myFragment, received_message.var_name());
-            }
 
-            receivedPacketsCounter++;
+                Fragment myFragment;
+                setFragment(received_message, myFragment);
+
+                Tier tier;
+                Chunk chunk;
+                setTier(myFragment, tier);
+                chunk.id = myFragment.chunk_id;
+
+                if (myFragment.is_data)
+                {
+                    chunk.data_fragments.push_back(myFragment);
+                }
+                else
+                {
+                    chunk.parity_fragments.push_back(myFragment);
+                }
+                tier.chunks.push_back(chunk);
+                var1.tiers.push_back(tier);
+                variables.push_back(var1);
+            }
+            previousTierId = received_message.tier_id();
+            previousVarName = received_message.var_name();
+            previousChunkId = received_message.chunk_id();
+            // std::cout << "received frag data id:" << received_message.fragment_id() << ";chunk:" << received_message.chunk_id() << ";tier:" << received_message.tier_id() << std::endl;
+            // std::cout << "received frag size: " << received_message.frag().size() << std::endl;
         } else if (received_message.fragment_id() == -1) {
             std::cout << "End of transmission received" << std::endl;
             std::cout << "Total received: " << totalReceived << std::endl;
             socket.close(); // Stop receiving data
             return;
-        } else {
+        }
+        else {
             std::cerr << "Received message is null or incomplete." << std::endl;
         }
+        // std::cout << "Received: '" << std::string(recv_buffer.begin(), recv_buffer.begin() + bytes_transferred) << "'\n";
 
         wait();
     }
 
-    void checkFragments(const std::vector<Variable>& variables) {
+    void checkFragments(const std::vector<Variable>& variables) 
+    {
         std::unordered_map<std::string, std::unordered_map<int, std::vector<int>>> chunksToRetransmit;
-        for (const auto& var: variables) {
-            for (const auto& tier: var.tiers) {
-                for (const auto& chunk: tier.chunks) {
-                    if (chunk.data_fragments.size() + chunk.parity_fragments.size() < 32 - tier.m) {
+        for (const auto& var: variables)
+        {
+            for (const auto& tier: var.tiers)
+            {
+                for (const auto& chunk: tier.chunks) 
+                {
+                    if (chunk.data_fragments.size() + chunk.parity_fragments.size() < 32 - tier.m) 
+                    {
                         chunksToRetransmit[var.var_name][tier.id].push_back(chunk.id);
                     }
                 }
             }       
         }
+        
+        
     }
 
-    void wait() {
+    void wait()
+    {
         socket.async_receive_from(boost::asio::buffer(recv_buffer),
                                   remote_endpoint,
                                   boost::bind(&BoostReceiver::handle_receive,
@@ -1237,14 +1136,17 @@ struct BoostReceiver {
                                               boost::asio::placeholders::bytes_transferred));
     }
 
-    void handle_timeout(const boost::system::error_code &error) {
-        if (!error) {
+    void handle_timeout(const boost::system::error_code &error)
+    {
+        if (!error)
+        {
             std::cout << "No new data received for " << TIMEOUT_DURATION_SECONDS << " seconds. Stopping.\n";
             socket.cancel();
         }
     }
 
-    void Receiver() {
+    void Receiver()
+    {
         socket.open(udp::v4());
         socket.bind(udp::endpoint(address::from_string(IPADDRESS), UDP_PORT));
 
@@ -1253,20 +1155,20 @@ struct BoostReceiver {
         std::cout << "Receiving\n";
         io_service.run();
         std::cout << "Receiver exit\nStarting recovery\n";
-        variableManager.printVariables();
 
-        for (size_t i = 0; i < receivedPackets.size(); i++) {
+        for (size_t i = 0; i < receivedPackets.size(); i++)
+        {
             std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
         }
         std::cout << "Total received: " << totalReceived << std::endl;
 
-        variableManager.printVariables();
-
-        for (int i = 0; i < variableManager.getVariables().size(); i++) {
-            restoreData(variableManager.getVariables()[i], 0, totalSites, unavailableSites, rawDataName);
+        for (int i = 0; i < variables.size(); i++)
+        {
+            restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
         }
 
-        for (size_t i = 0; i < receivedPackets.size(); i++) {
+        for (size_t i = 0; i < receivedPackets.size(); i++)
+        {
             std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
         }
         std::cout << "Total received: " << totalReceived << std::endl;
