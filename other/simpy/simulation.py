@@ -149,6 +149,7 @@ class Receiver:
         return total
 
     def print_lost_chunks_per_tier(self):
+        print("Printing total amount of retransmitted chunks")
         for tier in self.lost_chunk_per_tier:
             print(f"Tier: {tier}, amount of retransmitted chunks: {self.lost_chunk_per_tier[tier]}")
 
@@ -162,6 +163,19 @@ class PacketLossGen:
         while True:
             yield self.env.timeout(random.expovariate(lambd))
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
+
+    def weibullvariate_loss_gen(self, alpha, beta):
+        # alpha is scale
+        # beta is shape. 
+        # If β < 1: This models a decreasing failure rate over time.
+        # If β > 1: This models an increasing failure rate over time
+        loss_count = 0
+        while True:
+            yield self.env.timeout(random.weibullvariate(alpha, beta))
+            self.link.loss.put(f'A packet loss occurred at {self.env.now}')
+            # loss_count += 1
+            # if loss_count % 100 == 0:
+            #     print(f"Total packet losses generated: {loss_count}")
 
 def print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num):
     lost_chunks_per_tier = {}
@@ -223,82 +237,84 @@ def fragment_gen(tier_frags_num, tier_m, n):
     return all_tier_frags, all_tier_per_chunk_data_frags_num
 
 
-# env = simpy.Environment()
+env = simpy.Environment()
 
-# n = 32
-# frag_size = 2048
-# tier_sizes = [5474475, 22402608, 45505266, 150891984]
-# tier_m = [0,0,0,0]
-# number_of_chunks = []
+n = 32
+frag_size = 2048
+tier_sizes = [5474475, 22402608, 45505266, 150891984]
+tier_m = [4, 2, 1, 0]
+number_of_chunks = []
 
-# tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
+tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
 
-# all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, tier_m, n)
+all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, tier_m, n)
 
-# link = Link(env, 0.001)
-# sender = Sender(env, link, 1000, all_tier_frags)
-# receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
-# pkt_loss = PacketLossGen(env, link)
+link = Link(env, 0.001)
+sender = Sender(env, link, 1000, all_tier_frags)
+receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
+pkt_loss = PacketLossGen(env, link)
 
-# env.process(sender.send())
-# env.process(receiver.receive())
-# env.process(pkt_loss.expovariate_loss_gen(10))
+env.process(sender.send())
+env.process(receiver.receive())
+env.process(pkt_loss.expovariate_loss_gen(10))
+# env.process(pkt_loss.weibullvariate_loss_gen(0.05, 4))
+# env.process(pkt_loss.weibullvariate_loss_gen(alpha=0.1, beta=1))
 
-# env.run(until=SIM_DURATION)
-# print(tier_frags_num)
-# print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
-# receiver.print_tier_receiving_times()
-# receiver.print_lost_chunks_per_tier()
+env.run(until=SIM_DURATION)
+print(tier_frags_num)
+print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
+receiver.print_tier_receiving_times()
+receiver.print_lost_chunks_per_tier()
 
-# chunks_per_tier = {}
-# for t in all_tier_frags:
-#     for f in t:
-#         if f["tier"] in chunks_per_tier:
-#             chunks_per_tier[f["tier"]] += 1
-#         else:
-#             chunks_per_tier[f["tier"]] = 1
-# res = 0
-# for i in chunks_per_tier:
-#     print(f"Tier: {i}, total amount of chunks: {math.ceil(chunks_per_tier[i] / 32)}")
-#     res += math.ceil(chunks_per_tier[i] / 32)
-# print("Total:", res)
+chunks_per_tier = {}
+for t in all_tier_frags:
+    for f in t:
+        if f["tier"] in chunks_per_tier:
+            chunks_per_tier[f["tier"]] += 1
+        else:
+            chunks_per_tier[f["tier"]] = 1
+res = 0
+for i in chunks_per_tier:
+    print(f"Tier: {i}, total amount of chunks: {math.ceil(chunks_per_tier[i] / 32)}")
+    res += math.ceil(chunks_per_tier[i] / 32)
+print("Total:", res)
 
-top_times = []
+# top_times = []
 
-for i in range(32):
-    for j in range(32):
-        for k in range(32):
-            for l in range(32):
-                current_m = [i, j, k, l]
-                print(f'Running simulation with current_m = {current_m}')
+# for i in range(32):
+#     for j in range(32):
+#         for k in range(32):
+#             for l in range(32):
+#                 current_m = [i, j, k, l]
+#                 print(f'Running simulation with current_m = {current_m}')
                 
-                env = simpy.Environment()
-                n = 32
-                frag_size = 2048
-                tier_sizes = [5474475, 22402608, 45505266, 150891984]
-                number_of_chunks = []
+#                 env = simpy.Environment()
+#                 n = 32
+#                 frag_size = 2048
+#                 tier_sizes = [5474475, 22402608, 45505266, 150891984]
+#                 number_of_chunks = []
 
-                tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
+#                 tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
 
-                all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
+#                 all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
 
-                link = Link(env, 0.001)
-                sender = Sender(env, link, 1000, all_tier_frags)
-                receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
-                pkt_loss = PacketLossGen(env, link)
+#                 link = Link(env, 0.001)
+#                 sender = Sender(env, link, 1000, all_tier_frags)
+#                 receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
+#                 pkt_loss = PacketLossGen(env, link)
 
-                env.process(sender.send())
-                env.process(receiver.receive())
-                env.process(pkt_loss.expovariate_loss_gen(10))
+#                 env.process(sender.send())
+#                 env.process(receiver.receive())
+#                 env.process(pkt_loss.expovariate_loss_gen(10))
 
-                env.run(until=SIM_DURATION)
+#                 env.run(until=SIM_DURATION)
 
-                total_time = receiver.print_tier_receiving_times()
-                top_times.append((total_time, current_m))
+#                 total_time = receiver.print_tier_receiving_times()
+#                 top_times.append((total_time, current_m))
 
-                # Keep only the top 10 minimum times
-                top_times = sorted(top_times, key=lambda x: x[0])[:10]
+#                 # Keep only the top 10 minimum times
+#                 top_times = sorted(top_times, key=lambda x: x[0])[:10]
 
-print("Top 10 configurations with minimum times:")
-for time, config in top_times:
-    print(f'Time: {time}, Configuration: {config}')
+# print("Top 10 configurations with minimum times:")
+# for time, config in top_times:
+#     print(f'Time: {time}, Configuration: {config}')

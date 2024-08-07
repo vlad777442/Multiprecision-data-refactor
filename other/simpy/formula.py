@@ -51,8 +51,8 @@ def expected_total_transmission_time(S0, s, t, Tretrans, m0, lam):
     
     P_N_leq_m0 = poisson_cdf(lam, Ttrans, m0)
     p = P_N_leq_m0
-    print("NChunk", Nchunk)
-    print(f"Nchunk * Ttrans: {Nchunk * Ttrans} p: {p}")
+    # print("NChunk", Nchunk)
+    # print(f"Nchunk * Ttrans: {Nchunk * Ttrans} p: {p}")
     # E_Ttotal0 = Nchunk * Ttrans
     
     # g1 = Decimal(g(Nchunk, p)) * Decimal(Ttrans)
@@ -97,8 +97,8 @@ def calculate_expected_total_transmission_time_for_all_tiers(tier_sizes, frag_si
         E_Ttotal_tier = expected_total_transmission_time(S, frag_size, t, Tretrans, m, lam)
         times.append(E_Ttotal_tier)
         E_Toverall += E_Ttotal_tier
-    for i in range(len(times)):
-        print(f"Expected time for Tier {i} is {times[i]} seconds")
+    # for i in range(len(times)):
+    #     print(f"Expected time for Tier {i} is {times[i]} seconds")
     return E_Toverall
 
 n = 32
@@ -118,10 +118,10 @@ min_time = float('inf')
 best_m = []
 min_times = []
 
-for i in range(32):
-    for j in range(32):
-        for k in range(32):
-            for l in range(32):
+for i in range(16):
+    for j in range(8):
+        for k in range(8):
+            for l in range(8):
                 current_m = [i, j, k, l]
                 print("m:", current_m)
 
