@@ -376,61 +376,41 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
     udp::resolver resolver(io_service);
     udp::resolver::query query(udp::v4(), host, port);
     udp::resolver::iterator iter = resolver.resolve(query);
-
-    boost::asio::steady_timer timer(io_service);
-    timer.expires_from_now(std::chrono::minutes(30)); // Set the timer for 30 minutes
-
-    std::size_t packetsSent = 0;
+    int packetsSent = 0;
     boost::system::error_code ec;
 
-    // Lambda function to send fragments asynchronously
-    auto send_fragment = [&](size_t index) {
-        if (index < fragments.size()) {
-            auto& fragment = fragments[index];
+    auto start = std::chrono::steady_clock::now();
+    while (std::chrono::duration_cast<std::chrono::minutes>(std::chrono::steady_clock::now() - start).count() < 30) {
+        for (auto& fragment : fragments) {
             addTimestamp(fragment);
-
             std::string serialized_fragment;
             if (!fragment.SerializeToString(&serialized_fragment)) {
                 std::cerr << "Failed to serialize fragment." << std::endl;
-                return;
+                continue;
             }
-
-            socket.send_to(boost::asio::buffer(serialized_fragment), *iter, 0, ec);
+            socket.send_to(boost::asio::buffer(serialized_fragment), *iter);
             if (ec) {
                 std::cerr << "Send failed: " << ec.message() << std::endl;
             }
             packetsSent++;
 
-            // Schedule the next fragment send
-            io_service.post([&, index]() { send_fragment(index + 1); });
-        }
-    };
-
-    // Start sending fragments
-    send_fragment(0);
-
-    // Wait for the timer to expire and send the EOT message
-    timer.async_wait([&](const boost::system::error_code& ec) {
-        if (!ec) {
-            // Send an EOT message
-            DATA::Fragment eot;
-            eot.set_fragment_id(-1); // Using -1 to indicate the end of transmission
-            std::string serialized_eot;
-            eot.SerializeToString(&serialized_eot);
-            for (size_t i = 0; i < 10; i++) {
-                socket.send_to(boost::asio::buffer(serialized_eot), *iter, 0, ec);
+            // Output the number of sent fragments every 20000 fragments
+            if (packetsSent % 20000 == 0) {
+                std::cout << "Packets sent: " << packetsSent << std::endl;
             }
-
-            std::cout << "Timer expired. Sent EOT message. Total fragments sent: " << packetsSent << std::endl;
-
-            io_service.stop(); // Stop the io_service to end the process
         }
-    });
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
 
-    // Run the IO service to process the asynchronous operations
-    io_service.run();
-
-    std::cout << "Packets sent during the session: " << packetsSent << std::endl;
+    // Send an EOT message
+    DATA::Fragment eot;
+    eot.set_fragment_id(-1);
+    std::string serialized_eot;
+    eot.SerializeToString(&serialized_eot);
+    for (size_t i = 0; i < 10; i++) {
+        socket.send_to(boost::asio::buffer(serialized_eot), *iter);
+    }
+    std::cout << "Packets sent: " << packetsSent << std::endl;
 }
 
 void listen_for_retransmission_requests(boost::asio::io_service& io_service, const std::string& listen_host, const std::string& listen_port, std::vector<DATA::Fragment>& fragments) {
