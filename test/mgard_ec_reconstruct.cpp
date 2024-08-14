@@ -59,6 +59,8 @@ using boost::asio::ip::udp;
 using namespace ROCKSDB_NAMESPACE;
 using namespace Poco::Net;
 
+const int MAX_BUFFER_SIZE = 16384;
+
 std::vector<std::vector<uint32_t>> get_level_sizes(uint32_t levels, const std::vector<std::vector<uint64_t>> &query_table)
 {
     std::vector<std::vector<uint32_t>> level_sizes(levels);
@@ -1162,6 +1164,10 @@ struct BoostReceiver {
     int lostPackets = 0;
     int receivedPacketsCounter = 0;
     std::vector<DATA::Fragment> received_fragments;
+    // bool transmission_ended = false;
+    bool initial_transmission_ended = false;
+    bool retransmission_ended = false;
+    bool fragments_checked = false;
 
     void handle_receive(const boost::system::error_code &error, size_t bytes_transferred) {
         if (error) {
@@ -1181,8 +1187,8 @@ struct BoostReceiver {
             auto send_millis = received_message.timestamp();
             auto transmission_time = receive_millis - send_millis;
 
-            std::cout << "Transmission time: " << transmission_time << " ns" << std::endl;
-
+            // std::cout << "Transmission time: " << transmission_time << " ns" << std::endl;
+            std::cout << "Received fragment Tier: " << received_message.tier_id() << " Chunk: " << received_message.chunk_id() << std::endl;
             totalReceived++;
             Fragment myFragment;
             setFragment(received_message, myFragment);
@@ -1206,16 +1212,36 @@ struct BoostReceiver {
         } else if (received_message.fragment_id() == -1) {
             std::cout << "End of transmission received" << std::endl;
             std::cout << "Total received: " << totalReceived << std::endl;
-            socket.close(); // Stop receiving data
-            return;
+
+            if (!initial_transmission_ended) {
+                std::cout << "End of initial transmission received" << std::endl;
+                initial_transmission_ended = true;
+                if (!fragments_checked) {
+                    checkFragments(variableManager.getVariables());
+                    fragments_checked = true;
+                }
+            } else if (!retransmission_ended) {
+                std::cout << "End of retransmission received" << std::endl;
+                retransmission_ended = true;
+                if (!fragments_checked) {
+                    checkFragments(variableManager.getVariables());
+                    fragments_checked = true;
+                }
+            }
         } else {
             std::cerr << "Received message is null or incomplete." << std::endl;
         }
 
-        wait();
+        // wait();
+        if (!retransmission_ended) {
+            wait();
+        } else {
+            finalize();
+        }
     }
 
     void checkFragments(const std::vector<Variable>& variables) {
+        std::cout << "Checking for missing chunks..." << std::endl;
         std::unordered_map<std::string, std::unordered_map<int, std::vector<int>>> chunksToRetransmit;
         for (const auto& var: variables) {
             for (const auto& tier: var.tiers) {
@@ -1226,6 +1252,103 @@ struct BoostReceiver {
                 }
             }       
         }
+        if (!chunksToRetransmit.empty()) {
+            requestRetransmission(chunksToRetransmit);
+        } else {
+            std::cout << "No missing chunks detected." << std::endl;
+            retransmission_ended = true;
+            finalize();
+        }
+    }
+
+    void requestRetransmission(const std::unordered_map<std::string, std::unordered_map<int, std::vector<int>>>& chunksToRetransmit) {
+        retransmission_ended = false;
+        fragments_checked = false;
+        std::cout << "Requesting retransmission of missing chunks..." << std::endl;
+        for (const auto& [var_name, tiers] : chunksToRetransmit) {
+            for (const auto& [tier_id, chunk_ids] : tiers) {
+                for (int chunk_id : chunk_ids) {
+                    std::cout << "Requesting retransmission of chunk " << chunk_id << " from tier " << tier_id << " for variable " << var_name << std::endl;
+                    DATA::Fragment retransmission_request;
+                    retransmission_request.set_fragment_id(-2); // Use -2 to indicate a retransmission request
+                    retransmission_request.set_var_name(var_name);
+                    retransmission_request.set_tier_id(tier_id);
+                    retransmission_request.set_chunk_id(chunk_id);
+
+                    std::string serialized_request;
+                    if (retransmission_request.SerializeToString(&serialized_request)) {
+                        socket.send_to(boost::asio::buffer(serialized_request), remote_endpoint);
+                    } else {
+                        std::cerr << "Failed to serialize retransmission request." << std::endl;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+            }
+        }
+        
+        DATA::Fragment eom;
+        eom.set_fragment_id(-3); // Using -3 to indicate the end of missing chunk requests
+        std::string serialized_eom;
+        eom.SerializeToString(&serialized_eom);
+        for (size_t i = 0; i < 10; i++) {
+            socket.send_to(boost::asio::buffer(serialized_eom), remote_endpoint);
+        }
+
+        // Wait for retransmitted fragments
+        wait_for_retransmission();
+    }
+
+    void wait_for_retransmission() {
+        // transmission_ended = false;
+        wait();
+        io_service.run();
+
+        // Add a timeout
+        boost::asio::deadline_timer timer(io_service);
+        timer.expires_from_now(boost::posix_time::seconds(10)); // 10-second timeout
+        auto timeout_handler = [this](const boost::system::error_code& ec) {
+            if (!ec) {
+                std::cout << "Retransmission timeout. Finalizing...\n";
+                socket.cancel();
+                retransmission_ended = true;
+                finalize();
+            }
+        };
+
+        timer.async_wait(timeout_handler);
+
+        while (!retransmission_ended) {
+            io_service.run_one();
+        }
+
+        timer.cancel();
+    }
+
+    void finalize() {
+        DATA::Fragment eom;
+        eom.set_fragment_id(-3); // Using -3 to indicate the end of missing chunk requests
+        std::string serialized_eom;
+        eom.SerializeToString(&serialized_eom);
+        for (size_t i = 0; i < 10; i++) {
+            socket.send_to(boost::asio::buffer(serialized_eom), remote_endpoint);
+        }
+
+        socket.close();
+        process_received_data();
+    }
+
+    void process_received_data() {
+        std::cout << "Processing received data\n";
+        for (size_t i = 0; i < receivedPackets.size(); i++) {
+            std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
+        }
+        std::cout << "Total received: " << totalReceived << std::endl;
+
+        for (int i = 0; i < variableManager.getVariables().size(); i++) {
+            restoreData(variableManager.getVariables()[i], 0, totalSites, unavailableSites, rawDataName);
+        }
+
+        std::cout << "Total received: " << totalReceived << std::endl;
     }
 
     void wait() {
@@ -1237,13 +1360,6 @@ struct BoostReceiver {
                                               boost::asio::placeholders::bytes_transferred));
     }
 
-    void handle_timeout(const boost::system::error_code &error) {
-        if (!error) {
-            std::cout << "No new data received for " << TIMEOUT_DURATION_SECONDS << " seconds. Stopping.\n";
-            socket.cancel();
-        }
-    }
-
     void Receiver() {
         socket.open(udp::v4());
         socket.bind(udp::endpoint(address::from_string(IPADDRESS), UDP_PORT));
@@ -1252,332 +1368,9 @@ struct BoostReceiver {
 
         std::cout << "Receiving\n";
         io_service.run();
-        std::cout << "Receiver exit\nStarting recovery\n";
-        variableManager.printVariables();
-
-        for (size_t i = 0; i < receivedPackets.size(); i++) {
-            std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
-        }
-        std::cout << "Total received: " << totalReceived << std::endl;
-
-        variableManager.printVariables();
-
-        for (int i = 0; i < variableManager.getVariables().size(); i++) {
-            restoreData(variableManager.getVariables()[i], 0, totalSites, unavailableSites, rawDataName);
-        }
-
-        for (size_t i = 0; i < receivedPackets.size(); i++) {
-            std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
-        }
-        std::cout << "Total received: " << totalReceived << std::endl;
+        io_service.reset();
     }
 };
-
-// struct BoostReceiver2
-// {
-//     boost::asio::io_service io_service;
-//     udp::socket socket{io_service};
-//     boost::array<char, 16384> recv_buffer;
-//     udp::endpoint remote_endpoint;
-//     boost::asio::deadline_timer timer{io_service};
-
-//     std::string previousVarName = "null";
-//     std::int32_t previousTierId = -1;
-//     std::int32_t previousChunkId = -1;
-//     std::string rawDataName;
-//     std::int32_t totalSites;
-//     std::int32_t unavailableSites;
-//     std::vector<Fragment> fragments;
-//     std::vector<Variable> variables;
-
-//     std::vector<int> totalLostPackets;
-//     std::vector<int> receivedPackets;
-//     int totalReceived = 0;
-//     int lostPackets = 0;
-//     int receivedPacketsCounter = 0;
-//     // std::vector<DATA::Fragment> received_fragments;
-//     std::unordered_map<std::string, std::unordered_map<int, std::unordered_map<int, Chunk>>> received_fragments;
-
-//     void handle_receive(const boost::system::error_code &error, size_t bytes_transferred)
-//     {
-//         if (error)
-//         {
-//             std::cout << "Receive failed: " << error.message() << "\n";
-//             return;
-//         }
-
-//         DATA::Fragment received_message;
-//         if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred)))
-//         {
-//             std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
-//         }
-//         else if (!received_message.var_name().empty() && 
-//                 received_message.tier_id() != -1 && 
-//                 received_message.chunk_id() != -1) 
-//         {
-//             const std::string &var_name = received_message.var_name();
-//             int tier_id = received_message.tier_id();
-//             int chunk_id = received_message.chunk_id();
-
-//             // Access the appropriate chunk
-//             Chunk &chunk = received_fragments[var_name][tier_id][chunk_id];
-//             Fragment myFragment;
-//             setFragment(received_message, myFragment);
-//             // Store the fragment
-//             if (received_message.is_data())
-//             {
-//                 chunk.data_fragments.push_back(myFragment);
-//             }
-//             else
-//             {
-//                 chunk.parity_fragments.push_back(myFragment);
-//             }
-
-//             totalReceived++;
-
-//             if (previousVarName == received_message.var_name())
-//             {
-//                 receivedPacketsCounter++;
-//                 if (variables.empty()) { 
-//                     std::cout << "variables are empty!" << std::endl;
-//                 } else {
-                
-//                     Variable &latestVariable = variables.back();
-//                     Tier &latestTier = latestVariable.tiers.back();
-
-//                     Fragment myFragment;
-//                     setFragment(received_message, myFragment);
-
-//                     if (myFragment.tier_id == previousTierId)
-//                     {
-//                         // if (myFragment.chunk_id != previousChunkId)
-//                         // {
-//                         //     Chunk newChunk;
-//                         //     newChunk.id = myFragment.chunk_id;
-//                         //     latestTier.chunks.push_back(newChunk);
-//                         // }
-//                     }
-//                     else
-//                     {
-//                         Tier newTier;
-//                         setTier(myFragment, newTier);
-
-//                         // Chunk newChunk;
-//                         // newChunk.id = myFragment.chunk_id;
-                        
-//                         // newTier.chunks.push_back(newChunk);
-//                         latestVariable.tiers.push_back(newTier);
-//                     }
-//                 }
-//             }
-//             else
-//             {
-//                 std::cout << received_message.var_name() << std::endl;
-//                 if (receivedPacketsCounter != 0)
-//                 {
-//                     receivedPackets.push_back(receivedPacketsCounter);
-//                 }
-                
-//                 receivedPacketsCounter = 1;
-//                 Variable var1;
-//                 setVariable(received_message, var1);
-
-//                 Fragment myFragment;
-//                 setFragment(received_message, myFragment);
-
-//                 Tier tier;
-//                 Chunk chunk;
-//                 setTier(myFragment, tier);
-//                 chunk.id = myFragment.chunk_id;
-
-//                 tier.chunks.push_back(chunk);
-//                 var1.tiers.push_back(tier);
-//                 variables.push_back(var1);
-//             }
-//             previousTierId = received_message.tier_id();
-//             previousVarName = received_message.var_name();
-//             previousChunkId = received_message.chunk_id();
-//         }
-//         else if (received_message.fragment_id() == -1)
-//         {
-//             std::cout << "End of transmission received" << std::endl;
-//             std::cout << "Total received: " << totalReceived << std::endl;
-//             check_fragments(received_fragments, variables);
-//         }
-//         else
-//         {
-//             std::cerr << "Received message is null or incomplete." << std::endl;
-//         }
-
-//         // Restart the timer for another TIMEOUT_DURATION_SECONDS seconds
-//         // timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
-//         // timer.async_wait(boost::bind(&BoostReceiver::handle_timeout, this, boost::asio::placeholders::error));
-//         // wait();
-//     }
-
-
-//     void request_retransmit(const std::unordered_map<std::string, std::unordered_map<int, std::vector<int>>>& chunksToRetransmit) {
-//         for (const auto& varEntry : chunksToRetransmit) {
-//             for (const auto& tierEntry : varEntry.second) {
-//                 for (int chunkId : tierEntry.second) {
-//                     std::cout << "Requesting retransmit for Variable: " << varEntry.first << ", Tier: " << tierEntry.first << ", Chunk: " << chunkId << std::endl;
-//                     send_retransmission_request(varEntry.first, tierEntry.first, chunkId);
-//                 }
-//             }
-//         }
-//     }
-
-//     void send_retransmission_request(const std::string& varName, int tierId, int chunkId) {
-//         DATA::RetransmissionRequest request;
-//         auto* req = request.add_requests();
-//         req->set_var_name(varName);
-//         req->set_tier_id(tierId);
-//         req->set_chunk_id(chunkId);
-
-//         std::string serialized_request;
-//         if (!request.SerializeToString(&serialized_request)) {
-//             std::cerr << "Failed to serialize retransmission request." << std::endl;
-//             return;
-//         }
-
-//         // Create a resolver and query
-//         udp::resolver resolver(io_service);
-//         udp::resolver::query query(SENDER_IP, SENDER_PORT);  // Both SENDER_IP and SENDER_PORT should be strings
-//         udp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-
-//         // Send the serialized request to the sender
-//         socket.send_to(boost::asio::buffer(serialized_request), *endpoint_iterator);
-//         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-//     }
-
-
-//     void check_fragments(std::unordered_map<std::string, std::unordered_map<int, std::unordered_map<int, Chunk>>>& fragments, std::vector<Variable>& variables) 
-//     {
-//         std::cout << "Checking fragments" << std::endl;
-//         std::unordered_map<std::string, std::unordered_map<int, std::vector<int>>> chunksToRetransmit;
-
-//         for (auto& varEntry : fragments)
-//         {
-//             const std::string &var_name = varEntry.first;
-//             for (auto& tierEntry : varEntry.second)
-//             {
-//                 int tier_id = tierEntry.first;
-//                 for (auto& chunkEntry : tierEntry.second)
-//                 {
-//                     Chunk &chunk = chunkEntry.second;
-//                     int chunk_id = chunk.id;
-//                     if (chunk.data_fragments.size() + chunk.parity_fragments.size() < chunk.data_fragments[0].k) 
-//                     {
-//                         chunksToRetransmit[var_name][tier_id].push_back(chunk_id);
-                
-//                         chunk.data_fragments.clear();
-//                         chunk.parity_fragments.clear();
-//                     }
-//                 }
-//             }       
-//         }
-//         request_retransmit(chunksToRetransmit);
-//     }
-
-//     void convertFragmentsToVariables(const std::unordered_map<std::string, std::unordered_map<int, std::unordered_map<int, Chunk>>>& received_fragments, std::vector<Variable>& variables)
-//     {
-//         for (const auto& varEntry : received_fragments)
-//         {
-//             Variable variable;
-//             variable.var_name = varEntry.first;
-            
-//             for (const auto& tierEntry : varEntry.second)
-//             {
-//                 Tier tier;
-//                 tier.id = tierEntry.first;
-                
-//                 for (const auto& chunkEntry : tierEntry.second)
-//                 {
-//                     Chunk chunk;
-//                     chunk.id = chunkEntry.first;
-//                     chunk.data_fragments = chunkEntry.second.data_fragments;
-//                     chunk.parity_fragments = chunkEntry.second.parity_fragments;
-
-//                     // Assuming k, m, w, hd are the same for all fragments in a chunk
-//                     if (!chunk.data_fragments.empty())
-//                     {
-//                         chunk.data_fragments.front().k = chunkEntry.second.data_fragments.front().k;
-//                         chunk.data_fragments.front().m = chunkEntry.second.data_fragments.front().m;
-//                         chunk.data_fragments.front().w = chunkEntry.second.data_fragments.front().w;
-//                         chunk.data_fragments.front().hd = chunkEntry.second.data_fragments.front().hd;
-//                     }
-
-//                     tier.chunks.push_back(chunk);
-//                 }
-
-//                 // Assuming k, m, w, hd are the same for all chunks in a tier
-//                 if (!tier.chunks.empty())
-//                 {
-//                     tier.k = tier.chunks.front().data_fragments.front().k;
-//                     tier.m = tier.chunks.front().data_fragments.front().m;
-//                     tier.w = tier.chunks.front().data_fragments.front().w;
-//                     tier.hd = tier.chunks.front().data_fragments.front().hd;
-//                 }
-
-//                 variable.tiers.push_back(tier);
-//             }
-
-//             variables.push_back(variable);
-//         }
-//     }
-
-//     void wait()
-//     {
-//         socket.async_receive_from(boost::asio::buffer(recv_buffer),
-//                                   remote_endpoint,
-//                                   boost::bind(&BoostReceiver::handle_receive,
-//                                               this,
-//                                               boost::asio::placeholders::error,
-//                                               boost::asio::placeholders::bytes_transferred));
-//     }
-
-//     void handle_timeout(const boost::system::error_code &error)
-//     {
-//         if (!error)
-//         {
-//             std::cout << "No new data received for " << TIMEOUT_DURATION_SECONDS << " seconds. Stopping.\n";
-//             socket.cancel();
-//         }
-//     }
-
-//     void Receiver()
-//     {
-//         socket.open(udp::v4());
-//         socket.bind(udp::endpoint(address::from_string(IPADDRESS), UDP_PORT));
-
-//         wait();
-
-//         // // Set initial timer for TIMEOUT_DURATION_SECONDS seconds
-//         // timer.expires_from_now(boost::posix_time::seconds(TIMEOUT_DURATION_SECONDS));
-//         // timer.async_wait(boost::bind(&BoostReceiver::handle_timeout, this, boost::asio::placeholders::error));
-
-//         std::cout << "Receiving\n";
-//         io_service.run();
-//         std::cout << "Receiver exit\nStarting recovery\n";
-
-//         for (size_t i = 0; i < receivedPackets.size(); i++)
-//         {
-//             std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
-//         }
-//         std::cout << "Total received: " << totalReceived << std::endl;
-
-//         for (int i = 0; i < variables.size(); i++)
-//         {
-//             restoreData(variables[i], 0, totalSites, unavailableSites, rawDataName);
-//         }
-
-//         for (size_t i = 0; i < receivedPackets.size(); i++)
-//         {
-//             std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
-//         }
-//         std::cout << "Total received: " << totalReceived << std::endl;
-//     }
-// };
 
 class PocoReceiver {
     int receivedPacketsCounter = 0;

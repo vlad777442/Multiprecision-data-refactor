@@ -146,7 +146,7 @@ class Receiver:
         total_overall = self.end_time - self.sender.start_time
         print(f"Total time from the beginning to the end: {total_overall}")
 
-        return total
+        return total_overall
 
     def print_lost_chunks_per_tier(self):
         print("Printing total amount of retransmitted chunks")
@@ -241,7 +241,7 @@ def fragment_gen(tier_frags_num, tier_m, n):
 
 # n = 32
 # frag_size = 2048
-# t_trans = 0.015
+# t_trans = 0.0152
 # tier_sizes = [5474475, 22402608, 45505266, 150891984]
 # tier_m = [0,0,0,0]
 # number_of_chunks = []
@@ -283,7 +283,7 @@ def fragment_gen(tier_frags_num, tier_m, n):
 top_times = []
 t_trans = 0.0152
 
-for i in range(18):
+for i in range(17):
     # for j in range(32):
     #     for k in range(32):
     #         for l in range(32):
@@ -308,7 +308,7 @@ for i in range(18):
 
                 env.process(sender.send())
                 env.process(receiver.receive())
-                env.process(pkt_loss.expovariate_loss_gen(10))
+                env.process(pkt_loss.expovariate_loss_gen(50))
 
                 env.run(until=SIM_DURATION)
 

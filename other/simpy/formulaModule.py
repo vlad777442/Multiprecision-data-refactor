@@ -69,9 +69,9 @@ class TransmissionTimeCalculator:
         min_times = []
         
         for i in range(16):
-            for j in range(8):
-                for k in range(8):
-                    for l in range(8):
+            for j in range(16):
+                for k in range(16):
+                    for l in range(16):
                         current_m = [i, j, k, l]
                         # print("m:", current_m)
                         E_Toverall = self.calculate_expected_total_transmission_time_for_all_tiers(current_m)
