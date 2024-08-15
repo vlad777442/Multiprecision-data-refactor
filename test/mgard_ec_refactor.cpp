@@ -371,6 +371,130 @@ void addTimestamp(DATA::Fragment& message) {
     message.set_timestamp(millis);
 }
 
+void handle_retransmission_request(boost::asio::io_service& io_service, udp::socket& socket, std::vector<DATA::Fragment>& fragments) {
+    boost::array<char, 16384> recv_buffer;
+    udp::endpoint remote_endpoint;
+    boost::system::error_code ec;
+
+    std::unordered_map<std::string, std::unordered_map<int, std::vector<int>>> missingChunks;
+
+    std::cout << "Waiting for retransmission requests..." << std::endl;
+
+    while (true) {
+        socket.receive_from(boost::asio::buffer(recv_buffer), remote_endpoint, 0, ec);
+
+        if (!ec) {
+            DATA::Fragment received_request;
+            if (received_request.ParseFromArray(recv_buffer.data(), recv_buffer.size())) {
+                if (received_request.fragment_id() == -2) { // Retransmission request
+                    missingChunks[received_request.var_name()][received_request.tier_id()].push_back(received_request.chunk_id());
+                } else if (received_request.fragment_id() == -3) { // End of missing chunk requests
+                    break; // Exit the loop and start retransmitting
+                }
+            }
+        } else {
+            std::cerr << "Receive failed: " << ec.message() << std::endl;
+        }
+    }
+
+    // Now retransmit the requested fragments
+
+    for (const auto& [var_name, tiers] : missingChunks) {
+        for (const auto& [tier_id, chunk_ids] : tiers) {
+            for (int chunk_id : chunk_ids) {
+                std::cout << "Retransmitting missing fragment: Variable: " << var_name << ", Tier: " << tier_id << ", Chunk: " << chunk_id << std::endl;
+                for (const auto& fragment : fragments) {
+                    if (fragment.var_name() == var_name &&
+                        fragment.tier_id() == tier_id &&
+                        fragment.chunk_id() == chunk_id) {
+
+                        std::string serialized_fragment;
+                        if (fragment.SerializeToString(&serialized_fragment)) {
+                            socket.send_to(boost::asio::buffer(serialized_fragment), remote_endpoint, 0, ec);
+                            if (ec) {
+                                std::cerr << "Send failed: " << ec.message() << std::endl;
+                            }
+                        } else {
+                            std::cerr << "Failed to serialize fragment for retransmission." << std::endl;
+                        }
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    }
+                }
+            }
+        }
+    }
+
+    std::cout << "Retransmission of missing fragments completed." << std::endl;
+}
+
+void handle_retransmission_requests(boost::asio::io_service& io_service, udp::socket& socket, const std::vector<DATA::Fragment>& fragments, const udp::endpoint& receiver_endpoint) {
+    std::cout << "Waiting for retransmission requests..." << std::endl;
+    boost::array<char, 16384> recv_buffer;
+    udp::endpoint sender_endpoint;
+    std::vector<DATA::Fragment> retransmission_queue;
+
+    while (true) {
+        boost::system::error_code ec;
+        size_t bytes_received = socket.receive_from(boost::asio::buffer(recv_buffer), sender_endpoint, 0, ec);
+
+        if (ec) {
+            std::cerr << "Receive failed: " << ec.message() << std::endl;
+            continue;
+        }
+
+        DATA::Fragment request;
+        if (!request.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_received))) {
+            std::cerr << "Failed to parse retransmission request." << std::endl;
+            continue;
+        }
+
+        if (request.fragment_id() == -3) {
+            std::cout << "End of retransmission requests received." << std::endl;
+            break;
+        }
+
+        if (request.fragment_id() == -2) {
+            std::cout << "Retransmitting request received: Variable: " << request.var_name() << ", Tier: " << request.tier_id() << ", Chunk: " << request.chunk_id() << std::endl;
+            retransmission_queue.push_back(request);
+        }
+    }
+
+    // Process all retransmission requests
+    std::cout << "Processing " << retransmission_queue.size() << " retransmission requests." << std::endl;
+    for (const auto& request : retransmission_queue) {
+        std::cout << "Retransmitting fragment: Variable: " << request.var_name() << ", Tier: " << request.tier_id() << ", Chunk: " << request.chunk_id() << std::endl;
+        auto it = std::find_if(fragments.begin(), fragments.end(),
+            [&request](const DATA::Fragment& f) {
+                return f.var_name() == request.var_name() &&
+                       f.tier_id() == request.tier_id() &&
+                       f.chunk_id() == request.chunk_id();
+            });
+        if (it != fragments.end()) {
+            std::string serialized_fragment;
+            if (it->SerializeToString(&serialized_fragment)) {
+                socket.send_to(boost::asio::buffer(serialized_fragment), receiver_endpoint);
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            } else {
+                std::cerr << "Failed to serialize fragment for retransmission." << std::endl;
+            }
+        } else {
+            std::cerr << "Requested fragment not found." << std::endl;
+        }
+    }
+
+    // Send end of retransmission message
+    DATA::Fragment eor;
+    eor.set_fragment_id(-1);  // Using -1 to indicate the end of retransmission
+    std::string serialized_eor;
+    eor.SerializeToString(&serialized_eor);
+    for (size_t i = 0; i < 10; i++) {
+        socket.send_to(boost::asio::buffer(serialized_eor), receiver_endpoint);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    std::cout << "Retransmission completed." << std::endl;
+}
+
 void send_messages_boost(boost::asio::io_service& io_service, const std::string& host, const std::string& port, std::vector<DATA::Fragment>& fragments) {
     udp::socket socket(io_service, udp::v4());
     udp::resolver resolver(io_service);
@@ -387,15 +511,14 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
             std::cerr << "Failed to serialize fragment." << std::endl;
             continue;
         }
-
         socket.send_to(boost::asio::buffer(serialized_fragment), *iter);
-
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
         if (ec) {
             std::cerr << "Send failed: " << ec.message() << std::endl;
         }
         packetsSent++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+
     // Send an EOT message
     DATA::Fragment eot;
     eot.set_fragment_id(-1);  // Using -1 to indicate the end of transmission
@@ -403,45 +526,12 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
     eot.SerializeToString(&serialized_eot);
     for (size_t i = 0; i < 10; i++) {
         socket.send_to(boost::asio::buffer(serialized_eot), *iter);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     std::cout << "Packets sent: " << packetsSent << std::endl;
-}
 
-void listen_for_retransmission_requests(boost::asio::io_service& io_service, const std::string& listen_host, const std::string& listen_port, std::vector<DATA::Fragment>& fragments) {
-    udp::socket socket(io_service, udp::v4());
-    udp::resolver resolver(io_service);
-    udp::resolver::query query(udp::v4(), listen_host, listen_port);
-    udp::resolver::iterator iter = resolver.resolve(query);
-    socket.bind(*iter);
-
-    for (;;) {
-        boost::array<char, 16384> recv_buffer;
-        udp::endpoint remote_endpoint;
-        size_t len = socket.receive_from(boost::asio::buffer(recv_buffer), remote_endpoint);
-
-        // Parse the retransmission request and retransmit the corresponding fragments
-        DATA::Fragment request_fragment;
-        if (request_fragment.ParseFromArray(recv_buffer.data(), static_cast<int>(len))) {
-            // Handle retransmission logic here
-            int chunk_id = request_fragment.chunk_id();
-            int tier_id = request_fragment.tier_id();
-            std::string var_name = request_fragment.var_name();
-            std::cout << "Retransmission request received for Variable: " << var_name << ", Tier: " << tier_id << ", Chunk: " << chunk_id << std::endl;
-
-            // Find and retransmit the requested fragment(s)
-            for (const auto& fragment : fragments) {
-                if (fragment.var_name() == var_name && fragment.tier_id() == tier_id && fragment.chunk_id() == chunk_id) {
-                    std::string serialized_fragment;
-                    if (!fragment.SerializeToString(&serialized_fragment)) {
-                        std::cerr << "Failed to serialize fragment." << std::endl;
-                        continue;
-                    }
-                    socket.send_to(boost::asio::buffer(serialized_fragment), remote_endpoint);
-                }
-            }
-        }
-    }
+    handle_retransmission_requests(io_service, socket, fragments, *iter);
 }
 
 void send_protobuf_vector_boost(boost::asio::io_context& io_context, const std::string& host, const std::string& port, const std::vector<DATA::Fragment>& messages) {
@@ -1494,7 +1584,7 @@ int main(int argc, char *argv[])
         break;
     }
     boost::asio::io_service io_service;
-    boost::thread listen_thread(boost::bind(&listen_for_retransmission_requests, boost::ref(io_service), "127.0.0.1", "11000", boost::ref(fragments)));
+    // boost::thread listen_thread(boost::bind(&listen_for_retransmission_requests, boost::ref(io_service), "127.0.0.1", "11000", boost::ref(fragments)));
     send_messages_boost(io_service, IPADDRESS, std::to_string(UDP_PORT), fragments);
     // sendProtobufVectorPoco("localhost", 12345, fragments);
     // boost::asio::io_context io_context;
