@@ -3,12 +3,13 @@ from scipy.special import comb
 
 class TransmissionTimeCalculator:
     
-    def __init__(self, tier_sizes, frag_size, t, Tretrans, lam):
+    def __init__(self, tier_sizes, frag_size, t, Tretrans, lam, rate_fragment):
         self.tier_sizes = tier_sizes
         self.frag_size = frag_size
         self.t = t
         self.Tretrans = Tretrans
         self.lam = lam
+        self.rate_fragment = rate_fragment
     
     @staticmethod
     def poisson_pmf(lambda_val, T, m0):
@@ -42,13 +43,24 @@ class TransmissionTimeCalculator:
     def calculate_lambda(lost_fragments, Ttrans):
         return lost_fragments / Ttrans
 
-    def expected_total_transmission_time(self, S0, s, t, Tretrans, m0, lam):
+    def expected_total_transmission_time2(self, S0, s, t, Tretrans, m0, lam):
         Nchunk = S0 / ((32 - m0) * s)
         Nchunk = math.ceil(Nchunk)
         Ttrans = self.get_chunk_transmission_time(t)
         P_N_leq_m0 = self.poisson_cdf(lam, Ttrans, m0)
         p = P_N_leq_m0
         E_Ttotal0 = Nchunk * Ttrans / p
+        return E_Ttotal0
+    
+    def expected_total_transmission_time(self, S0, s, t_trans, Tretrans, m0, lam):
+        rate_chunk = self.rate_fragment / 32
+        Nchunk = S0 / ((32 - m0) * s)
+        Nchunk = math.ceil(Nchunk)
+        Ttrans = self.get_chunk_transmission_time(t_trans)
+        P_N_leq_m0 = self.poisson_cdf(lam, Ttrans, m0)
+        p = P_N_leq_m0
+        # E_Ttotal0 = Nchunk * Ttrans / p
+        E_Ttotal0 = t_trans - 1 / rate_chunk + Nchunk / (p * rate_chunk)
         return E_Ttotal0
 
     def calculate_expected_total_transmission_time_for_all_tiers(self, ms):
@@ -69,10 +81,11 @@ class TransmissionTimeCalculator:
         min_times = []
         
         for i in range(16):
-            for j in range(8):
-                for k in range(8):
-                    for l in range(8):
-                        current_m = [i, j, k, l]
+            # for j in range(8):
+            #     for k in range(8):
+            #         for l in range(8):
+                        # current_m = [i, j, k, l]
+                        current_m = [i, i, i, i]
                         # print("m:", current_m)
                         E_Toverall = self.calculate_expected_total_transmission_time_for_all_tiers(current_m)
                         
@@ -81,7 +94,7 @@ class TransmissionTimeCalculator:
                             best_m = current_m
 
                         min_times.append((E_Toverall, current_m))
-                        min_times = sorted(min_times, key=lambda x: x[0])[:10]
+                        min_times = sorted(min_times, key=lambda x: x[0])[:17]
         optimal_m = {}
         tier = 0
         for m in best_m:
@@ -94,11 +107,12 @@ n = 32
 frag_size = 2048
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
 tier_m = [16, 8, 4, 2]
-t = 0.001     # Time to transmit one fragment in seconds
-Tretrans = 0.001  # Retransmission time in seconds
+t = 0.0152     # Time to transmit one fragment in seconds
+Tretrans = 0.0152  # Retransmission time in seconds
 lam = 10    # Expected number of events in a given interval
+rate_fragment = 1 / t
 
-calculator = TransmissionTimeCalculator(tier_sizes, frag_size, t, Tretrans, lam)
+calculator = TransmissionTimeCalculator(tier_sizes, frag_size, t, Tretrans, lam, rate_fragment)
 E_Toverall = calculator.calculate_expected_total_transmission_time_for_all_tiers(tier_m)
 print(f"Expected total transmission time for all tiers: {E_Toverall} seconds")
 
