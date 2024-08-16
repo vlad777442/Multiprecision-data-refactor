@@ -2,7 +2,7 @@ import simpy
 import random
 import math
 
-SIM_DURATION = 100000
+SIM_DURATION = 50000000
 
 class Link:
     """This class represents the data transfer through a network link."""
@@ -84,7 +84,7 @@ class Receiver:
         """A process which consumes packets."""
         while True:
             pkt = yield self.link.get()
-            print(f'Received {pkt} at {self.env.now}')
+            # print(f'Received {pkt} at {self.env.now}')
             if pkt["tier"] == -1:
                 self.check_all_fragments_received()
             else:
@@ -143,6 +143,8 @@ class Receiver:
             total += end_time - start_time
             print(f"Tier {tier} receiving time: {end_time - start_time}")
         print(f"Total receiving time, which includes retransmission time for other tiers: {total}")
+        if self.end_time is None:
+            self.end_time = self.env.now
         total_overall = self.end_time - self.sender.start_time
         print(f"Total time from the beginning to the end: {total_overall}")
 
@@ -245,20 +247,21 @@ def fragment_gen(tier_frags_num, tier_m, n):
 # tier_sizes = [5474475, 22402608, 45505266, 150891984]
 # tier_m = [0,0,0,0]
 # number_of_chunks = []
+# rate = 1 / t_trans
 
 # tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
 
 # all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, tier_m, n)
 
 # link = Link(env, t_trans)
-# sender = Sender(env, link, 1000, all_tier_frags)
+# sender = Sender(env, link, rate, all_tier_frags)
 # receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
 # pkt_loss = PacketLossGen(env, link)
 
 # env.process(sender.send())
 # env.process(receiver.receive())
-# env.process(pkt_loss.expovariate_loss_gen(10))
-# # env.process(pkt_loss.weibullvariate_loss_gen(0.05, 4))
+# # env.process(pkt_loss.expovariate_loss_gen(10))
+# env.process(pkt_loss.weibullvariate_loss_gen(0.05, 2))
 # # env.process(pkt_loss.weibullvariate_loss_gen(alpha=0.1, beta=1))
 
 # env.run(until=SIM_DURATION)
@@ -282,6 +285,7 @@ def fragment_gen(tier_frags_num, tier_m, n):
 
 top_times = []
 t_trans = 0.0152
+rate = 1 / t_trans
 
 for i in range(17):
     # for j in range(32):
@@ -302,13 +306,14 @@ for i in range(17):
                 all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
 
                 link = Link(env, t_trans)
-                sender = Sender(env, link, 1000, all_tier_frags)
+                sender = Sender(env, link, rate, all_tier_frags)
                 receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
                 pkt_loss = PacketLossGen(env, link)
 
                 env.process(sender.send())
                 env.process(receiver.receive())
-                env.process(pkt_loss.expovariate_loss_gen(50))
+                env.process(pkt_loss.expovariate_loss_gen(10))
+                # env.process(pkt_loss.weibullvariate_loss_gen(0.8, 1.5))
 
                 env.run(until=SIM_DURATION)
 

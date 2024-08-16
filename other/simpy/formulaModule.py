@@ -15,9 +15,14 @@ class TransmissionTimeCalculator:
     def poisson_pmf(lambda_val, T, m0):
         return (lambda_val * T)**m0 * math.exp(-lambda_val * T) / math.factorial(m0)
 
+    # @staticmethod
+    # def poisson_cdf(lambda_val, T, m0):
+    #     cumulative_sum = sum((lambda_val * T)**k * math.exp(-lambda_val * T) / math.factorial(k) for k in range(m0 + 1))
+    #     return cumulative_sum
     @staticmethod
-    def poisson_cdf(lambda_val, T, m0):
-        cumulative_sum = sum((lambda_val * T)**k * math.exp(-lambda_val * T) / math.factorial(k) for k in range(m0 + 1))
+    def poisson_cdf(lambda_val, T, m0, rate_fragment):
+        new_time = T + 31 / rate_fragment
+        cumulative_sum = sum((lambda_val * new_time)**k * math.exp(-lambda_val * new_time) / math.factorial(k) for k in range(m0 + 1))
         return cumulative_sum
 
     @staticmethod
@@ -56,8 +61,9 @@ class TransmissionTimeCalculator:
         rate_chunk = self.rate_fragment / 32
         Nchunk = S0 / ((32 - m0) * s)
         Nchunk = math.ceil(Nchunk)
-        Ttrans = self.get_chunk_transmission_time(t_trans)
-        P_N_leq_m0 = self.poisson_cdf(lam, Ttrans, m0)
+        # Ttrans = self.get_chunk_transmission_time(t_trans)
+        # P_N_leq_m0 = self.poisson_cdf(lam, Ttrans, m0, self.rate_fragment)
+        P_N_leq_m0 = self.poisson_cdf(lam, t_trans, m0, self.rate_fragment)
         p = P_N_leq_m0
         # E_Ttotal0 = Nchunk * Ttrans / p
         E_Ttotal0 = t_trans - 1 / rate_chunk + Nchunk / (p * rate_chunk)
@@ -106,7 +112,7 @@ class TransmissionTimeCalculator:
 n = 32
 frag_size = 2048
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
-tier_m = [16, 8, 4, 2]
+tier_m = [0,0,0,0]
 t = 0.0152     # Time to transmit one fragment in seconds
 Tretrans = 0.0152  # Retransmission time in seconds
 lam = 10    # Expected number of events in a given interval

@@ -4,7 +4,7 @@ import math
 from formulaModule import TransmissionTimeCalculator
 import threading
 
-SIM_DURATION = 100000
+SIM_DURATION = 600000
 CHUNK_BATCH_SIZE = 10 # Number of chunks after which the sender sends a control message
 
 class Link:
@@ -362,24 +362,25 @@ tier_m = [0,0,0,0]
 # t_retrans = 0.001
 t_trans = 0.0152
 t_retrans = 0.0152
+rate = 1 / t_trans
 lambd = 10
 number_of_chunks = []
 min_times = []
-calculator = TransmissionTimeCalculator(tier_sizes, frag_size, t_trans, t_retrans, lambd)
+calculator = TransmissionTimeCalculator(tier_sizes, frag_size, t_trans, t_retrans, lambd, rate)
 min_time, tier_m, min_times = calculator.find_min_time_configuration()
 
 tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
 
 
 link = Link(env, t_trans)
-sender = Sender(env, link, 1000, tier_frags_num, tier_m, n, calculator)
+sender = Sender(env, link, rate, tier_frags_num, tier_m, n, calculator)
 receiver = Receiver(env, link, sender)
 pkt_loss = PacketLossGen(env, link)
 
 env.process(sender.send())
 env.process(receiver.receive())
 env.process(pkt_loss.expovariate_loss_gen(lambd))
-# env.process(pkt_loss.weibullvariate_loss_gen(0.05, 4))
+env.process(pkt_loss.weibullvariate_loss_gen(0.5, 1.5))
 
 env.run(until=SIM_DURATION)
 print(tier_frags_num)
