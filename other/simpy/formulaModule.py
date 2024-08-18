@@ -20,9 +20,9 @@ class TransmissionTimeCalculator:
     #     cumulative_sum = sum((lambda_val * T)**k * math.exp(-lambda_val * T) / math.factorial(k) for k in range(m0 + 1))
     #     return cumulative_sum
     @staticmethod
-    def poisson_cdf(lambda_val, T, m0, rate_fragment):
-        new_time = T + 31 / rate_fragment
-        cumulative_sum = sum((lambda_val * new_time)**k * math.exp(-lambda_val * new_time) / math.factorial(k) for k in range(m0 + 1))
+    def poisson_cdf(lambda_val, t_frag, m0, rate_fragment):
+        t_chunk = t_frag + 31 / rate_fragment
+        cumulative_sum = sum((lambda_val * t_chunk)**k * math.exp(-lambda_val * t_chunk) / math.factorial(k) for k in range(m0 + 1))
         return cumulative_sum
 
     @staticmethod
