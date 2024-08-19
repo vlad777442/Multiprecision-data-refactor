@@ -1114,6 +1114,7 @@ class Fragment PROTOBUF_FINAL :
     kFragmentIdFieldNumber = 16,
     kVarLevelsFieldNumber = 20,
     kTimestampFieldNumber = 26,
+    kSequenceNumberFieldNumber = 27,
     kVarTiersFieldNumber = 25,
   };
   // repeated uint32 var_dimensions = 18;
@@ -1464,6 +1465,15 @@ class Fragment PROTOBUF_FINAL :
   void _internal_set_timestamp(::PROTOBUF_NAMESPACE_ID::uint64 value);
   public:
 
+  // uint64 sequence_number = 27;
+  void clear_sequence_number();
+  ::PROTOBUF_NAMESPACE_ID::uint64 sequence_number() const;
+  void set_sequence_number(::PROTOBUF_NAMESPACE_ID::uint64 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint64 _internal_sequence_number() const;
+  void _internal_set_sequence_number(::PROTOBUF_NAMESPACE_ID::uint64 value);
+  public:
+
   // uint32 var_tiers = 25;
   void clear_var_tiers();
   ::PROTOBUF_NAMESPACE_ID::uint32 var_tiers() const;
@@ -1507,6 +1517,7 @@ class Fragment PROTOBUF_FINAL :
   ::PROTOBUF_NAMESPACE_ID::uint32 fragment_id_;
   ::PROTOBUF_NAMESPACE_ID::uint32 var_levels_;
   ::PROTOBUF_NAMESPACE_ID::uint64 timestamp_;
+  ::PROTOBUF_NAMESPACE_ID::uint64 sequence_number_;
   ::PROTOBUF_NAMESPACE_ID::uint32 var_tiers_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_fragment_2eproto;
@@ -3879,6 +3890,26 @@ inline void Fragment::_internal_set_timestamp(::PROTOBUF_NAMESPACE_ID::uint64 va
 inline void Fragment::set_timestamp(::PROTOBUF_NAMESPACE_ID::uint64 value) {
   _internal_set_timestamp(value);
   // @@protoc_insertion_point(field_set:DATA.Fragment.timestamp)
+}
+
+// uint64 sequence_number = 27;
+inline void Fragment::clear_sequence_number() {
+  sequence_number_ = PROTOBUF_ULONGLONG(0);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 Fragment::_internal_sequence_number() const {
+  return sequence_number_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 Fragment::sequence_number() const {
+  // @@protoc_insertion_point(field_get:DATA.Fragment.sequence_number)
+  return _internal_sequence_number();
+}
+inline void Fragment::_internal_set_sequence_number(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  
+  sequence_number_ = value;
+}
+inline void Fragment::set_sequence_number(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  _internal_set_sequence_number(value);
+  // @@protoc_insertion_point(field_set:DATA.Fragment.sequence_number)
 }
 
 // -------------------------------------------------------------------

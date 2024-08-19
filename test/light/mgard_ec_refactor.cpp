@@ -377,12 +377,14 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
     udp::resolver::query query(udp::v4(), host, port);
     udp::resolver::iterator iter = resolver.resolve(query);
     int packetsSent = 0;
+    uint64_t sequenceNumber = 0;
     boost::system::error_code ec;
 
     auto start = std::chrono::steady_clock::now();
     while (std::chrono::duration_cast<std::chrono::minutes>(std::chrono::steady_clock::now() - start).count() < 30) {
         for (auto& fragment : fragments) {
             addTimestamp(fragment);
+            fragment.set_sequence_number(sequenceNumber++);
             std::string serialized_fragment;
             if (!fragment.SerializeToString(&serialized_fragment)) {
                 std::cerr << "Failed to serialize fragment." << std::endl;
@@ -411,6 +413,12 @@ void send_messages_boost(boost::asio::io_service& io_service, const std::string&
         socket.send_to(boost::asio::buffer(serialized_eot), *iter);
     }
     std::cout << "Packets sent: " << packetsSent << std::endl;
+
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    double actualTransmissionRate = packetsSent / elapsed.count();  // packets per second
+
+    std::cout << "Actual transmission rate: " << actualTransmissionRate << " packets/second" << std::endl;
 }
 
 void listen_for_retransmission_requests(boost::asio::io_service& io_service, const std::string& listen_host, const std::string& listen_port, std::vector<DATA::Fragment>& fragments) {

@@ -70,6 +70,7 @@ message Fragment {
   SquaredErrorsTable var_squared_errors = 24;
   uint32 var_tiers = 25;
   uint64 timestamp = 26;
+  uint64 sequence_number = 27;
 }
 
 message VariableCollection {

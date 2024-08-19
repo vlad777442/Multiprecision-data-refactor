@@ -1163,6 +1163,9 @@ struct BoostReceiver {
     int receivedPacketsCounter = 0;
     std::vector<DATA::Fragment> received_fragments;
 
+    std::set<uint64_t> receivedSequenceNumbers;
+    uint64_t highestSequenceNumber = 0;
+
     void handle_receive(const boost::system::error_code &error, size_t bytes_transferred) {
         if (error) {
             std::cout << "Receive failed: " << error.message() << "\n";
@@ -1182,6 +1185,9 @@ struct BoostReceiver {
             auto transmission_time = receive_millis - send_millis;
 
             std::cout << "Transmission time: " << transmission_time << " ns" << std::endl;
+
+            receivedSequenceNumbers.insert(received_message.sequence_number());
+            highestSequenceNumber = std::max(highestSequenceNumber, received_message.sequence_number());
 
             totalReceived++;
             Fragment myFragment;
@@ -1244,6 +1250,18 @@ struct BoostReceiver {
         }
     }
 
+    void calculatePacketLoss() {
+        uint64_t expectedPackets = highestSequenceNumber + 1;
+        uint64_t receivedPackets = receivedSequenceNumbers.size();
+        uint64_t lostPackets = expectedPackets - receivedPackets;
+        double packetLossRate = static_cast<double>(lostPackets) / expectedPackets * 100.0;
+
+        std::cout << "Expected packets: " << expectedPackets << std::endl;
+        std::cout << "Received packets: " << receivedPackets << std::endl;
+        std::cout << "Lost packets: " << lostPackets << std::endl;
+        std::cout << "Packet loss rate: " << packetLossRate << "%" << std::endl;
+    }
+
     void Receiver() {
         socket.open(udp::v4());
         socket.bind(udp::endpoint(address::from_string(IPADDRESS), UDP_PORT));
@@ -1258,17 +1276,25 @@ struct BoostReceiver {
         for (size_t i = 0; i < receivedPackets.size(); i++) {
             std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
         }
-        std::cout << "Total received: " << totalReceived << std::endl;
+        
 
-        variableManager.printVariables();
+        // variableManager.printVariables();
 
-        for (int i = 0; i < variableManager.getVariables().size(); i++) {
-            restoreData(variableManager.getVariables()[i], 0, totalSites, unavailableSites, rawDataName);
-        }
+        // for (int i = 0; i < variableManager.getVariables().size(); i++) {
+        //     restoreData(variableManager.getVariables()[i], 0, totalSites, unavailableSites, rawDataName);
+        // }
 
         for (size_t i = 0; i < receivedPackets.size(); i++) {
             std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
         }
+
+        std::cout << "Missing packets ids: " << std::endl;
+        for (size_t i = 0; i < receivedSequenceNumbers.size(); i++) {
+            if (receivedSequenceNumbers.find(i) == receivedSequenceNumbers.end()) {
+                std::cout << i << " ";
+            }
+        }
+        calculatePacketLoss();
         std::cout << "Total received: " << totalReceived << std::endl;
     }
 };

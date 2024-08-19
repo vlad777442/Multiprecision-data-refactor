@@ -248,6 +248,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_fragment_2eproto::offsets[] PR
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_squared_errors_),
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, var_tiers_),
   PROTOBUF_FIELD_OFFSET(::DATA::Fragment, timestamp_),
+  PROTOBUF_FIELD_OFFSET(::DATA::Fragment, sequence_number_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::DATA::VariableCollection, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -275,9 +276,9 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 16, -1, sizeof(::DATA::Variable)},
   { 30, -1, sizeof(::DATA::Tier)},
   { 42, -1, sizeof(::DATA::Fragment)},
-  { 73, -1, sizeof(::DATA::VariableCollection)},
-  { 79, -1, sizeof(::DATA::RetransmissionRequest_ChunkRequest)},
-  { 87, -1, sizeof(::DATA::RetransmissionRequest)},
+  { 74, -1, sizeof(::DATA::VariableCollection)},
+  { 80, -1, sizeof(::DATA::RetransmissionRequest_ChunkRequest)},
+  { 88, -1, sizeof(::DATA::RetransmissionRequest)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -304,7 +305,7 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "rrorsTable\022\r\n\005tiers\030\t \001(\r\"y\n\004Tier\022\n\n\002id\030"
   "\001 \001(\005\022\t\n\001k\030\002 \001(\005\022\t\n\001m\030\003 \001(\005\022\t\n\001w\030\004 \001(\005\022\n"
   "\n\002hd\030\005 \001(\005\022\027\n\017ec_backend_name\030\006 \001(\t\022\037\n\027e"
-  "ncoded_fragment_length\030\007 \001(\004\"\277\004\n\010Fragmen"
+  "ncoded_fragment_length\030\007 \001(\004\"\330\004\n\010Fragmen"
   "t\022\t\n\001k\030\001 \001(\005\022\t\n\001m\030\002 \001(\005\022\t\n\001w\030\003 \001(\005\022\n\n\002hd"
   "\030\004 \001(\005\022\027\n\017ec_backend_name\030\005 \001(\014\022\037\n\027encod"
   "ed_fragment_length\030\006 \001(\r\022\013\n\003idx\030\007 \001(\r\022\014\n"
@@ -319,12 +320,13 @@ const char descriptor_table_protodef_fragment_2eproto[] PROTOBUF_SECTION_VARIABL
   "le_content\030\027 \001(\0132\020.DATA.QueryTable\0224\n\022va"
   "r_squared_errors\030\030 \001(\0132\030.DATA.SquaredErr"
   "orsTable\022\021\n\tvar_tiers\030\031 \001(\r\022\021\n\ttimestamp"
-  "\030\032 \001(\004\"7\n\022VariableCollection\022!\n\tvariable"
-  "s\030\001 \003(\0132\016.DATA.Variable\"\230\001\n\025Retransmissi"
-  "onRequest\022:\n\010requests\030\001 \003(\0132(.DATA.Retra"
-  "nsmissionRequest.ChunkRequest\032C\n\014ChunkRe"
-  "quest\022\020\n\010var_name\030\001 \001(\t\022\017\n\007tier_id\030\002 \001(\005"
-  "\022\020\n\010chunk_id\030\003 \001(\005b\006proto3"
+  "\030\032 \001(\004\022\027\n\017sequence_number\030\033 \001(\004\"7\n\022Varia"
+  "bleCollection\022!\n\tvariables\030\001 \003(\0132\016.DATA."
+  "Variable\"\230\001\n\025RetransmissionRequest\022:\n\010re"
+  "quests\030\001 \003(\0132(.DATA.RetransmissionReques"
+  "t.ChunkRequest\032C\n\014ChunkRequest\022\020\n\010var_na"
+  "me\030\001 \001(\t\022\017\n\007tier_id\030\002 \001(\005\022\020\n\010chunk_id\030\003 "
+  "\001(\005b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_fragment_2eproto_deps[1] = {
 };
@@ -340,7 +342,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_fra
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_fragment_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_fragment_2eproto = {
-  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 1306,
+  false, false, descriptor_table_protodef_fragment_2eproto, "fragment.proto", 1331,
   &descriptor_table_fragment_2eproto_once, descriptor_table_fragment_2eproto_sccs, descriptor_table_fragment_2eproto_deps, 8, 0,
   schemas, file_default_instances, TableStruct_fragment_2eproto::offsets,
   file_level_metadata_fragment_2eproto, 8, file_level_enum_descriptors_fragment_2eproto, file_level_service_descriptors_fragment_2eproto,
@@ -2103,6 +2105,13 @@ const char* Fragment::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::i
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
+      // uint64 sequence_number = 27;
+      case 27:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 216)) {
+          sequence_number_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
       default: {
       handle_unusual:
         if ((tag & 7) == 4 || tag == 0) {
@@ -2299,6 +2308,12 @@ failure:
   if (this->timestamp() != 0) {
     target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(26, this->_internal_timestamp(), target);
+  }
+
+  // uint64 sequence_number = 27;
+  if (this->sequence_number() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(27, this->_internal_sequence_number(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -2507,6 +2522,13 @@ size_t Fragment::ByteSizeLong() const {
         this->_internal_timestamp());
   }
 
+  // uint64 sequence_number = 27;
+  if (this->sequence_number() != 0) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
+        this->_internal_sequence_number());
+  }
+
   // uint32 var_tiers = 25;
   if (this->var_tiers() != 0) {
     total_size += 2 +
@@ -2613,6 +2635,9 @@ void Fragment::MergeFrom(const Fragment& from) {
   }
   if (from.timestamp() != 0) {
     _internal_set_timestamp(from._internal_timestamp());
+  }
+  if (from.sequence_number() != 0) {
+    _internal_set_sequence_number(from._internal_sequence_number());
   }
   if (from.var_tiers() != 0) {
     _internal_set_var_tiers(from._internal_var_tiers());
