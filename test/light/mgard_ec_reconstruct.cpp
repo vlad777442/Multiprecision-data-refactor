@@ -1169,6 +1169,29 @@ struct BoostReceiver {
     std::vector<std::set<uint64_t>> receivedSequenceNumbersPerWindow;
     std::chrono::steady_clock::time_point windowStart;
     const int windowDuration = 1000;
+    std::vector<long long> transmission_times;
+
+    void calculatePacketLossAfterTransmission() {
+        for (size_t i = 0; i < receivedSequenceNumbersPerWindow.size(); ++i) {
+            const std::set<uint64_t>& receivedInWindow = receivedSequenceNumbersPerWindow[i];
+
+            // Determine the range of sequence numbers for this window
+            uint64_t windowStartSeq = i * (highestSequenceNumber + 1) / receivedSequenceNumbersPerWindow.size();
+            uint64_t windowEndSeq = (i + 1) * (highestSequenceNumber + 1) / receivedSequenceNumbersPerWindow.size();
+
+            uint64_t expectedPacketsInWindow = windowEndSeq - windowStartSeq;
+            uint64_t receivedPacketsInWindow = receivedInWindow.size();
+            uint64_t lostPacketsInWindow = expectedPacketsInWindow - receivedPacketsInWindow;
+
+            double packetLossRateInWindow = static_cast<double>(lostPacketsInWindow) / expectedPacketsInWindow * 100.0;
+
+            std::cout << "Window " << i + 1 << ": " << std::endl;
+            std::cout << "Expected packets: " << expectedPacketsInWindow << std::endl;
+            std::cout << "Received packets: " << receivedPacketsInWindow << std::endl;
+            std::cout << "Lost packets: " << lostPacketsInWindow << std::endl;
+            std::cout << "Packet loss rate: " << packetLossRateInWindow << "%" << std::endl;
+        }
+    }
 
     void handle_receive(const boost::system::error_code &error, size_t bytes_transferred) {
         if (error) {
@@ -1180,16 +1203,8 @@ struct BoostReceiver {
         if (!received_message.ParseFromArray(recv_buffer.data(), static_cast<int>(bytes_transferred))) {
             std::cerr << "Failed to parse the received data as a protobuf message." << std::endl;
         } else if (!received_message.var_name().empty() && 
-                   received_message.tier_id() != -1 && 
-                   received_message.chunk_id() != -1) {
-
-            auto now = std::chrono::high_resolution_clock::now();
-            auto duration = now.time_since_epoch();
-            auto receive_millis = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-            auto send_millis = received_message.timestamp();
-            auto transmission_time = receive_millis - send_millis;
-
-            std::cout << "Transmission time: " << transmission_time << " ns" << std::endl;
+                received_message.tier_id() != -1 && 
+                received_message.chunk_id() != -1) {
 
             receivedSequenceNumbers.insert(received_message.sequence_number());
             highestSequenceNumber = std::max(highestSequenceNumber, received_message.sequence_number());
@@ -1198,38 +1213,22 @@ struct BoostReceiver {
             auto now2 = std::chrono::steady_clock::now();
             auto elapsed_millis = std::chrono::duration_cast<std::chrono::milliseconds>(now2 - windowStart).count();
             if (elapsed_millis >= windowDuration) {
+                // Store the sequence numbers for this window and reset for the next window
                 receivedSequenceNumbersPerWindow.push_back(receivedSequenceNumbers);
                 receivedSequenceNumbers.clear();
                 windowStart = now2;
             }
 
             totalReceived++;
-            Fragment myFragment;
-            setFragment(received_message, myFragment);
-
-            // Check if the variable already exists
-            auto it = std::find_if(variableManager.getVariables().begin(), variableManager.getVariables().end(),
-                                   [&](const Variable& var) { return var.var_name == received_message.var_name(); });
-
-            if (it != variableManager.getVariables().end()) {
-                // Update existing variable
-                variableManager.updateFragment(myFragment, received_message.var_name());
-            } else {
-                // Create a new variable and add it to the manager
-                Variable var1;
-                setVariable(received_message, var1);
-                variableManager.addVariable(var1);
-                variableManager.updateFragment(myFragment, received_message.var_name());
-            }
-
-            receivedPacketsCounter++;
         } else if (received_message.fragment_id() == -1) {
             std::cout << "End of transmission received" << std::endl;
             std::cout << "Total received: " << totalReceived << std::endl;
+
+            // Calculate packet loss for all windows after transmission ends
+            calculatePacketLossAfterTransmission();
+
             socket.close(); // Stop receiving data
             return;
-        } else {
-            std::cerr << "Received message is null or incomplete." << std::endl;
         }
 
         wait();
@@ -1276,22 +1275,6 @@ struct BoostReceiver {
         std::cout << "Packet loss rate: " << packetLossRate << "%" << std::endl;
     }
 
-    void calculatePacketLossPerWindow() {
-    for (size_t i = 0; i < receivedSequenceNumbersPerWindow.size(); i++) {
-        const auto& receivedSequenceNumbersInWindow = receivedSequenceNumbersPerWindow[i];
-        uint64_t expectedPackets = receivedSequenceNumbersInWindow.size() + 1;  // Last sequence number + 1
-        uint64_t receivedPackets = receivedSequenceNumbersInWindow.size();
-        uint64_t lostPackets = expectedPackets - receivedPackets;
-        double packetLossRate = static_cast<double>(lostPackets) / expectedPackets * 100.0;
-
-        std::cout << "Time window " << i << ":" << std::endl;
-        std::cout << "  Expected packets: " << expectedPackets << std::endl;
-        std::cout << "  Received packets: " << receivedPackets << std::endl;
-        std::cout << "  Lost packets: " << lostPackets << std::endl;
-        std::cout << "  Packet loss rate: " << packetLossRate << "%" << std::endl;
-    }
-}
-
     void Receiver() {
         socket.open(udp::v4());
         socket.bind(udp::endpoint(address::from_string(IPADDRESS), UDP_PORT));
@@ -1301,7 +1284,7 @@ struct BoostReceiver {
         std::cout << "Receiving\n";
         io_service.run();
         std::cout << "Receiver exit\nStarting recovery\n";
-        variableManager.printVariables();
+        // variableManager.printVariables();
 
         for (size_t i = 0; i < receivedPackets.size(); i++) {
             std::cout << "Variable: " << i << " received packets: " << receivedPackets[i] << std::endl;
@@ -1325,7 +1308,6 @@ struct BoostReceiver {
             }
         }
         calculatePacketLoss();
-        calculatePacketLossPerWindow();
         std::cout << "Total received: " << totalReceived << std::endl;
     }
 };
