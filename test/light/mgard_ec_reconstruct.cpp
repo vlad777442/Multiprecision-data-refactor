@@ -1170,6 +1170,15 @@ struct BoostReceiver {
     std::vector<long long> transmission_times;
     std::chrono::steady_clock::time_point windowStart;
     const int windowDuration = 1000;
+    const int windowSize = 1000; // Define window size (e.g., 1000 packets per window)
+
+    void trackSequenceNumberPerWindow(uint64_t sequenceNumber) {
+        int windowIndex = sequenceNumber / windowSize;
+        if (windowIndex >= receivedSequenceNumbersPerWindow.size()) {
+            receivedSequenceNumbersPerWindow.resize(windowIndex + 1);
+        }
+        receivedSequenceNumbersPerWindow[windowIndex].insert(sequenceNumber);
+    }
 
     void handle_receive(const boost::system::error_code &error, size_t bytes_transferred) {
         if (error) {
@@ -1187,6 +1196,7 @@ struct BoostReceiver {
             // Update the received sequence numbers and transmission times
             receivedSequenceNumbers.insert(received_message.sequence_number());
             highestSequenceNumber = std::max(highestSequenceNumber, received_message.sequence_number());
+            trackSequenceNumberPerWindow(received_message.sequence_number());
             transmission_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - windowStart).count());
 
             if (totalReceived % 50000 == 0) {
@@ -1239,14 +1249,32 @@ struct BoostReceiver {
     }
 
     void calculatePacketLossAfterTransmission() {
+        int totalLost = 0;
         for (size_t i = 0; i < receivedSequenceNumbersPerWindow.size(); i++) {
-            size_t expectedPackets = receivedSequenceNumbersPerWindow[i].empty() ? 0 : *receivedSequenceNumbersPerWindow[i].rbegin() + 1;
-            size_t receivedPackets = receivedSequenceNumbersPerWindow[i].size();
-            size_t lostPackets = expectedPackets - receivedPackets;
+            uint64_t windowStart = i * windowSize;
+            uint64_t windowEnd = (i + 1) * windowSize - 1;
+            
+            // Adjust the last window end to the highest received sequence number
+            if (i == receivedSequenceNumbersPerWindow.size() - 1) {
+                windowEnd = highestSequenceNumber;
+            }
+
+            uint64_t expectedPackets = windowEnd - windowStart + 1;
+            uint64_t receivedPackets = receivedSequenceNumbersPerWindow[i].size();
+            uint64_t lostPackets = expectedPackets - receivedPackets;
             double packetLossRate = static_cast<double>(lostPackets) / expectedPackets * 100.0;
 
-            std::cout << "Window " << i << " packet loss: " << lostPackets << " out of " << expectedPackets << " (" << packetLossRate << "%)" << std::endl;
+            if (lostPackets != 0) {
+                totalLost += lostPackets;
+                std::cout << "Window " << i << " (Seq " << windowStart << " - " << windowEnd << "):" << std::endl;
+                std::cout << "  Expected packets: " << expectedPackets << std::endl;
+                std::cout << "  Received packets: " << receivedPackets << std::endl;
+                std::cout << "  Lost packets: " << lostPackets << std::endl;
+                std::cout << "  Packet loss rate: " << packetLossRate << "%" << std::endl;
+                std::cout << std::endl;
+            }
         }
+        std::cout << "Received sequence numbers: " << receivedSequenceNumbers.size() << std::endl;
     }
 
     void Receiver() {
@@ -1281,7 +1309,7 @@ struct BoostReceiver {
                 std::cout << i << " ";
             }
         }
-        
+        calculatePacketLossAfterTransmission();
         std::cout << "Total received: " << totalReceived << std::endl;
     }
 };
