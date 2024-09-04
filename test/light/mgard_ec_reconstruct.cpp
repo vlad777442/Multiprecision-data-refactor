@@ -1169,13 +1169,18 @@ struct BoostReceiver {
     std::vector<std::set<uint64_t>> receivedSequenceNumbersPerWindow;
     std::vector<long long> transmission_times;
     std::chrono::steady_clock::time_point windowStart;
-    const int windowDuration = 1000;
     const int windowSize = 1000; // Define window size (e.g., 1000 packets per window)
+    std::vector<double> packetLossPerWindow;
+    std::vector<std::chrono::steady_clock::time_point> windowStartTimes;
+    std::vector<std::chrono::steady_clock::time_point> windowEndTimes;
 
     void trackSequenceNumberPerWindow(uint64_t sequenceNumber) {
         int windowIndex = sequenceNumber / windowSize;
         if (windowIndex >= receivedSequenceNumbersPerWindow.size()) {
             receivedSequenceNumbersPerWindow.resize(windowIndex + 1);
+            windowStartTimes.resize(windowIndex + 1);
+            windowEndTimes.resize(windowIndex + 1);
+            windowStartTimes[windowIndex] = std::chrono::steady_clock::now();
         }
         receivedSequenceNumbersPerWindow[windowIndex].insert(sequenceNumber);
     }
@@ -1199,11 +1204,13 @@ struct BoostReceiver {
             trackSequenceNumberPerWindow(received_message.sequence_number());
             transmission_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - windowStart).count());
 
+            if (receivedSequenceNumbersPerWindow[receivedSequenceNumbersPerWindow.size() - 1].size() == windowSize) {
+                windowEndTimes[windowEndTimes.size() - 1] = std::chrono::steady_clock::now();
+            }
+
             if (totalReceived % 50000 == 0) {
                 std::cout << "Received " << totalReceived << " packets" << std::endl;
             }
-
-            
 
             totalReceived++;
         } else if (received_message.fragment_id() == -1) {
@@ -1249,7 +1256,7 @@ struct BoostReceiver {
     }
 
     void calculatePacketLossAfterTransmission() {
-        int totalLost = 0;
+        double totalPacketLoss = 0.0;
         for (size_t i = 0; i < receivedSequenceNumbersPerWindow.size(); i++) {
             uint64_t windowStart = i * windowSize;
             uint64_t windowEnd = (i + 1) * windowSize - 1;
@@ -1262,19 +1269,28 @@ struct BoostReceiver {
             uint64_t expectedPackets = windowEnd - windowStart + 1;
             uint64_t receivedPackets = receivedSequenceNumbersPerWindow[i].size();
             uint64_t lostPackets = expectedPackets - receivedPackets;
-            double packetLossRate = static_cast<double>(lostPackets) / expectedPackets * 100.0;
+            auto windowDuration = std::chrono::duration_cast<std::chrono::milliseconds>(windowEndTimes[i] - windowStartTimes[i]).count();
+            double packetLossRate = static_cast<double>(lostPackets) / (windowDuration / 1000.0);
+
+            packetLossPerWindow.push_back(packetLossRate);
 
             if (lostPackets != 0) {
-                totalLost += lostPackets;
                 std::cout << "Window " << i << " (Seq " << windowStart << " - " << windowEnd << "):" << std::endl;
                 std::cout << "  Expected packets: " << expectedPackets << std::endl;
                 std::cout << "  Received packets: " << receivedPackets << std::endl;
                 std::cout << "  Lost packets: " << lostPackets << std::endl;
-                std::cout << "  Packet loss rate: " << packetLossRate << "%" << std::endl;
+                std::cout << "  Packet loss rate: " << packetLossRate << " packets/s" << std::endl;
                 std::cout << std::endl;
             }
         }
-        std::cout << "Received sequence numbers: " << receivedSequenceNumbers.size() << std::endl;
+
+        double averagePacketLoss = 0.0;
+        for (double loss : packetLossPerWindow) {
+            averagePacketLoss += loss;
+        }
+        averagePacketLoss /= packetLossPerWindow.size();
+
+        std::cout << "Average packet loss: " << averagePacketLoss << " packets/s" << std::endl;
     }
 
     void Receiver() {
@@ -1309,7 +1325,7 @@ struct BoostReceiver {
                 std::cout << i << " ";
             }
         }
-        calculatePacketLossAfterTransmission();
+        
         std::cout << "Total received: " << totalReceived << std::endl;
     }
 };
