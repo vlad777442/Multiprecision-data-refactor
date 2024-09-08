@@ -87,26 +87,45 @@ class TransmissionTimeCalculator:
         min_times = []
         
         for i in range(16):
-            # for j in range(8):
-            #     for k in range(8):
-            #         for l in range(8):
-                        # current_m = [i, j, k, l]
-                        current_m = [i, i, i, i]
-                        # print("m:", current_m)
-                        E_Toverall = self.calculate_expected_total_transmission_time_for_all_tiers(current_m)
-                        
-                        if E_Toverall < min_time:
-                            min_time = E_Toverall
-                            best_m = current_m
+            current_m = [i, i, i, i]
+            E_Toverall = self.calculate_expected_total_transmission_time_for_all_tiers(current_m)
+            
+            if E_Toverall < min_time:
+                min_time = E_Toverall
+                best_m = current_m
 
-                        min_times.append((E_Toverall, current_m))
-                        min_times = sorted(min_times, key=lambda x: x[0])[:17]
+            min_times.append((E_Toverall, current_m))
+            min_times = sorted(min_times, key=lambda x: x[0])[:17]
+        
         optimal_m = {}
         tier = 0
         for m in best_m:
             optimal_m[tier] = m
             tier += 1
         return min_time, optimal_m, min_times
+    
+    def get_all_E_Toverall_values(self):
+        all_E_Toverall = []
+        
+        for i in range(17):
+            current_m = [i, i, i, i]
+            E_Toverall = self.calculate_expected_total_transmission_time_for_all_tiers(current_m)
+            all_E_Toverall.append((E_Toverall, current_m))
+        
+        return all_E_Toverall
+    
+
+    def find_configurations_within_time_limit(self, time_limit):
+        all_E_Toverall_values = self.get_all_E_Toverall_values()
+        configurations_within_limit = [config for config in all_E_Toverall_values if config[0] <= time_limit]
+        
+        if configurations_within_limit:
+            closest_config = min(configurations_within_limit, key=lambda x: time_limit - x[0])
+        else:
+            print("No configurations found within the time limit, choosing the closest one")
+            closest_config = min(all_E_Toverall_values, key=lambda x: x[0])
+        
+        return closest_config
 
 # Example usage
 n = 32
