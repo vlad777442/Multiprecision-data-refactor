@@ -2,7 +2,7 @@ import simpy
 import random
 import math
 from formulaModule import TransmissionTimeCalculator
-import threading
+import matplotlib.pyplot as plt
 
 SIM_DURATION = 600000
 CHUNK_BATCH_SIZE = 10 # Number of chunks after which the sender sends a control message
@@ -44,6 +44,8 @@ class Sender:
         self.fragments_sent = 0
         self.control_messages = simpy.Store(env) 
         self.calculator = calculator
+        self.lambdas = []
+        self.lambda_file = open("lambdas.txt", "w")
 
     def send(self):
         """A process which generates and sends fragments by chunk."""
@@ -112,6 +114,8 @@ class Sender:
             new_lambda = self.calculator.calculate_lambda(lost_fragments, transmission_time)
             print(f"New lambda: {new_lambda}")
             self.calculator.lam = new_lambda
+            self.lambdas.append(new_lambda)
+            self.lambda_file.write(f"{new_lambda}\n")
             min_time, best_m, _ = self.calculator.find_min_time_configuration()
             print(f"New m parameters: {best_m}")
             self.env.process(self.update_m_parameters(best_m))
@@ -193,7 +197,8 @@ class Receiver:
                 self.last_frag_time = self.env.now
                 # with self.lock:  # Acquire the lock
                     # self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time)
-                self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time, pkt["fragments_sent"])
+                if self.fragment_count > 0:
+                    self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time, pkt["fragments_sent"])
                 self.first_frag_time = None
                 self.fragment_count = 0
             else:
@@ -301,19 +306,34 @@ class PacketLossGen:
         self.env = env
         self.link = link
 
+        self.scale = 0
+        self.shape = 0
+        self.scale_decrease_rate = 0
+        self.time = 0
+
     def expovariate_loss_gen(self, lambd):
         while True:
             yield self.env.timeout(random.expovariate(lambd))
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
-    def weibullvariate_loss_gen(self, alpha, beta):
+    def weibullvariate_loss_gen(self, initial_scale, shape, scale_decrease_rate):
         # alpha is scale
         # beta is shape. 
         # If β < 1: This models a decreasing failure rate over time.
         # If β > 1: This models an increasing failure rate over time
+        self.scale = initial_scale
+        self.shape = shape
+        self.scale_decrease_rate = scale_decrease_rate
+        self.time = 0
+
         while True:
-            yield self.env.timeout(random.weibullvariate(alpha, beta))
+            interval = random.weibullvariate(self.scale, self.shape)
+            yield self.env.timeout(interval)
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
+
+            # Update scale to increase packet loss over time
+            self.time += interval
+            self.scale = max(0.01, initial_scale - self.scale_decrease_rate * self.time)
 
     def random_loss_gen(self, min_time, max_time):
         while True:
@@ -357,7 +377,7 @@ env = simpy.Environment()
 n = 32
 frag_size = 2048
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
-tier_m = [0,0,0,0]
+tier_m = [3, 3, 3, 3]
 # t_trans = 0.001
 # t_retrans = 0.001
 t_trans = 0.0152
@@ -379,8 +399,8 @@ pkt_loss = PacketLossGen(env, link)
 
 env.process(sender.send())
 env.process(receiver.receive())
-env.process(pkt_loss.expovariate_loss_gen(lambd))
-env.process(pkt_loss.weibullvariate_loss_gen(0.5, 1.5))
+# env.process(pkt_loss.expovariate_loss_gen(lambd))
+env.process(pkt_loss.weibullvariate_loss_gen(0.8, 2.0, 0.0002))
 
 env.run(until=SIM_DURATION)
 print(tier_frags_num)
@@ -389,56 +409,9 @@ print_statistics(receiver)
 receiver.print_tier_receiving_times()
 receiver.print_lost_chunks_per_tier()
 
-# chunks_per_tier = {}
-# for t in all_tier_frags:
-#     for f in t:
-#         if f["tier"] in chunks_per_tier:
-#             chunks_per_tier[f["tier"]] += 1
-#         else:
-#             chunks_per_tier[f["tier"]] = 1
-# res = 0
-# for i in chunks_per_tier:
-#     print(f"Tier: {i}, total amount of chunks: {math.ceil(chunks_per_tier[i] / 32)}")
-#     res += math.ceil(chunks_per_tier[i] / 32)
-# print("Total:", res)
-
-# top_times = []
-
-# for i in range(32):
-#     for j in range(32):
-#         for k in range(32):
-#             for l in range(32):
-#                 current_m = [i, j, k, l]
-#                 print(f'Running simulation with current_m = {current_m}')
-                
-#                 env = simpy.Environment()
-#                 n = 32
-#                 frag_size = 2048
-#                 tier_sizes = [5474475, 22402608, 45505266, 150891984]
-#                 number_of_chunks = []
-
-#                 tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
-
-#                 all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
-
-#                 link = Link(env, 0.001)
-#                 sender = Sender(env, link, 1000, all_tier_frags)
-#                 receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
-#                 pkt_loss = PacketLossGen(env, link)
-
-#                 env.process(sender.send())
-#                 env.process(receiver.receive())
-#                 # env.process(pkt_loss.expovariate_loss_gen(10))
-#                 env.process(pkt_loss.weibullvariate_loss_gen(1.2, 10))
-
-#                 env.run(until=SIM_DURATION)
-
-#                 total_time = receiver.print_tier_receiving_times()
-#                 top_times.append((total_time, current_m))
-
-#                 # Keep only the top 10 minimum times
-#                 top_times = sorted(top_times, key=lambda x: x[0])[:10]
-
-# print("Top 10 configurations with minimum times:")
-# for time, config in top_times:
-#     print(f'Time: {time}, Configuration: {config}')
+# Plot the lambdas after the simulation
+plt.plot(sender.lambdas)
+plt.xlabel('Iteration')
+plt.ylabel('Lambda')
+plt.title('Lambda values over time')
+plt.show()
