@@ -4,8 +4,14 @@ from formulaModule import TransmissionTimeCalculator
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import numpy as np
+import pandas as pd
+from statsmodels.tsa.arima.model import ARIMA
+from prophet import Prophet
+from keras.models import Sequential
+from keras.layers import LSTM, Dense
 
-SIM_DURATION = 600000
+SIM_DURATION = 10000
 CHUNK_BATCH_SIZE = 10 # Number of chunks after which the sender sends a control message
 
 class Link:
@@ -45,8 +51,10 @@ class Sender:
         self.fragments_sent = 0
         self.control_messages = simpy.Store(env) 
         self.calculator = calculator
-        self.lambdas = []
+        self.lambda_history = []
         self.lambda_file = open("lambdas.txt", "w")
+        self.ema_alpha = 0.3  # Smoothing factor for EMA
+
 
     def send(self):
         """A process which generates and sends fragments by chunk."""
@@ -115,13 +123,69 @@ class Sender:
             new_lambda = self.calculator.calculate_lambda(lost_fragments, transmission_time)
             print(f"New lambda: {new_lambda}")
             self.calculator.lam = new_lambda
-            self.lambdas.append(new_lambda)
+            self.lambda_history.append(new_lambda)
             self.lambda_file.write(f"{new_lambda}\n")
-            min_time, best_m, _ = self.calculator.find_min_time_configuration()
-            print(f"New m parameters: {best_m}")
-            self.env.process(self.update_m_parameters(best_m))
+
+            predicted_lambda = self.predict_lambda_prophet()
+            predicted_m = self.calculate_m_for_lambda(predicted_lambda)
+            
+            print(f"Predicted lambda: {predicted_lambda}")
+            print(f"Predicted m parameters: {predicted_m}")
+            self.env.process(self.update_m_parameters(predicted_m))
         yield self.env.timeout(0)
 
+    def predict_lambda_ema(self):
+        """Predict lambda using Exponential Moving Average."""
+        if len(self.lambda_history) < 2:
+            return self.lambda_history[-1]
+        
+        ema = self.lambda_history[-1]
+        for i in range(len(self.lambda_history) - 2, -1, -1):
+            ema = self.ema_alpha * self.lambda_history[i] + (1 - self.ema_alpha) * ema
+        
+        return ema
+    
+    def predict_lambda_prophet(self):
+        """Predict lambda using Prophet."""
+        if len(self.lambda_history) < 10:  # Need sufficient history for Prophet
+            return self.predict_lambda_ema()
+        
+        df = pd.DataFrame({'ds': pd.date_range(start='2021-01-01', periods=len(self.lambda_history)), 
+                           'y': self.lambda_history})
+        model = Prophet()
+        model.fit(df)
+        future = model.make_future_dataframe(periods=1)
+        forecast = model.predict(future)
+        return forecast['yhat'].iloc[-1]
+
+    def predict_lambda_lstm(self):
+        """Predict lambda using LSTM."""
+        if len(self.lambda_history) < 50:  # Need substantial history for LSTM
+            return self.predict_lambda_ema()
+        
+        # Prepare data
+        X = np.array(self.lambda_history[:-1]).reshape(-1, 1, 1)
+        y = np.array(self.lambda_history[1:])
+        
+        # Create and train model
+        model = Sequential()
+        model.add(LSTM(4, input_shape=(1,1)))
+        model.add(Dense(1))
+        model.compile(loss='mean_squared_error', optimizer='adam')
+        model.fit(X, y, epochs=100, batch_size=1, verbose=0)
+        
+        # Make prediction
+        last_lambda = np.array([self.lambda_history[-1]]).reshape(1,1,1)
+        predicted_lambda = model.predict(last_lambda)
+        return predicted_lambda[0][0]
+    
+    def calculate_m_for_lambda(self, predicted_lambda):
+        """Calculate m values directly for the predicted lambda."""
+        # Use the calculator to find the best m values for the predicted lambda
+        self.calculator.lam = predicted_lambda
+        _, best_m, _ = self.calculator.find_min_time_configuration()
+        return best_m
+    
     def retransmit_chunks(self, missing_chunks):
         """Retransmit all fragments of missing chunks using new erasure coding parameters."""
         self.fragments_sent = 0
@@ -198,8 +262,9 @@ class Receiver:
                 self.last_frag_time = self.env.now
                 # with self.lock:  # Acquire the lock
                     # self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time)
-                self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time, pkt["fragments_sent"])
-                self.first_frag_time = None
+                if self.first_frag_time is not None:
+                    self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time, pkt["fragments_sent"])
+                    self.first_frag_time = None
                 self.fragment_count = 0
             else:
                 tier = pkt["tier"]
@@ -264,7 +329,7 @@ class Receiver:
                         self.lost_chunk_per_tier[tier] = 1
 
         if missing_chunks:
-
+            print("Retransmitting missing chunks")
             # min_time, best_m, _ = self.calculator.find_min_time_configuration()
             # print(f"New m parameters: {best_m}")
 
@@ -272,6 +337,9 @@ class Receiver:
             self.env.process(self.sender.retransmit_chunks(missing_chunks))
         else:
             self.end_time = self.env.now
+            receiver.print_tier_receiving_times()
+            receiver.print_lost_chunks_per_tier()
+            # raise simpy.exceptions.StopSimulation("No missing chunks, stopping simulation.")
         # else:
         #     self.all_frags_received = True
 
@@ -301,30 +369,72 @@ class Receiver:
             print(f"Tier: {tier}, amount of retransmitted chunks: {self.lost_chunk_per_tier[tier]}")
 
 class PacketLossGen:
-
-    def __init__(self, env, link):
+    def __init__(self, env, link, sender):
         self.env = env
         self.link = link
+        self.sender = sender
+        self.current_tier = 0
+        self.tier_progress = [0] * len(sender.tier_frags_num)
+
+    def weibull_loss_gen(self, scale):
+        while True:
+            # Determine the current tier and progress
+            total_sent = sum(self.tier_progress)
+            current_tier_total = self.sender.tier_frags_num[self.current_tier]
+            
+            # Check if we've moved to the next tier
+            while self.current_tier < len(self.sender.tier_frags_num) - 1 and \
+                  self.tier_progress[self.current_tier] >= current_tier_total:
+                self.current_tier += 1
+                current_tier_total = self.sender.tier_frags_num[self.current_tier]
+
+            # Calculate progress within the current tier
+            tier_progress = self.tier_progress[self.current_tier] / current_tier_total
+
+            # Determine the shape parameter based on tier progress
+            if tier_progress < 1/3:
+                shape = 0.5
+            elif tier_progress < 2/3:
+                shape = 1.0
+            else:
+                shape = 3.0
+
+            # Generate the interval between packet losses using Weibull distribution
+            interval = random.weibullvariate(scale, shape)
+            yield self.env.timeout(interval)
+            self.link.loss.put(f'A packet loss occurred at {self.env.now}, shape: {shape}, tier: {self.current_tier}')
+
+            # Update the progress for the current tier
+            self.tier_progress[self.current_tier] += 1
+
+            # Check if we've finished all tiers
+            if self.current_tier == len(self.sender.tier_frags_num) - 1 and \
+               self.tier_progress[self.current_tier] >= current_tier_total:
+                break
+
+    def update_progress(self, tier, fragments_sent):
+        """Update the progress for a specific tier."""
+        self.tier_progress[tier] = fragments_sent
 
     def expovariate_loss_gen(self, lambd):
         while True:
             yield self.env.timeout(random.expovariate(lambd))
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
-    def weibull_loss_gen(self, scale, shape):
-        # alpha is scale
-        # beta is shape. 
-        # If β < 1: This models a decreasing failure rate over time.
-        # If β > 1: This models an increasing failure rate over time
-        while True:
-            interval = random.weibullvariate(scale, shape)
-            yield self.env.timeout(interval)
-            self.link.loss.put(f'A packet loss occurred at {self.env.now}')
-            weibull_vals.append(interval)
-        # while True:
-        #     # Generate the interval between packet losses using Weibull distribution
-        #     interval = np.random.weibull(shape) * scale
-        #     yield self.env.timeout(interval)
+    # def weibull_loss_gen(self, scale, shape):
+    #     # alpha is scale
+    #     # beta is shape. 
+    #     # If β < 1: This models a decreasing failure rate over time.
+    #     # If β > 1: This models an increasing failure rate over time
+    #     while True:
+    #         interval = random.weibullvariate(scale, shape)
+    #         yield self.env.timeout(interval)
+    #         self.link.loss.put(f'A packet loss occurred at {self.env.now}')
+    #         weibull_vals.append(interval)
+    #     # while True:
+    #     #     # Generate the interval between packet losses using Weibull distribution
+    #     #     interval = np.random.weibull(shape) * scale
+    #     #     yield self.env.timeout(interval)
         #     self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
     def random_loss_gen(self, min_time, max_time):
@@ -333,13 +443,44 @@ class PacketLossGen:
             yield self.env.timeout(interval)
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
-    def increasing_loss_gen(self, initial_interval, decay_rate):
+    def increasing_loss_gen(self, initial_interval, decay_rate, max_loss_rate=0.1):
         current_time = 0
         while True:
+            # Calculate the interval based on the exponential decay
             interval = initial_interval * math.exp(-decay_rate * current_time)
+            
+            # Calculate the current loss rate (packets per unit time)
+            current_loss_rate = 1 / interval
+            
+            # If the current loss rate exceeds the maximum, adjust the interval
+            if current_loss_rate > max_loss_rate:
+                interval = 1 / max_loss_rate
+            
             yield self.env.timeout(interval)
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
             current_time += interval
+
+    # def weibull_loss_gen(self, scale):
+    #     while True:
+    #         # Get the current number of sent fragments
+    #         current_fragments = self.sender.fragments_sent
+
+    #         # Determine the current phase and shape parameter
+    #         if current_fragments < self.total_fragments / 3:
+    #             shape = 0.5
+    #         elif current_fragments < 2 * self.total_fragments / 3:
+    #             shape = 1.0
+    #         else:
+    #             shape = 3.0
+
+    #         # Generate the interval between packet losses using Weibull distribution
+    #         interval = random.weibullvariate(scale, shape)
+    #         yield self.env.timeout(interval)
+    #         self.link.loss.put(f'A packet loss occurred at {self.env.now}, shape: {shape}')
+
+    #         # Check if we've reached the end of the transmission
+    #         # if current_fragments >= self.total_fragments:
+    #         #     break
 
 def print_statistics(receiver):
     """Print statistics of the received fragments and calculate the recovery error."""
@@ -397,15 +538,19 @@ tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
 link = Link(env, t_trans)
 sender = Sender(env, link, rate, tier_frags_num, tier_m, n, calculator)
 receiver = Receiver(env, link, sender)
-pkt_loss = PacketLossGen(env, link)
+pkt_loss = PacketLossGen(env, link, sender)
 
 env.process(sender.send())
 env.process(receiver.receive())
 # env.process(pkt_loss.expovariate_loss_gen(lambd))
-# env.process(pkt_loss.weibull_loss_gen(scale, shape))
-env.process(pkt_loss.increasing_loss_gen(initial_interval=0.1, decay_rate=0.0001))
+# env.process(pkt_loss.weibull_loss_gen(scale))
+env.process(pkt_loss.increasing_loss_gen(initial_interval=0.1, decay_rate=0.001, max_loss_rate=17.0))
 
 env.run(until=SIM_DURATION)
+# try:
+#     env.run(until=SIM_DURATION)  # Run until StopSimulation is raised
+# except simpy.exceptions.StopSimulation as e:
+#     print(f"Simulation stopped: {e}")
 print(tier_frags_num)
 print_statistics(receiver)
 # print_statistics(receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
@@ -413,14 +558,13 @@ receiver.print_tier_receiving_times()
 receiver.print_lost_chunks_per_tier()
 
 # Plot the lambdas after the simulation
-# plt.plot(sender.lambdas)
-plt.plot(sender.lambdas)
+plt.plot(sender.lambda_history)
 plt.xlabel('Iteration')
 plt.ylabel('Lambda')
 plt.title(f'Lambda values over time scale={scale} shape={shape}')
 plt.show()
 
-plt.hist(sender.lambdas, bins=100, density=True)
+plt.hist(sender.lambda_history, bins=100, density=True)
 plt.xlabel('Iteration')
 plt.ylabel('Lambda')
 plt.title(f'Lambda values over time scale={scale} shape={shape}')
