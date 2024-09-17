@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-SIM_DURATION = 600000
+SIM_DURATION = 10000
 CHUNK_BATCH_SIZE = 10 # Number of chunks after which the sender sends a control message
 
 class Link:
@@ -147,20 +147,6 @@ class Sender:
         last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "last_fragment"}
         self.link.put(last_frag)
 
-    # def retransmit_chunks(self, missing_chunks):
-    #     """Retransmit all fragments of missing chunks using new erasure coding parameters."""
-    #     for tier, chunks in missing_chunks.items():
-    #         for chunk_id in chunks:
-    #             print(f"Retransmitting tier {tier} chunk {chunk_id}")
-    #             data_frags, parity_frags = self.generate_chunk_fragments(tier, chunk_id, self.tier_frags_num[tier])
-    #             for frag in data_frags + parity_frags:
-    #                 yield self.env.timeout(1.0 / self.rate)
-    #                 frag["time"] = self.env.now
-    #                 self.link.put(frag)
-        
-    #     last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "last_fragment"}
-    #     self.link.put(last_frag)
-
     def update_m_parameters(self, new_m):
         """Update the m parameters without retransmitting immediately."""
         for tier, m_value in new_m.items():
@@ -198,8 +184,9 @@ class Receiver:
                 self.last_frag_time = self.env.now
                 # with self.lock:  # Acquire the lock
                     # self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time)
-                self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time, pkt["fragments_sent"])
-                self.first_frag_time = None
+                if self.first_frag_time is not None:
+                    self.send_received_fragments_count(self.fragment_count, self.last_frag_time - self.first_frag_time, pkt["fragments_sent"])
+                    self.first_frag_time = None
                 self.fragment_count = 0
             else:
                 tier = pkt["tier"]
@@ -264,7 +251,7 @@ class Receiver:
                         self.lost_chunk_per_tier[tier] = 1
 
         if missing_chunks:
-
+            print("Retransmitting missing chunks")
             # min_time, best_m, _ = self.calculator.find_min_time_configuration()
             # print(f"New m parameters: {best_m}")
 
@@ -272,6 +259,9 @@ class Receiver:
             self.env.process(self.sender.retransmit_chunks(missing_chunks))
         else:
             self.end_time = self.env.now
+            receiver.print_tier_receiving_times()
+            receiver.print_lost_chunks_per_tier()
+            # raise simpy.exceptions.StopSimulation("No missing chunks, stopping simulation.")
         # else:
         #     self.all_frags_received = True
 
@@ -301,17 +291,59 @@ class Receiver:
             print(f"Tier: {tier}, amount of retransmitted chunks: {self.lost_chunk_per_tier[tier]}")
 
 class PacketLossGen:
-
-    def __init__(self, env, link):
+    def __init__(self, env, link, sender):
         self.env = env
         self.link = link
+        self.sender = sender
+        self.current_tier = 0
+        self.tier_progress = [0] * len(sender.tier_frags_num)
+
+    def weibull_loss_gen(self, scale):
+        while True:
+            # Determine the current tier and progress
+            total_sent = sum(self.tier_progress)
+            current_tier_total = self.sender.tier_frags_num[self.current_tier]
+            
+            # Check if we've moved to the next tier
+            while self.current_tier < len(self.sender.tier_frags_num) - 1 and \
+                  self.tier_progress[self.current_tier] >= current_tier_total:
+                self.current_tier += 1
+                current_tier_total = self.sender.tier_frags_num[self.current_tier]
+
+            # Calculate progress within the current tier
+            tier_progress = self.tier_progress[self.current_tier] / current_tier_total
+
+            # Determine the shape parameter based on tier progress
+            if tier_progress < 1/3:
+                shape = 0.5
+            elif tier_progress < 2/3:
+                shape = 1.0
+            else:
+                shape = 3.0
+
+            # Generate the interval between packet losses using Weibull distribution
+            interval = random.weibullvariate(scale, shape)
+            yield self.env.timeout(interval)
+            self.link.loss.put(f'A packet loss occurred at {self.env.now}, shape: {shape}, tier: {self.current_tier}')
+
+            # Update the progress for the current tier
+            self.tier_progress[self.current_tier] += 1
+
+            # Check if we've finished all tiers
+            if self.current_tier == len(self.sender.tier_frags_num) - 1 and \
+               self.tier_progress[self.current_tier] >= current_tier_total:
+                break
+
+    def update_progress(self, tier, fragments_sent):
+        """Update the progress for a specific tier."""
+        self.tier_progress[tier] = fragments_sent
 
     def expovariate_loss_gen(self, lambd):
         while True:
             yield self.env.timeout(random.expovariate(lambd))
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
-    def weibull_loss_gen(self, scale, shape):
+    def weibull_loss_gen2params(self, scale, shape):
         # alpha is scale
         # beta is shape. 
         # If β < 1: This models a decreasing failure rate over time.
@@ -321,11 +353,44 @@ class PacketLossGen:
             yield self.env.timeout(interval)
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
             weibull_vals.append(interval)
-        # while True:
-        #     # Generate the interval between packet losses using Weibull distribution
-        #     interval = np.random.weibull(shape) * scale
-        #     yield self.env.timeout(interval)
-        #     self.link.loss.put(f'A packet loss occurred at {self.env.now}')
+            self.link.loss.put(f'A packet loss occurred at {self.env.now}')
+
+    def weibull_random_loss_gen(self, scale):
+        previous_loss_time = None
+        batch_counter = 0
+
+        while True:
+            # Determine the current tier and progress
+            total_sent = sum(self.tier_progress)
+            current_tier_total = self.sender.tier_frags_num[self.current_tier]
+
+            # Check if we've moved to the next tier
+            while self.current_tier < len(self.sender.tier_frags_num) - 1 and \
+                  self.tier_progress[self.current_tier] >= current_tier_total:
+                self.current_tier += 1
+                current_tier_total = self.sender.tier_frags_num[self.current_tier]
+
+            # Generate a random shape parameter between 0.5 and 3.0
+            if batch_counter == 0:
+                shape = random.uniform(0.5, 3.0)
+                previous_loss_time = random.weibullvariate(scale, shape)
+
+            # Same loss time for at least two CHUNK_BATCH_SIZEs
+            yield self.env.timeout(previous_loss_time)
+            self.link.loss.put(f'A packet loss occurred at {self.env.now}, shape: {shape}, tier: {self.current_tier}')
+
+            # Update the progress for the current tier
+            self.tier_progress[self.current_tier] += 1
+            batch_counter += 1
+
+            # Reset batch_counter after two CHUNK_BATCH_SIZEs
+            if batch_counter >= 2 * CHUNK_BATCH_SIZE:
+                batch_counter = 0
+
+            # Check if we've finished all tiers
+            if self.current_tier == len(self.sender.tier_frags_num) - 1 and \
+               self.tier_progress[self.current_tier] >= current_tier_total:
+                break
 
     def random_loss_gen(self, min_time, max_time):
         while True:
@@ -333,10 +398,19 @@ class PacketLossGen:
             yield self.env.timeout(interval)
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
-    def increasing_loss_gen(self, initial_interval, decay_rate):
+    def increasing_loss_gen(self, initial_interval, decay_rate, max_loss_rate=0.1):
         current_time = 0
         while True:
+            # Calculate the interval based on the exponential decay
             interval = initial_interval * math.exp(-decay_rate * current_time)
+            
+            # Calculate the current loss rate (packets per unit time)
+            current_loss_rate = 1 / interval
+            
+            # If the current loss rate exceeds the maximum, adjust the interval
+            if current_loss_rate > max_loss_rate:
+                interval = 1 / max_loss_rate
+            
             yield self.env.timeout(interval)
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
             current_time += interval
@@ -397,15 +471,20 @@ tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
 link = Link(env, t_trans)
 sender = Sender(env, link, rate, tier_frags_num, tier_m, n, calculator)
 receiver = Receiver(env, link, sender)
-pkt_loss = PacketLossGen(env, link)
+pkt_loss = PacketLossGen(env, link, sender)
 
 env.process(sender.send())
 env.process(receiver.receive())
 # env.process(pkt_loss.expovariate_loss_gen(lambd))
-# env.process(pkt_loss.weibull_loss_gen(scale, shape))
-env.process(pkt_loss.increasing_loss_gen(initial_interval=0.1, decay_rate=0.0001))
+# env.process(pkt_loss.weibull_loss_gen(scale))
+# env.process(pkt_loss.increasing_loss_gen(initial_interval=0.1, decay_rate=0.0002, max_loss_rate=18.0))
+env.process(pkt_loss.weibull_random_loss_gen(scale))
 
 env.run(until=SIM_DURATION)
+# try:
+#     env.run(until=SIM_DURATION)  # Run until StopSimulation is raised
+# except simpy.exceptions.StopSimulation as e:
+#     print(f"Simulation stopped: {e}")
 print(tier_frags_num)
 print_statistics(receiver)
 # print_statistics(receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
