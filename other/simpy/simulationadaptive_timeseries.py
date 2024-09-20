@@ -126,7 +126,8 @@ class Sender:
             self.lambda_history.append(new_lambda)
             self.lambda_file.write(f"{new_lambda}\n")
 
-            predicted_lambda = self.predict_lambda_prophet()
+            # predicted_lambda = self.predict_lambda_lstm()
+            predicted_lambda = self.predict_lambda_ema()
             predicted_m = self.calculate_m_for_lambda(predicted_lambda)
             
             print(f"Predicted lambda: {predicted_lambda}")
