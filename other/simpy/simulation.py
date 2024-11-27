@@ -1,9 +1,9 @@
 import simpy
 import random
-import math
 
-SIM_DURATION = 50000
+SIM_DURATION = 1000
 CHUNK_BATCH_SIZE = 10
+total_sent = 0
 
 class Link:
     """This class represents the data transfer through a network link."""
@@ -16,7 +16,7 @@ class Link:
 
     def transfer(self, value):
         yield self.env.timeout(self.delay)
-        if len(self.loss.items) and value["tier"] != -1:
+        if len(self.loss.items) and value["type"] != "last_frag":
             loss = yield self.loss.get()
             # print(f'{loss}, {value} got dropped')
         else:
@@ -41,13 +41,14 @@ class Sender:
         self.total_fragments = sum(self.tier_frags_num)
         self.fragments_sent = 0
         self.frag_counter = 0
-        # self.current_tier = 0
+        self.lost_frags = 0
 
     def send(self):
         """A process which randomly generates packets."""
+        global total_sent
         if self.start_time is None:
             self.start_time = self.env.now
-
+        
         for t in self.all_tier_frags:
             for f in t:
                 # wait for next transmission
@@ -56,16 +57,22 @@ class Sender:
                 self.link.put(f)
                 self.fragments_sent += 1
                 self.frag_counter += 1
-            # self.current_tier += 1
+                total_sent += 1
+           
             self.frag_counter = 0
 
-        last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "data"}
+        last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "last_frag"}
         self.link.put(last_frag)
 
     def retransmit_chunks(self, missing_chunks):
+        # for i in range(len(missing_chunks)):
+        #     yield self.env.timeout(1.0 / self.rate)
         """Retransmit all fragments of missing chunks."""
+        global total_sent
+        print("Sender: Retransmitting missing chunks", self.env.now)
         for tier, chunks in missing_chunks.items():
             for chunk_id in chunks:
+                self.lost_frags += 1
                 # print(f"Retransmitting tier {tier} chunk {chunk_id}")
                 for frag in self.all_tier_frags[tier]:
                     if frag["chunk"] == chunk_id:
@@ -74,11 +81,13 @@ class Sender:
                         self.link.put(frag)
                         self.fragments_sent += 1
                         self.frag_counter += 1
-            # self.current_tier += 1
+                        total_sent += 1
+            
             self.frag_counter = 0
         
-        last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "data"}
+        last_frag = {"tier": -1, "chunk": 0, "fragment": 0, "type": "last_frag"}
         self.link.put(last_frag)
+        print("Sender: Finished retransmitting missing chunks", self.env.now)
 
     def get_transmission_progress(self):
         return self.fragments_sent / self.total_fragments
@@ -97,15 +106,19 @@ class Receiver:
         self.end_time = None
         self.all_tier_per_chunk_data_frags_num = all_tier_per_chunk_data_frags_num
         self.all_frags_received = False
+        self.lost_frags_per_tier = {}
+        # self.one_frag_lost = False
 
     def receive(self):
         """A process which consumes packets."""
         while True:
             if self.all_frags_received:
-                    break
+                break
+
             pkt = yield self.link.get()
             # print(f'Received {pkt} at {self.env.now}')
-            if pkt["tier"] == -1:
+            if pkt["type"] == "last_frag":
+                print("Last fragment received, check fragments begin", self.env.now)
                 self.check_all_fragments_received()
             else:
                 tier = pkt["tier"]
@@ -123,19 +136,19 @@ class Receiver:
                     self.all_tier_frags_received[tier] = {chunk: 1}
 
                 self.fragment_count += 1
-                # self.end_time = self.env.now
-
-                
+                # self.end_time = self.env.now      
 
     def get_result(self):
         return self.all_tier_frags_received
 
     def check_all_fragments_received(self):
         print("Checking received fragments")
+        
         missing_chunks = {}
         for tier, chunks in self.all_tier_frags_received.items():
             for chunk, count in chunks.items():
                 if count < self.all_tier_per_chunk_data_frags_num[tier][chunk]:
+                    # print(f"Tier {tier} Chunk {chunk} is expected {self.all_tier_per_chunk_data_frags_num[tier][chunk]} received {count}")
                     if tier not in missing_chunks:
                         missing_chunks[tier] = []
                     missing_chunks[tier].append(chunk)
@@ -147,13 +160,28 @@ class Receiver:
                     else:
                         self.lost_chunk_per_tier[tier] = 1
 
+                    if tier in self.lost_frags_per_tier:
+                        self.lost_frags_per_tier[tier] += self.all_tier_per_chunk_data_frags_num[tier][chunk] - count
+                    else:
+                        self.lost_frags_per_tier[tier] = self.all_tier_per_chunk_data_frags_num[tier][chunk] - count
+        
+     
         if missing_chunks:
+            # print("Missing chunks:", missing_chunks)
+            cnt = 0
+            for tier, chunks in missing_chunks.items():
+                cnt += len(chunks)
+            print("Total missing chunks:", cnt)
+            print("Receiver: Sending retransmitting missing chunks", self.env.now)
+            print("-----------------------------")
             self.env.process(self.sender.retransmit_chunks(missing_chunks))
+            # if(len(missing_chunks) == 1):
+            #     self.all_frags_received = True
         else:
             self.end_time = self.env.now
+            print("Lost fragments per tier:", self.lost_frags_per_tier)
             self.all_frags_received = True
-        # else:
-        #     self.all_frags_received = True
+            print("All fragments received")
 
     def print_tier_receiving_times(self):
         total = 0
@@ -176,58 +204,56 @@ class Receiver:
             print(f"Tier: {tier}, amount of retransmitted chunks: {self.lost_chunk_per_tier[tier]}")
 
 class PacketLossGen:
-
-    def __init__(self, env, link, sender):
+    def __init__(self, env, link, min_time, max_time):
         self.env = env
         self.link = link
-        self.sender = sender
-        # self.current_tier = None
-        self.batch_size = CHUNK_BATCH_SIZE * 32  # Fragments per batch
+        self.lambdas = [191, 383, 957]  # List of possible lambdas for packet loss
+        # self.current_lambda = random.choice(self.lambdas)  # Initially choose a random lambda
+        self.current_lambda = 191
+
+        # Gaussian parameters (mean and standard deviation)
+        self.mus_sigmas = {191: 20, 383: 40, 957: 100}
+        self.current_lambda_gaus = 191
+        self.min_time = min_time
+        self.max_time = max_time
+
+    def random_expovariate_loss_gen(self):
+        while True:
+            # Randomly choose a duration (e.g., between 50 to 150 units of simulation time) for using the current lambda
+            duration = random.uniform(self.min_time, self.max_time)
+            end_time = self.env.now + duration
+
+            while self.env.now < end_time:
+                interval = random.expovariate(self.current_lambda)
+                yield self.env.timeout(interval)
+                self.link.loss.put(f'A packet loss occurred at {self.env.now}')
+
+            # Switch to a new lambda after the duration
+            self.current_lambda = random.choice(self.lambdas)
 
     def expovariate_loss_gen(self, lambd):
         while True:
-            yield self.env.timeout(random.expovariate(lambd))
+            interval = random.expovariate(lambd)
+            yield self.env.timeout(interval)
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
-    def weibullvariate_loss_gen(self, alpha, beta):
-        # If β < 1: This models a decreasing failure rate over time.
-        # If β > 1: This models an increasing failure rate over time
-        loss_count = 0
-        while True:
-            yield self.env.timeout(random.weibullvariate(alpha, beta))
-            self.link.loss.put(f'A packet loss occurred at {self.env.now}')
-            # loss_count += 1
-            # if loss_count % 100 == 0:
-            #     print(f"Total packet losses generated: {loss_count}")
-    
-    def weibullvariate_loss_gen3shapes(self, scale):
-        while True:
-            progress = self.sender.get_transmission_progress()
-            
-            if progress < 1/3:
-                beta = 0.5
-            elif progress < 2/3:
-                beta = 1.0
-            elif progress > 1.0:
-                beta = 0.8
-            else:
-                beta = 3.0
+    def generate_lambda_from_gaussian(self):
+        mu = random.choice(list(self.mus_sigmas.keys())) 
+        sigma = self.mus_sigmas[mu] 
+        lambda_value = max(1, random.gauss(mu, sigma))  # Ensure lambda is positive
+        return lambda_value
 
-            yield self.env.timeout(random.weibullvariate(scale, beta))
-            self.link.loss.put(f'A packet loss occurred at {self.env.now}')
-
-    def exponential_random_loss_gen(self, min_lambda, max_lambda):
+    def random_expovariate_loss_gen_gaus(self):
         while True:
-            if self.sender.frag_counter % self.batch_size == 0:
-                # self.current_tier = self.sender.current_tier
-                current_lambda = random.uniform(min_lambda, max_lambda)
+            duration = random.uniform(self.min_time, self.max_time) 
+            end_time = self.env.now + duration
 
-            time_to_next_loss = random.expovariate(current_lambda)
-            
-            yield self.env.timeout(time_to_next_loss)
-            
-            loss_time = self.env.now
-            self.link.loss.put(f'A packet loss occurred at {loss_time:.2f}')
+            while self.env.now < end_time:
+                interval = random.expovariate(self.current_lambda_gaus) 
+                yield self.env.timeout(interval)
+                self.link.loss.put(f'A packet loss occurred at {self.env.now}')
+
+            self.current_lambda_gaus = self.generate_lambda_from_gaussian()
 
 def print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num):
     lost_chunks_per_tier = {}
@@ -289,99 +315,64 @@ def fragment_gen(tier_frags_num, tier_m, n):
     return all_tier_frags, all_tier_per_chunk_data_frags_num
 
 
-# env = simpy.Environment()
-
-# n = 32
-# frag_size = 2048
-# t_trans = 0.0152
-# # tier_sizes = [5474475, 22402608, 45505266, 150891984] # 5.2 MB, 21.4 MB, 43.4 MB, 146.3 MB
-# # tier_sizes = [524288000, 1073741824, 2147483648, 5368709120]  # 500 MB, 1 GB, 2 GB, 5 GB
-# tier_sizes = [5605015040, 22951620608, 46590234624, 154509402624]  # ~5.2 GB, ~22.9 GB, ~46.6 GB, ~154.5 GB
-# lambd = 10
-# tier_m = [0, 0, 0, 0]
-# number_of_chunks = []
-# # rate = 1 / t_trans
-# rate = 30000
-
-# tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
-# print("tier frags num:", tier_frags_num)
-
-# all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, tier_m, n)
-
-# link = Link(env, t_trans)
-# sender = Sender(env, link, rate, all_tier_frags, tier_frags_num)
-# receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
-# pkt_loss = PacketLossGen(env, link, sender)
-
-# env.process(sender.send())
-# env.process(receiver.receive())
-# # env.process(pkt_loss.exponential_random_loss_gen(5, 15))
-# env.process(pkt_loss.expovariate_loss_gen(lambd))
-# # env.process(pkt_loss.weibullvariate_loss_gen(0.05, 2))
-# # env.process(pkt_loss.weibullvariate_loss_gen(alpha=0.1, beta=1))
-
-# env.run(until=SIM_DURATION)
-# print(tier_frags_num)
-# print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
-# receiver.print_tier_receiving_times()
-# receiver.print_lost_chunks_per_tier()
-
-# chunks_per_tier = {}
-# for t in all_tier_frags:
-#     for f in t:
-#         if f["tier"] in chunks_per_tier:
-#             chunks_per_tier[f["tier"]] += 1
-#         else:
-#             chunks_per_tier[f["tier"]] = 1
-# res = 0
-# for i in chunks_per_tier:
-#     print(f"Tier: {i}, total amount of chunks: {math.ceil(chunks_per_tier[i] / 32)}")
-#     res += math.ceil(chunks_per_tier[i] / 32)
-# print("Total:", res)
-
-top_times = []
-t_trans = 0.009
-# rate = 15148.30
-# lambd = 16.2197
-rates = [1704.26, 6360.96, 10268.40, 15148.30, 28183.2]
-lambdas = [0.00001, 0.4518, 0.760058, 16.2197, 3978.12]
+t_trans = 0.01
+# rates = [1704.26, 6360.96, 10268.40, 15148.30, 21298.5, 25170.9, 27111.7, 28713.3]
+# lambdas = [0.00001, 0.4518, 0.760058, 16.2197, 47.1776, 563.973, 2539.07, 3528.7]
+rates = [19144.6]
+lambdas = [191]
+n = 32
+frag_size = 4096
 
 for i in range(len(rates)):
     top_times = []
     rate = rates[i]
     lambd = lambdas[i]
-    for i in range(1, 17):
-                current_m = [i, i, i, i]
-                print(f'Running simulation with current_m = {current_m}')
+    print(f'Running simulation with rate = {rate} and lambda = {lambd}')
+    for i in range(17):
+        current_m = [i, i, i, i]
+        print(f'Running simulation with current_m = {current_m}')
+        
+        env = simpy.Environment()
+        
+        tier_sizes_orig = [5474475, 22402608, 45505266, 150891984] # 5.2 MB, 21.4 MB, 43.4 MB, 146.3 MB
+        # tier_sizes = [5605015040, 22951620608, 46590234624, 154509402624]  # ~5.2 GB, ~22.9 GB, ~46.6 GB, ~154.5 GB
+        
+        k = 128
+        tier_sizes = [int(size * k) for size in tier_sizes_orig]
+
+        number_of_chunks = []
+
+        tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
+        print("tier frags num:", tier_frags_num)
+
+        all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
+        total = 0
+        for i in all_tier_frags:
+            print("len tier_frags:", len(i))
+            total += len(i)
+        print("Total fragments:", total)
+        
+
+        link = Link(env, t_trans)
+        sender = Sender(env, link, rate, all_tier_frags, tier_frags_num)
+        receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
+        pkt_loss = PacketLossGen(env, link, 5, 20)
+
+        env.process(sender.send())
+        env.process(receiver.receive())
+        # env.process(pkt_loss.expovariate_loss_gen(lambd))
+        # env.process(pkt_loss.random_expovariate_loss_gen())
+        env.process(pkt_loss.random_expovariate_loss_gen_gaus())
+
+        env.run(until=SIM_DURATION)
+
+        total_time = receiver.print_tier_receiving_times()
+        top_times.append((total_time, current_m))
+
+        top_times = sorted(top_times, key=lambda x: x[0])[:17]
+        print("lost frags:", sender.lost_frags)
+        print("Total sent:", total_sent)
                 
-                env = simpy.Environment()
-                n = 32
-                frag_size = 8192
-                # tier_sizes = [5474475, 22402608, 45505266, 150891984]
-                # tier_sizes = [5605015040, 22951620608, 46590234624, 154509402624]  # ~5.2 GB, ~22.9 GB, ~46.6 GB, ~154.5 GB
-                tier_sizes = [157286400, 367001600, 734003200, 1073741824]  # 150 MB, 350 MB, 700 MB, 1 GB
-
-                number_of_chunks = []
-
-                tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
-
-                all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
-
-                link = Link(env, t_trans)
-                sender = Sender(env, link, rate, all_tier_frags, tier_frags_num)
-                receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
-                pkt_loss = PacketLossGen(env, link, sender)
-
-                env.process(sender.send())
-                env.process(receiver.receive())
-                env.process(pkt_loss.expovariate_loss_gen(lambd))
-
-                env.run(until=SIM_DURATION)
-
-                total_time = receiver.print_tier_receiving_times()
-                top_times.append((total_time, current_m))
-
-                top_times = sorted(top_times, key=lambda x: x[0])[:17]
     print(f"Top 16 configurations with minimum times for rate {rate} and lambda {lambd}, frag_size {frag_size}, t_trans {t_trans}, tier_sizes: {tier_sizes}:")
     # print("Top 16 configurations with minimum times:")
     for time, config in top_times:
