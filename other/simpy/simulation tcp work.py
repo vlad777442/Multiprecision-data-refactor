@@ -2,7 +2,6 @@ import simpy
 import random
 import math
 
-<<<<<<< HEAD
 SIM_DURATION = 100000
 INIT_CWND = 100  # Initial congestion window size (in segments)
 MIN_RTO = 0.001  # Minimum retransmission timeout (100ms)
@@ -11,16 +10,6 @@ MAX_RTO = 1.0   # Maximum retransmission timeout (30s)
 class TCPLink:
     """Represents a TCP network link with delay and loss characteristics."""
     def __init__(self, env, delay, loss_rate=0.01, buffer_size=256, min_time=0.1, max_time=5):
-=======
-SIM_DURATION = 5000
-INIT_CWND = 10  # Initial congestion window size (in segments)
-MIN_RTO = 0.1  # Minimum retransmission timeout (200ms)
-MAX_RTO = 30   # Maximum retransmission timeout (60s)
-
-class TCPLink:
-    """Represents a TCP network link with delay and loss characteristics."""
-    def __init__(self, env, delay, loss_rate=0.01, buffer_size=256):
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
         self.env = env
         self.delay = delay
         self.buffer_size = buffer_size
@@ -30,7 +19,6 @@ class TCPLink:
         self.loss_rate = loss_rate
         self.next_loss_time = 0
         # Start the loss generation process
-<<<<<<< HEAD
         # self.env.process(self.loss_generator())
         self.lambdas = [191, 383, 957]  # List of possible lambdas for packet loss
         self.current_lambda = random.choice(self.lambdas)  # Initially choose a random lambda
@@ -40,9 +28,6 @@ class TCPLink:
         self.current_lambda_gaus = 19
         self.min_time = min_time
         self.max_time = max_time
-=======
-        self.env.process(self.loss_generator())
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
     
     def loss_generator(self):
         """Generate packet loss events using exponential distribution"""
@@ -52,7 +37,6 @@ class TCPLink:
             yield self.loss.put(f'A packet loss occurred at {self.env.now}')
             self.next_loss_time = self.env.now + interval
 
-<<<<<<< HEAD
     def random_expovariate_loss_gen(self):
         while True:
             # Randomly choose a duration (e.g., between 50 to 150 units of simulation time) for using the current lambda
@@ -93,15 +77,12 @@ class TCPLink:
             yield self.env.timeout(interval)
             self.loss.put(f'A packet loss occurred at {self.env.now}')
 
-=======
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
     def should_drop_packet(self):
         """Check if current time falls within a loss period"""
         if len(self.loss.items) > 0:
             return True
         return False
 
-<<<<<<< HEAD
     # def transfer(self, packet):
     #     yield self.env.timeout(self.delay)
         
@@ -124,16 +105,6 @@ class TCPLink:
         # Only check for packet drops on data packets that have seq_num
         if packet["type"] == "data" and self.should_drop_packet():
             # print(f"Packet dropped: {packet['seq_num']} at {self.env.now}")
-=======
-    def transfer(self, packet):
-        yield self.env.timeout(self.delay)
-        
-        # Don't apply loss to ACKs or FIN packets
-        if packet["type"] != "ack" and packet["type"] != "fin" and self.should_drop_packet():
-            # Packet is dropped
-            print(f"Packet dropped: {packet['seq_num']} at {self.env.now}")
-            # Consume the loss event
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
             yield self.loss.get()
             return
         
@@ -165,19 +136,11 @@ class TCPSender:
         
         # TCP specific parameters
         self.cwnd = INIT_CWND
-<<<<<<< HEAD
         self.ssthresh = 65535
         self.rtt_samples = []
         self.srtt = None
         self.rttvar = None
         self.rto = 0.05  # Initial RTO value
-=======
-        self.ssthresh = 128
-        self.rtt_samples = []
-        self.srtt = None
-        self.rttvar = None
-        self.rto = 1.0  # Initial RTO value
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
         self.unacked_packets = {}
         self.next_seq_num = 0
         self.window_base = 0
@@ -279,11 +242,7 @@ class TCPSender:
             # Check for packets that need retransmission
             for seq_num, data in list(self.unacked_packets.items()):
                 if data["timer"].triggered:
-<<<<<<< HEAD
                     if data["retries"] < 10:  # Maximum retransmission attempts
-=======
-                    if data["retries"] < 3:  # Maximum retransmission attempts
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
                         # Retransmit packet
                         self.link.put(data["packet"])
                         
@@ -385,17 +344,11 @@ n = 32
 frag_size = 4096
 t_trans = 0.01
 tier_sizes = [5474475, 22402608, 45505266, 150891984]
-<<<<<<< HEAD
 tier_sizes = [x * 128 for x in tier_sizes] 
 tier_m = [0, 0, 0, 0]
 number_of_chunks = []
 rate = 19146
 lambd = 957
-=======
-tier_m = [0, 0, 0, 0]
-number_of_chunks = []
-rate = 19146
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
 
 
 tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
@@ -407,11 +360,7 @@ n = 32
 tier_frags_num = [size // frag_size + 1 for size in tier_sizes]
 
 # Create network components
-<<<<<<< HEAD
 link = TCPLink(env, t_trans, loss_rate=lambd, buffer_size=16384, min_time=0.1, max_time=5)
-=======
-link = TCPLink(env, t_trans, loss_rate=10)
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
 sender = TCPSender(env, link, rate, all_tier_frags, tier_frags_num)
 receiver = TCPReceiver(env, link)
 
@@ -420,14 +369,9 @@ env.process(sender.send())
 env.process(sender.handle_ack())
 env.process(sender.retransmission_handler())
 env.process(receiver.receive())
-<<<<<<< HEAD
 # env.process(link.random_expovariate_loss_gen_gaus())
 env.process(link.expovariate_loss_gen(lambd))
 
 
 env.run(until=SIM_DURATION)
 print("Lost frags:", sender.lost_frags)
-=======
-
-env.run(until=SIM_DURATION)
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993

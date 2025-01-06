@@ -230,7 +230,6 @@ def print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frag
     print('')
     print(get_recovery_error(lost_chunks_per_tier))
 
-<<<<<<< HEAD
 
 
 def get_recovery_error(lost_chunks):
@@ -251,15 +250,6 @@ def get_recovery_error(lost_chunks):
             results_per_best_m[key]['eps' + str(tier)] += 1
             return f'Tiers can be recovered to tier {tier}, with error eps{tier}'
     return 'All tiers are recovered'
-=======
-def get_recovery_error(lost_chunks):
-    for tier, chunks in lost_chunks.items():
-        if tier == 0:
-            return 'Tiers cannot be recovered, tier 0 is lost'
-        else:
-            return f'Tiers can be recovered to tier {tier - 1}, with error {eps_list[tier - 1]}'
-    return f'All tiers are recovered, error is {eps_list[-1]}'
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
 
 def fragment_gen(tier_frags_num, tier_m, n):
     all_tier_frags = []
@@ -303,7 +293,6 @@ t_trans = 0.01
 # rates = [1704.26, 6360.96, 10268.40, 15148.30, 21298.5, 25170.9, 27111.7, 28713.3]
 # lambdas = [0.00001, 0.4518, 0.760058, 16.2197, 47.1776, 563.973, 2539.07, 3528.7]
 rates = [19144.6]
-<<<<<<< HEAD
 lambdas = [383]
 n = 32
 frag_size = 4096
@@ -381,60 +370,3 @@ print("\nFinal EPS Error Counts per Tier for each best_m configuration:")
 for best_m_config, value in results_per_best_m.items():
     print(f"\n--- Results for m = {best_m_config} ---")
     print(f'Eps values: {value}')
-=======
-lambdas = [19]
-n = 32
-frag_size = 4096
-eps_list = ['eps0', 'eps1', 'eps2', 'eps3']
-
-for i in range(len(rates)):
-    top_times = []
-    rate = rates[i]
-    lambd = lambdas[i]
-    print(f'Running simulation with rate = {rate} and lambda = {lambd}')
-    for i in range(17):
-        current_m = [i, i, i, i]
-        print('-----------------------------------')
-        print(f'Running simulation with current_m = {current_m}')
-        
-        env = simpy.Environment()
-        
-        tier_sizes_orig = [5474475, 22402608, 45505266, 150891984] # 5.2 MB, 21.4 MB, 43.4 MB, 146.3 MB
-        # tier_sizes = [5605015040, 22951620608, 46590234624, 154509402624]  # ~5.2 GB, ~22.9 GB, ~46.6 GB, ~154.5 GB
-        
-        k = 128
-        tier_sizes = [int(size * k) for size in tier_sizes_orig]
-
-        number_of_chunks = []
-
-        tier_frags_num = [i // frag_size + 1 for i in tier_sizes]
-        print("tier frags num:", tier_frags_num)
-
-        all_tier_frags, all_tier_per_chunk_data_frags_num = fragment_gen(tier_frags_num, current_m, n)
-        total = 0
-        for i in all_tier_frags:
-            # print("len tier_frags:", len(i))
-            total += len(i)
-        print("Total fragments:", total)
-
-        link = Link(env, t_trans)
-        sender = Sender(env, link, rate, all_tier_frags, tier_frags_num)
-        receiver = Receiver(env, link, sender, all_tier_per_chunk_data_frags_num)
-        pkt_loss = PacketLossGen(env, link)
-
-        env.process(sender.send())
-        env.process(receiver.receive())
-        env.process(pkt_loss.expovariate_loss_gen(lambd))
-        # env.process(pkt_loss.random_expovariate_loss_gen())
-
-        env.run(until=SIM_DURATION)
-
-        total_time = receiver.print_tier_receiving_times()
-        top_times.append((total_time, current_m))
-        print_statistics(env, receiver, all_tier_frags, all_tier_per_chunk_data_frags_num)
-
-        top_times = sorted(top_times, key=lambda x: x[0])[:17]
-        # print("lost frags:", sender.lost_frags)
-        # print("Total sent:", total_sent)
-                
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993

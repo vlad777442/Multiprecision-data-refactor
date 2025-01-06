@@ -5,7 +5,7 @@ import math
 import datetime
 
 SIM_DURATION = 10000
-CHUNK_BATCH_SIZE = 2 # Number of chunks after which the sender sends a control message
+CHUNK_BATCH_SIZE = 10 # Number of chunks after which the sender sends a control message
 
 class Link:
     """This class represents the data transfer through a network link."""
@@ -423,19 +423,6 @@ class PacketLossGen:
             yield self.env.timeout(interval)
             self.link.loss.put(f'A packet loss occurred at {self.env.now}')
 
-<<<<<<< HEAD
-=======
-def plot_lambda_changes(lambda_changes):
-    times, lambdas = zip(*lambda_changes)
-    plt.figure(figsize=(10, 5))
-    plt.step(times, lambdas, where='post')
-    plt.xlabel('Simulation Time')
-    plt.ylabel('Lambda Value')
-    plt.title('Lambda Changes Over Simulation Time')
-    plt.grid(True)
-    plt.show()
-
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
 def print_statistics(receiver):
     """Print statistics of the received fragments and calculate the recovery error."""
     lost_chunks_per_tier = {}
@@ -470,13 +457,8 @@ def get_recovery_error(lost_chunks, number_of_chunks):
 
 # rates = [1704.26, 6360.96, 10268.40, 15148.30, 21298.5, 24442.8, 25170.9, 26320.3, 27111.7, 27998.3, 28713.3]
 # lambdas = [0.00001, 0.4518, 0.760058, 16.2197, 47.1776, 155.208, 563.973, 2777.1, 2539.07, 3181.82, 3528.7]
-<<<<<<< HEAD
 rates = [19144.6, 19144.6, 19144.6]
 lambdas = [19, 19, 19]
-=======
-rates = [19144.6]
-lambdas = [957]
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
 
 now = datetime.datetime.now()
 
@@ -528,11 +510,7 @@ for i in range(len(rates)):
     print("Adaptive simulation results: rate: ", rate, " lambda: ", lambd)
     receiver.print_tier_receiving_times()
     receiver.print_lost_chunks_per_tier()
-<<<<<<< HEAD
     # plot_lambda_changes(pkt_loss.lambda_changes)
-=======
-    plot_lambda_changes(pkt_loss.lambda_changes)
->>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
 
 end = datetime.datetime.now()
 print("Time elapsed: ", end - now)
