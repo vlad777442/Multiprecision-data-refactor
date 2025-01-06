@@ -1,7 +1,7 @@
 import simpy
 import random
 
-SIM_DURATION = 50000
+SIM_DURATION = 1000
 CHUNK_BATCH_SIZE = 10
 total_sent = 0
 
@@ -212,8 +212,13 @@ class PacketLossGen:
         self.current_lambda = 191
 
         # Gaussian parameters (mean and standard deviation)
+<<<<<<< HEAD
         self.mus_sigmas = {19: 2, 383: 40, 957: 100}
         self.current_lambda_gaus = 19
+=======
+        self.mus_sigmas = {191: 20, 383: 40, 957: 100}
+        self.current_lambda_gaus = 191
+>>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
         self.min_time = min_time
         self.max_time = max_time
 
@@ -319,7 +324,11 @@ t_trans = 0.01
 # rates = [1704.26, 6360.96, 10268.40, 15148.30, 21298.5, 25170.9, 27111.7, 28713.3]
 # lambdas = [0.00001, 0.4518, 0.760058, 16.2197, 47.1776, 563.973, 2539.07, 3528.7]
 rates = [19144.6]
+<<<<<<< HEAD
 lambdas = [957]
+=======
+lambdas = [191]
+>>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
 n = 32
 frag_size = 4096
 
@@ -328,7 +337,11 @@ for i in range(len(rates)):
     rate = rates[i]
     lambd = lambdas[i]
     print(f'Running simulation with rate = {rate} and lambda = {lambd}')
+<<<<<<< HEAD
     for i in range(1):
+=======
+    for i in range(17):
+>>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
         current_m = [i, i, i, i]
         print(f'Running simulation with current_m = {current_m}')
         
@@ -360,9 +373,15 @@ for i in range(len(rates)):
 
         env.process(sender.send())
         env.process(receiver.receive())
+<<<<<<< HEAD
         env.process(pkt_loss.expovariate_loss_gen(lambd))
         # env.process(pkt_loss.random_expovariate_loss_gen())
         # env.process(pkt_loss.random_expovariate_loss_gen_gaus())
+=======
+        # env.process(pkt_loss.expovariate_loss_gen(lambd))
+        # env.process(pkt_loss.random_expovariate_loss_gen())
+        env.process(pkt_loss.random_expovariate_loss_gen_gaus())
+>>>>>>> 3bf7d713962b560cc2881807840be32f47f14993
 
         env.run(until=SIM_DURATION)
 
