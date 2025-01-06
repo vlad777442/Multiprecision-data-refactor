@@ -47,7 +47,7 @@ struct TableStruct_fragment_2eproto {
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::AuxillaryParseTableField aux[]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
-  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[8]
+  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[12]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::FieldMetadata field_metadata[];
   static const ::PROTOBUF_NAMESPACE_ID::internal::SerializationTable serialization_table[];
@@ -58,37 +58,53 @@ namespace DATA {
 class Fragment;
 class FragmentDefaultTypeInternal;
 extern FragmentDefaultTypeInternal _Fragment_default_instance_;
+class Metadata;
+class MetadataDefaultTypeInternal;
+extern MetadataDefaultTypeInternal _Metadata_default_instance_;
 class QueryTable;
 class QueryTableDefaultTypeInternal;
 extern QueryTableDefaultTypeInternal _QueryTable_default_instance_;
 class RetransmissionRequest;
 class RetransmissionRequestDefaultTypeInternal;
 extern RetransmissionRequestDefaultTypeInternal _RetransmissionRequest_default_instance_;
-class RetransmissionRequest_ChunkRequest;
-class RetransmissionRequest_ChunkRequestDefaultTypeInternal;
-extern RetransmissionRequest_ChunkRequestDefaultTypeInternal _RetransmissionRequest_ChunkRequest_default_instance_;
+class RetransmissionRequest_VariableRequest;
+class RetransmissionRequest_VariableRequestDefaultTypeInternal;
+extern RetransmissionRequest_VariableRequestDefaultTypeInternal _RetransmissionRequest_VariableRequest_default_instance_;
+class RetransmissionRequest_VariableRequest_TierRequest;
+class RetransmissionRequest_VariableRequest_TierRequestDefaultTypeInternal;
+extern RetransmissionRequest_VariableRequest_TierRequestDefaultTypeInternal _RetransmissionRequest_VariableRequest_TierRequest_default_instance_;
 class SquaredErrorsTable;
 class SquaredErrorsTableDefaultTypeInternal;
 extern SquaredErrorsTableDefaultTypeInternal _SquaredErrorsTable_default_instance_;
 class Tier;
 class TierDefaultTypeInternal;
 extern TierDefaultTypeInternal _Tier_default_instance_;
+class TierMetadata;
+class TierMetadataDefaultTypeInternal;
+extern TierMetadataDefaultTypeInternal _TierMetadata_default_instance_;
 class Variable;
 class VariableDefaultTypeInternal;
 extern VariableDefaultTypeInternal _Variable_default_instance_;
 class VariableCollection;
 class VariableCollectionDefaultTypeInternal;
 extern VariableCollectionDefaultTypeInternal _VariableCollection_default_instance_;
+class VariableMetadata;
+class VariableMetadataDefaultTypeInternal;
+extern VariableMetadataDefaultTypeInternal _VariableMetadata_default_instance_;
 }  // namespace DATA
 PROTOBUF_NAMESPACE_OPEN
 template<> ::DATA::Fragment* Arena::CreateMaybeMessage<::DATA::Fragment>(Arena*);
+template<> ::DATA::Metadata* Arena::CreateMaybeMessage<::DATA::Metadata>(Arena*);
 template<> ::DATA::QueryTable* Arena::CreateMaybeMessage<::DATA::QueryTable>(Arena*);
 template<> ::DATA::RetransmissionRequest* Arena::CreateMaybeMessage<::DATA::RetransmissionRequest>(Arena*);
-template<> ::DATA::RetransmissionRequest_ChunkRequest* Arena::CreateMaybeMessage<::DATA::RetransmissionRequest_ChunkRequest>(Arena*);
+template<> ::DATA::RetransmissionRequest_VariableRequest* Arena::CreateMaybeMessage<::DATA::RetransmissionRequest_VariableRequest>(Arena*);
+template<> ::DATA::RetransmissionRequest_VariableRequest_TierRequest* Arena::CreateMaybeMessage<::DATA::RetransmissionRequest_VariableRequest_TierRequest>(Arena*);
 template<> ::DATA::SquaredErrorsTable* Arena::CreateMaybeMessage<::DATA::SquaredErrorsTable>(Arena*);
 template<> ::DATA::Tier* Arena::CreateMaybeMessage<::DATA::Tier>(Arena*);
+template<> ::DATA::TierMetadata* Arena::CreateMaybeMessage<::DATA::TierMetadata>(Arena*);
 template<> ::DATA::Variable* Arena::CreateMaybeMessage<::DATA::Variable>(Arena*);
 template<> ::DATA::VariableCollection* Arena::CreateMaybeMessage<::DATA::VariableCollection>(Arena*);
+template<> ::DATA::VariableMetadata* Arena::CreateMaybeMessage<::DATA::VariableMetadata>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
 namespace DATA {
 
@@ -1670,23 +1686,23 @@ class VariableCollection PROTOBUF_FINAL :
 };
 // -------------------------------------------------------------------
 
-class RetransmissionRequest_ChunkRequest PROTOBUF_FINAL :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:DATA.RetransmissionRequest.ChunkRequest) */ {
+class RetransmissionRequest_VariableRequest_TierRequest PROTOBUF_FINAL :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:DATA.RetransmissionRequest.VariableRequest.TierRequest) */ {
  public:
-  inline RetransmissionRequest_ChunkRequest() : RetransmissionRequest_ChunkRequest(nullptr) {};
-  virtual ~RetransmissionRequest_ChunkRequest();
+  inline RetransmissionRequest_VariableRequest_TierRequest() : RetransmissionRequest_VariableRequest_TierRequest(nullptr) {};
+  virtual ~RetransmissionRequest_VariableRequest_TierRequest();
 
-  RetransmissionRequest_ChunkRequest(const RetransmissionRequest_ChunkRequest& from);
-  RetransmissionRequest_ChunkRequest(RetransmissionRequest_ChunkRequest&& from) noexcept
-    : RetransmissionRequest_ChunkRequest() {
+  RetransmissionRequest_VariableRequest_TierRequest(const RetransmissionRequest_VariableRequest_TierRequest& from);
+  RetransmissionRequest_VariableRequest_TierRequest(RetransmissionRequest_VariableRequest_TierRequest&& from) noexcept
+    : RetransmissionRequest_VariableRequest_TierRequest() {
     *this = ::std::move(from);
   }
 
-  inline RetransmissionRequest_ChunkRequest& operator=(const RetransmissionRequest_ChunkRequest& from) {
+  inline RetransmissionRequest_VariableRequest_TierRequest& operator=(const RetransmissionRequest_VariableRequest_TierRequest& from) {
     CopyFrom(from);
     return *this;
   }
-  inline RetransmissionRequest_ChunkRequest& operator=(RetransmissionRequest_ChunkRequest&& from) noexcept {
+  inline RetransmissionRequest_VariableRequest_TierRequest& operator=(RetransmissionRequest_VariableRequest_TierRequest&& from) noexcept {
     if (GetArena() == from.GetArena()) {
       if (this != &from) InternalSwap(&from);
     } else {
@@ -1704,20 +1720,20 @@ class RetransmissionRequest_ChunkRequest PROTOBUF_FINAL :
   static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
     return GetMetadataStatic().reflection;
   }
-  static const RetransmissionRequest_ChunkRequest& default_instance();
+  static const RetransmissionRequest_VariableRequest_TierRequest& default_instance();
 
   static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
-  static inline const RetransmissionRequest_ChunkRequest* internal_default_instance() {
-    return reinterpret_cast<const RetransmissionRequest_ChunkRequest*>(
-               &_RetransmissionRequest_ChunkRequest_default_instance_);
+  static inline const RetransmissionRequest_VariableRequest_TierRequest* internal_default_instance() {
+    return reinterpret_cast<const RetransmissionRequest_VariableRequest_TierRequest*>(
+               &_RetransmissionRequest_VariableRequest_TierRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     6;
 
-  friend void swap(RetransmissionRequest_ChunkRequest& a, RetransmissionRequest_ChunkRequest& b) {
+  friend void swap(RetransmissionRequest_VariableRequest_TierRequest& a, RetransmissionRequest_VariableRequest_TierRequest& b) {
     a.Swap(&b);
   }
-  inline void Swap(RetransmissionRequest_ChunkRequest* other) {
+  inline void Swap(RetransmissionRequest_VariableRequest_TierRequest* other) {
     if (other == this) return;
     if (GetArena() == other->GetArena()) {
       InternalSwap(other);
@@ -1725,7 +1741,7 @@ class RetransmissionRequest_ChunkRequest PROTOBUF_FINAL :
       ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
     }
   }
-  void UnsafeArenaSwap(RetransmissionRequest_ChunkRequest* other) {
+  void UnsafeArenaSwap(RetransmissionRequest_VariableRequest_TierRequest* other) {
     if (other == this) return;
     GOOGLE_DCHECK(GetArena() == other->GetArena());
     InternalSwap(other);
@@ -1733,17 +1749,17 @@ class RetransmissionRequest_ChunkRequest PROTOBUF_FINAL :
 
   // implements Message ----------------------------------------------
 
-  inline RetransmissionRequest_ChunkRequest* New() const final {
-    return CreateMaybeMessage<RetransmissionRequest_ChunkRequest>(nullptr);
+  inline RetransmissionRequest_VariableRequest_TierRequest* New() const final {
+    return CreateMaybeMessage<RetransmissionRequest_VariableRequest_TierRequest>(nullptr);
   }
 
-  RetransmissionRequest_ChunkRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
-    return CreateMaybeMessage<RetransmissionRequest_ChunkRequest>(arena);
+  RetransmissionRequest_VariableRequest_TierRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<RetransmissionRequest_VariableRequest_TierRequest>(arena);
   }
   void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
   void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
-  void CopyFrom(const RetransmissionRequest_ChunkRequest& from);
-  void MergeFrom(const RetransmissionRequest_ChunkRequest& from);
+  void CopyFrom(const RetransmissionRequest_VariableRequest_TierRequest& from);
+  void MergeFrom(const RetransmissionRequest_VariableRequest_TierRequest& from);
   PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
   bool IsInitialized() const final;
 
@@ -1757,13 +1773,13 @@ class RetransmissionRequest_ChunkRequest PROTOBUF_FINAL :
   inline void SharedCtor();
   inline void SharedDtor();
   void SetCachedSize(int size) const final;
-  void InternalSwap(RetransmissionRequest_ChunkRequest* other);
+  void InternalSwap(RetransmissionRequest_VariableRequest_TierRequest* other);
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "DATA.RetransmissionRequest.ChunkRequest";
+    return "DATA.RetransmissionRequest.VariableRequest.TierRequest";
   }
   protected:
-  explicit RetransmissionRequest_ChunkRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  explicit RetransmissionRequest_VariableRequest_TierRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena);
   private:
   static void ArenaDtor(void* object);
   inline void RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena* arena);
@@ -1783,10 +1799,191 @@ class RetransmissionRequest_ChunkRequest PROTOBUF_FINAL :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kVarNameFieldNumber = 1,
-    kTierIdFieldNumber = 2,
-    kChunkIdFieldNumber = 3,
+    kChunkIdsFieldNumber = 2,
+    kTierIdFieldNumber = 1,
   };
+  // repeated int32 chunk_ids = 2;
+  int chunk_ids_size() const;
+  private:
+  int _internal_chunk_ids_size() const;
+  public:
+  void clear_chunk_ids();
+  private:
+  ::PROTOBUF_NAMESPACE_ID::int32 _internal_chunk_ids(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >&
+      _internal_chunk_ids() const;
+  void _internal_add_chunk_ids(::PROTOBUF_NAMESPACE_ID::int32 value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >*
+      _internal_mutable_chunk_ids();
+  public:
+  ::PROTOBUF_NAMESPACE_ID::int32 chunk_ids(int index) const;
+  void set_chunk_ids(int index, ::PROTOBUF_NAMESPACE_ID::int32 value);
+  void add_chunk_ids(::PROTOBUF_NAMESPACE_ID::int32 value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >&
+      chunk_ids() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >*
+      mutable_chunk_ids();
+
+  // int32 tier_id = 1;
+  void clear_tier_id();
+  ::PROTOBUF_NAMESPACE_ID::int32 tier_id() const;
+  void set_tier_id(::PROTOBUF_NAMESPACE_ID::int32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::int32 _internal_tier_id() const;
+  void _internal_set_tier_id(::PROTOBUF_NAMESPACE_ID::int32 value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:DATA.RetransmissionRequest.VariableRequest.TierRequest)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 > chunk_ids_;
+  mutable std::atomic<int> _chunk_ids_cached_byte_size_;
+  ::PROTOBUF_NAMESPACE_ID::int32 tier_id_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_fragment_2eproto;
+};
+// -------------------------------------------------------------------
+
+class RetransmissionRequest_VariableRequest PROTOBUF_FINAL :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:DATA.RetransmissionRequest.VariableRequest) */ {
+ public:
+  inline RetransmissionRequest_VariableRequest() : RetransmissionRequest_VariableRequest(nullptr) {};
+  virtual ~RetransmissionRequest_VariableRequest();
+
+  RetransmissionRequest_VariableRequest(const RetransmissionRequest_VariableRequest& from);
+  RetransmissionRequest_VariableRequest(RetransmissionRequest_VariableRequest&& from) noexcept
+    : RetransmissionRequest_VariableRequest() {
+    *this = ::std::move(from);
+  }
+
+  inline RetransmissionRequest_VariableRequest& operator=(const RetransmissionRequest_VariableRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline RetransmissionRequest_VariableRequest& operator=(RetransmissionRequest_VariableRequest&& from) noexcept {
+    if (GetArena() == from.GetArena()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const RetransmissionRequest_VariableRequest& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const RetransmissionRequest_VariableRequest* internal_default_instance() {
+    return reinterpret_cast<const RetransmissionRequest_VariableRequest*>(
+               &_RetransmissionRequest_VariableRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    7;
+
+  friend void swap(RetransmissionRequest_VariableRequest& a, RetransmissionRequest_VariableRequest& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(RetransmissionRequest_VariableRequest* other) {
+    if (other == this) return;
+    if (GetArena() == other->GetArena()) {
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(RetransmissionRequest_VariableRequest* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline RetransmissionRequest_VariableRequest* New() const final {
+    return CreateMaybeMessage<RetransmissionRequest_VariableRequest>(nullptr);
+  }
+
+  RetransmissionRequest_VariableRequest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<RetransmissionRequest_VariableRequest>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const RetransmissionRequest_VariableRequest& from);
+  void MergeFrom(const RetransmissionRequest_VariableRequest& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* _InternalSerialize(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(RetransmissionRequest_VariableRequest* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "DATA.RetransmissionRequest.VariableRequest";
+  }
+  protected:
+  explicit RetransmissionRequest_VariableRequest(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  private:
+  static void ArenaDtor(void* object);
+  inline void RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_fragment_2eproto);
+    return ::descriptor_table_fragment_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  typedef RetransmissionRequest_VariableRequest_TierRequest TierRequest;
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kTiersFieldNumber = 2,
+    kVarNameFieldNumber = 1,
+  };
+  // repeated .DATA.RetransmissionRequest.VariableRequest.TierRequest tiers = 2;
+  int tiers_size() const;
+  private:
+  int _internal_tiers_size() const;
+  public:
+  void clear_tiers();
+  ::DATA::RetransmissionRequest_VariableRequest_TierRequest* mutable_tiers(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_VariableRequest_TierRequest >*
+      mutable_tiers();
+  private:
+  const ::DATA::RetransmissionRequest_VariableRequest_TierRequest& _internal_tiers(int index) const;
+  ::DATA::RetransmissionRequest_VariableRequest_TierRequest* _internal_add_tiers();
+  public:
+  const ::DATA::RetransmissionRequest_VariableRequest_TierRequest& tiers(int index) const;
+  ::DATA::RetransmissionRequest_VariableRequest_TierRequest* add_tiers();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_VariableRequest_TierRequest >&
+      tiers() const;
+
   // string var_name = 1;
   void clear_var_name();
   const std::string& var_name() const;
@@ -1812,34 +2009,15 @@ class RetransmissionRequest_ChunkRequest PROTOBUF_FINAL :
   std::string* _internal_mutable_var_name();
   public:
 
-  // int32 tier_id = 2;
-  void clear_tier_id();
-  ::PROTOBUF_NAMESPACE_ID::int32 tier_id() const;
-  void set_tier_id(::PROTOBUF_NAMESPACE_ID::int32 value);
-  private:
-  ::PROTOBUF_NAMESPACE_ID::int32 _internal_tier_id() const;
-  void _internal_set_tier_id(::PROTOBUF_NAMESPACE_ID::int32 value);
-  public:
-
-  // int32 chunk_id = 3;
-  void clear_chunk_id();
-  ::PROTOBUF_NAMESPACE_ID::int32 chunk_id() const;
-  void set_chunk_id(::PROTOBUF_NAMESPACE_ID::int32 value);
-  private:
-  ::PROTOBUF_NAMESPACE_ID::int32 _internal_chunk_id() const;
-  void _internal_set_chunk_id(::PROTOBUF_NAMESPACE_ID::int32 value);
-  public:
-
-  // @@protoc_insertion_point(class_scope:DATA.RetransmissionRequest.ChunkRequest)
+  // @@protoc_insertion_point(class_scope:DATA.RetransmissionRequest.VariableRequest)
  private:
   class _Internal;
 
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_VariableRequest_TierRequest > tiers_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr var_name_;
-  ::PROTOBUF_NAMESPACE_ID::int32 tier_id_;
-  ::PROTOBUF_NAMESPACE_ID::int32 chunk_id_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_fragment_2eproto;
 };
@@ -1887,7 +2065,7 @@ class RetransmissionRequest PROTOBUF_FINAL :
                &_RetransmissionRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    7;
+    8;
 
   friend void swap(RetransmissionRequest& a, RetransmissionRequest& b) {
     a.Swap(&b);
@@ -1955,30 +2133,30 @@ class RetransmissionRequest PROTOBUF_FINAL :
 
   // nested types ----------------------------------------------------
 
-  typedef RetransmissionRequest_ChunkRequest ChunkRequest;
+  typedef RetransmissionRequest_VariableRequest VariableRequest;
 
   // accessors -------------------------------------------------------
 
   enum : int {
-    kRequestsFieldNumber = 1,
+    kVariablesFieldNumber = 1,
   };
-  // repeated .DATA.RetransmissionRequest.ChunkRequest requests = 1;
-  int requests_size() const;
+  // repeated .DATA.RetransmissionRequest.VariableRequest variables = 1;
+  int variables_size() const;
   private:
-  int _internal_requests_size() const;
+  int _internal_variables_size() const;
   public:
-  void clear_requests();
-  ::DATA::RetransmissionRequest_ChunkRequest* mutable_requests(int index);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_ChunkRequest >*
-      mutable_requests();
+  void clear_variables();
+  ::DATA::RetransmissionRequest_VariableRequest* mutable_variables(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_VariableRequest >*
+      mutable_variables();
   private:
-  const ::DATA::RetransmissionRequest_ChunkRequest& _internal_requests(int index) const;
-  ::DATA::RetransmissionRequest_ChunkRequest* _internal_add_requests();
+  const ::DATA::RetransmissionRequest_VariableRequest& _internal_variables(int index) const;
+  ::DATA::RetransmissionRequest_VariableRequest* _internal_add_variables();
   public:
-  const ::DATA::RetransmissionRequest_ChunkRequest& requests(int index) const;
-  ::DATA::RetransmissionRequest_ChunkRequest* add_requests();
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_ChunkRequest >&
-      requests() const;
+  const ::DATA::RetransmissionRequest_VariableRequest& variables(int index) const;
+  ::DATA::RetransmissionRequest_VariableRequest* add_variables();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_VariableRequest >&
+      variables() const;
 
   // @@protoc_insertion_point(class_scope:DATA.RetransmissionRequest)
  private:
@@ -1987,7 +2165,499 @@ class RetransmissionRequest PROTOBUF_FINAL :
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_ChunkRequest > requests_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_VariableRequest > variables_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_fragment_2eproto;
+};
+// -------------------------------------------------------------------
+
+class TierMetadata PROTOBUF_FINAL :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:DATA.TierMetadata) */ {
+ public:
+  inline TierMetadata() : TierMetadata(nullptr) {};
+  virtual ~TierMetadata();
+
+  TierMetadata(const TierMetadata& from);
+  TierMetadata(TierMetadata&& from) noexcept
+    : TierMetadata() {
+    *this = ::std::move(from);
+  }
+
+  inline TierMetadata& operator=(const TierMetadata& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline TierMetadata& operator=(TierMetadata&& from) noexcept {
+    if (GetArena() == from.GetArena()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const TierMetadata& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const TierMetadata* internal_default_instance() {
+    return reinterpret_cast<const TierMetadata*>(
+               &_TierMetadata_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    9;
+
+  friend void swap(TierMetadata& a, TierMetadata& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(TierMetadata* other) {
+    if (other == this) return;
+    if (GetArena() == other->GetArena()) {
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(TierMetadata* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline TierMetadata* New() const final {
+    return CreateMaybeMessage<TierMetadata>(nullptr);
+  }
+
+  TierMetadata* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<TierMetadata>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const TierMetadata& from);
+  void MergeFrom(const TierMetadata& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* _InternalSerialize(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(TierMetadata* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "DATA.TierMetadata";
+  }
+  protected:
+  explicit TierMetadata(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  private:
+  static void ArenaDtor(void* object);
+  inline void RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_fragment_2eproto);
+    return ::descriptor_table_fragment_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kChunkIdsFieldNumber = 3,
+    kTierIdFieldNumber = 1,
+    kKFieldNumber = 2,
+  };
+  // repeated uint32 chunk_ids = 3;
+  int chunk_ids_size() const;
+  private:
+  int _internal_chunk_ids_size() const;
+  public:
+  void clear_chunk_ids();
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_chunk_ids(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+      _internal_chunk_ids() const;
+  void _internal_add_chunk_ids(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+      _internal_mutable_chunk_ids();
+  public:
+  ::PROTOBUF_NAMESPACE_ID::uint32 chunk_ids(int index) const;
+  void set_chunk_ids(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value);
+  void add_chunk_ids(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+      chunk_ids() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+      mutable_chunk_ids();
+
+  // uint32 tier_id = 1;
+  void clear_tier_id();
+  ::PROTOBUF_NAMESPACE_ID::uint32 tier_id() const;
+  void set_tier_id(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_tier_id() const;
+  void _internal_set_tier_id(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  public:
+
+  // uint32 k = 2;
+  void clear_k();
+  ::PROTOBUF_NAMESPACE_ID::uint32 k() const;
+  void set_k(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_k() const;
+  void _internal_set_k(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:DATA.TierMetadata)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 > chunk_ids_;
+  mutable std::atomic<int> _chunk_ids_cached_byte_size_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 tier_id_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 k_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_fragment_2eproto;
+};
+// -------------------------------------------------------------------
+
+class VariableMetadata PROTOBUF_FINAL :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:DATA.VariableMetadata) */ {
+ public:
+  inline VariableMetadata() : VariableMetadata(nullptr) {};
+  virtual ~VariableMetadata();
+
+  VariableMetadata(const VariableMetadata& from);
+  VariableMetadata(VariableMetadata&& from) noexcept
+    : VariableMetadata() {
+    *this = ::std::move(from);
+  }
+
+  inline VariableMetadata& operator=(const VariableMetadata& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline VariableMetadata& operator=(VariableMetadata&& from) noexcept {
+    if (GetArena() == from.GetArena()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const VariableMetadata& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const VariableMetadata* internal_default_instance() {
+    return reinterpret_cast<const VariableMetadata*>(
+               &_VariableMetadata_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    10;
+
+  friend void swap(VariableMetadata& a, VariableMetadata& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(VariableMetadata* other) {
+    if (other == this) return;
+    if (GetArena() == other->GetArena()) {
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(VariableMetadata* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline VariableMetadata* New() const final {
+    return CreateMaybeMessage<VariableMetadata>(nullptr);
+  }
+
+  VariableMetadata* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<VariableMetadata>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const VariableMetadata& from);
+  void MergeFrom(const VariableMetadata& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* _InternalSerialize(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(VariableMetadata* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "DATA.VariableMetadata";
+  }
+  protected:
+  explicit VariableMetadata(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  private:
+  static void ArenaDtor(void* object);
+  inline void RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_fragment_2eproto);
+    return ::descriptor_table_fragment_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kTiersFieldNumber = 2,
+    kVarNameFieldNumber = 1,
+  };
+  // repeated .DATA.TierMetadata tiers = 2;
+  int tiers_size() const;
+  private:
+  int _internal_tiers_size() const;
+  public:
+  void clear_tiers();
+  ::DATA::TierMetadata* mutable_tiers(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::TierMetadata >*
+      mutable_tiers();
+  private:
+  const ::DATA::TierMetadata& _internal_tiers(int index) const;
+  ::DATA::TierMetadata* _internal_add_tiers();
+  public:
+  const ::DATA::TierMetadata& tiers(int index) const;
+  ::DATA::TierMetadata* add_tiers();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::TierMetadata >&
+      tiers() const;
+
+  // string var_name = 1;
+  void clear_var_name();
+  const std::string& var_name() const;
+  void set_var_name(const std::string& value);
+  void set_var_name(std::string&& value);
+  void set_var_name(const char* value);
+  void set_var_name(const char* value, size_t size);
+  std::string* mutable_var_name();
+  std::string* release_var_name();
+  void set_allocated_var_name(std::string* var_name);
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  std::string* unsafe_arena_release_var_name();
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  void unsafe_arena_set_allocated_var_name(
+      std::string* var_name);
+  private:
+  const std::string& _internal_var_name() const;
+  void _internal_set_var_name(const std::string& value);
+  std::string* _internal_mutable_var_name();
+  public:
+
+  // @@protoc_insertion_point(class_scope:DATA.VariableMetadata)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::TierMetadata > tiers_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr var_name_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_fragment_2eproto;
+};
+// -------------------------------------------------------------------
+
+class Metadata PROTOBUF_FINAL :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:DATA.Metadata) */ {
+ public:
+  inline Metadata() : Metadata(nullptr) {};
+  virtual ~Metadata();
+
+  Metadata(const Metadata& from);
+  Metadata(Metadata&& from) noexcept
+    : Metadata() {
+    *this = ::std::move(from);
+  }
+
+  inline Metadata& operator=(const Metadata& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline Metadata& operator=(Metadata&& from) noexcept {
+    if (GetArena() == from.GetArena()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const Metadata& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const Metadata* internal_default_instance() {
+    return reinterpret_cast<const Metadata*>(
+               &_Metadata_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    11;
+
+  friend void swap(Metadata& a, Metadata& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(Metadata* other) {
+    if (other == this) return;
+    if (GetArena() == other->GetArena()) {
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(Metadata* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline Metadata* New() const final {
+    return CreateMaybeMessage<Metadata>(nullptr);
+  }
+
+  Metadata* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<Metadata>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const Metadata& from);
+  void MergeFrom(const Metadata& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* _InternalSerialize(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(Metadata* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "DATA.Metadata";
+  }
+  protected:
+  explicit Metadata(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  private:
+  static void ArenaDtor(void* object);
+  inline void RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_fragment_2eproto);
+    return ::descriptor_table_fragment_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kVariablesFieldNumber = 1,
+  };
+  // repeated .DATA.VariableMetadata variables = 1;
+  int variables_size() const;
+  private:
+  int _internal_variables_size() const;
+  public:
+  void clear_variables();
+  ::DATA::VariableMetadata* mutable_variables(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::VariableMetadata >*
+      mutable_variables();
+  private:
+  const ::DATA::VariableMetadata& _internal_variables(int index) const;
+  ::DATA::VariableMetadata* _internal_add_variables();
+  public:
+  const ::DATA::VariableMetadata& variables(int index) const;
+  ::DATA::VariableMetadata* add_variables();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::VariableMetadata >&
+      variables() const;
+
+  // @@protoc_insertion_point(class_scope:DATA.Metadata)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::VariableMetadata > variables_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_fragment_2eproto;
 };
@@ -3957,60 +4627,131 @@ VariableCollection::variables() const {
 
 // -------------------------------------------------------------------
 
-// RetransmissionRequest_ChunkRequest
+// RetransmissionRequest_VariableRequest_TierRequest
+
+// int32 tier_id = 1;
+inline void RetransmissionRequest_VariableRequest_TierRequest::clear_tier_id() {
+  tier_id_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 RetransmissionRequest_VariableRequest_TierRequest::_internal_tier_id() const {
+  return tier_id_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 RetransmissionRequest_VariableRequest_TierRequest::tier_id() const {
+  // @@protoc_insertion_point(field_get:DATA.RetransmissionRequest.VariableRequest.TierRequest.tier_id)
+  return _internal_tier_id();
+}
+inline void RetransmissionRequest_VariableRequest_TierRequest::_internal_set_tier_id(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  tier_id_ = value;
+}
+inline void RetransmissionRequest_VariableRequest_TierRequest::set_tier_id(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  _internal_set_tier_id(value);
+  // @@protoc_insertion_point(field_set:DATA.RetransmissionRequest.VariableRequest.TierRequest.tier_id)
+}
+
+// repeated int32 chunk_ids = 2;
+inline int RetransmissionRequest_VariableRequest_TierRequest::_internal_chunk_ids_size() const {
+  return chunk_ids_.size();
+}
+inline int RetransmissionRequest_VariableRequest_TierRequest::chunk_ids_size() const {
+  return _internal_chunk_ids_size();
+}
+inline void RetransmissionRequest_VariableRequest_TierRequest::clear_chunk_ids() {
+  chunk_ids_.Clear();
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 RetransmissionRequest_VariableRequest_TierRequest::_internal_chunk_ids(int index) const {
+  return chunk_ids_.Get(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 RetransmissionRequest_VariableRequest_TierRequest::chunk_ids(int index) const {
+  // @@protoc_insertion_point(field_get:DATA.RetransmissionRequest.VariableRequest.TierRequest.chunk_ids)
+  return _internal_chunk_ids(index);
+}
+inline void RetransmissionRequest_VariableRequest_TierRequest::set_chunk_ids(int index, ::PROTOBUF_NAMESPACE_ID::int32 value) {
+  chunk_ids_.Set(index, value);
+  // @@protoc_insertion_point(field_set:DATA.RetransmissionRequest.VariableRequest.TierRequest.chunk_ids)
+}
+inline void RetransmissionRequest_VariableRequest_TierRequest::_internal_add_chunk_ids(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  chunk_ids_.Add(value);
+}
+inline void RetransmissionRequest_VariableRequest_TierRequest::add_chunk_ids(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  _internal_add_chunk_ids(value);
+  // @@protoc_insertion_point(field_add:DATA.RetransmissionRequest.VariableRequest.TierRequest.chunk_ids)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >&
+RetransmissionRequest_VariableRequest_TierRequest::_internal_chunk_ids() const {
+  return chunk_ids_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >&
+RetransmissionRequest_VariableRequest_TierRequest::chunk_ids() const {
+  // @@protoc_insertion_point(field_list:DATA.RetransmissionRequest.VariableRequest.TierRequest.chunk_ids)
+  return _internal_chunk_ids();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >*
+RetransmissionRequest_VariableRequest_TierRequest::_internal_mutable_chunk_ids() {
+  return &chunk_ids_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::int32 >*
+RetransmissionRequest_VariableRequest_TierRequest::mutable_chunk_ids() {
+  // @@protoc_insertion_point(field_mutable_list:DATA.RetransmissionRequest.VariableRequest.TierRequest.chunk_ids)
+  return _internal_mutable_chunk_ids();
+}
+
+// -------------------------------------------------------------------
+
+// RetransmissionRequest_VariableRequest
 
 // string var_name = 1;
-inline void RetransmissionRequest_ChunkRequest::clear_var_name() {
+inline void RetransmissionRequest_VariableRequest::clear_var_name() {
   var_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
-inline const std::string& RetransmissionRequest_ChunkRequest::var_name() const {
-  // @@protoc_insertion_point(field_get:DATA.RetransmissionRequest.ChunkRequest.var_name)
+inline const std::string& RetransmissionRequest_VariableRequest::var_name() const {
+  // @@protoc_insertion_point(field_get:DATA.RetransmissionRequest.VariableRequest.var_name)
   return _internal_var_name();
 }
-inline void RetransmissionRequest_ChunkRequest::set_var_name(const std::string& value) {
+inline void RetransmissionRequest_VariableRequest::set_var_name(const std::string& value) {
   _internal_set_var_name(value);
-  // @@protoc_insertion_point(field_set:DATA.RetransmissionRequest.ChunkRequest.var_name)
+  // @@protoc_insertion_point(field_set:DATA.RetransmissionRequest.VariableRequest.var_name)
 }
-inline std::string* RetransmissionRequest_ChunkRequest::mutable_var_name() {
-  // @@protoc_insertion_point(field_mutable:DATA.RetransmissionRequest.ChunkRequest.var_name)
+inline std::string* RetransmissionRequest_VariableRequest::mutable_var_name() {
+  // @@protoc_insertion_point(field_mutable:DATA.RetransmissionRequest.VariableRequest.var_name)
   return _internal_mutable_var_name();
 }
-inline const std::string& RetransmissionRequest_ChunkRequest::_internal_var_name() const {
+inline const std::string& RetransmissionRequest_VariableRequest::_internal_var_name() const {
   return var_name_.Get();
 }
-inline void RetransmissionRequest_ChunkRequest::_internal_set_var_name(const std::string& value) {
+inline void RetransmissionRequest_VariableRequest::_internal_set_var_name(const std::string& value) {
   
   var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value, GetArena());
 }
-inline void RetransmissionRequest_ChunkRequest::set_var_name(std::string&& value) {
+inline void RetransmissionRequest_VariableRequest::set_var_name(std::string&& value) {
   
   var_name_.Set(
     &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArena());
-  // @@protoc_insertion_point(field_set_rvalue:DATA.RetransmissionRequest.ChunkRequest.var_name)
+  // @@protoc_insertion_point(field_set_rvalue:DATA.RetransmissionRequest.VariableRequest.var_name)
 }
-inline void RetransmissionRequest_ChunkRequest::set_var_name(const char* value) {
+inline void RetransmissionRequest_VariableRequest::set_var_name(const char* value) {
   GOOGLE_DCHECK(value != nullptr);
   
   var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
               GetArena());
-  // @@protoc_insertion_point(field_set_char:DATA.RetransmissionRequest.ChunkRequest.var_name)
+  // @@protoc_insertion_point(field_set_char:DATA.RetransmissionRequest.VariableRequest.var_name)
 }
-inline void RetransmissionRequest_ChunkRequest::set_var_name(const char* value,
+inline void RetransmissionRequest_VariableRequest::set_var_name(const char* value,
     size_t size) {
   
   var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
       reinterpret_cast<const char*>(value), size), GetArena());
-  // @@protoc_insertion_point(field_set_pointer:DATA.RetransmissionRequest.ChunkRequest.var_name)
+  // @@protoc_insertion_point(field_set_pointer:DATA.RetransmissionRequest.VariableRequest.var_name)
 }
-inline std::string* RetransmissionRequest_ChunkRequest::_internal_mutable_var_name() {
+inline std::string* RetransmissionRequest_VariableRequest::_internal_mutable_var_name() {
   
   return var_name_.Mutable(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
-inline std::string* RetransmissionRequest_ChunkRequest::release_var_name() {
-  // @@protoc_insertion_point(field_release:DATA.RetransmissionRequest.ChunkRequest.var_name)
+inline std::string* RetransmissionRequest_VariableRequest::release_var_name() {
+  // @@protoc_insertion_point(field_release:DATA.RetransmissionRequest.VariableRequest.var_name)
   return var_name_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
-inline void RetransmissionRequest_ChunkRequest::set_allocated_var_name(std::string* var_name) {
+inline void RetransmissionRequest_VariableRequest::set_allocated_var_name(std::string* var_name) {
   if (var_name != nullptr) {
     
   } else {
@@ -4018,16 +4759,16 @@ inline void RetransmissionRequest_ChunkRequest::set_allocated_var_name(std::stri
   }
   var_name_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), var_name,
       GetArena());
-  // @@protoc_insertion_point(field_set_allocated:DATA.RetransmissionRequest.ChunkRequest.var_name)
+  // @@protoc_insertion_point(field_set_allocated:DATA.RetransmissionRequest.VariableRequest.var_name)
 }
-inline std::string* RetransmissionRequest_ChunkRequest::unsafe_arena_release_var_name() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:DATA.RetransmissionRequest.ChunkRequest.var_name)
+inline std::string* RetransmissionRequest_VariableRequest::unsafe_arena_release_var_name() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:DATA.RetransmissionRequest.VariableRequest.var_name)
   GOOGLE_DCHECK(GetArena() != nullptr);
   
   return var_name_.UnsafeArenaRelease(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       GetArena());
 }
-inline void RetransmissionRequest_ChunkRequest::unsafe_arena_set_allocated_var_name(
+inline void RetransmissionRequest_VariableRequest::unsafe_arena_set_allocated_var_name(
     std::string* var_name) {
   GOOGLE_DCHECK(GetArena() != nullptr);
   if (var_name != nullptr) {
@@ -4037,95 +4778,360 @@ inline void RetransmissionRequest_ChunkRequest::unsafe_arena_set_allocated_var_n
   }
   var_name_.UnsafeArenaSetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       var_name, GetArena());
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:DATA.RetransmissionRequest.ChunkRequest.var_name)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:DATA.RetransmissionRequest.VariableRequest.var_name)
 }
 
-// int32 tier_id = 2;
-inline void RetransmissionRequest_ChunkRequest::clear_tier_id() {
-  tier_id_ = 0;
+// repeated .DATA.RetransmissionRequest.VariableRequest.TierRequest tiers = 2;
+inline int RetransmissionRequest_VariableRequest::_internal_tiers_size() const {
+  return tiers_.size();
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 RetransmissionRequest_ChunkRequest::_internal_tier_id() const {
-  return tier_id_;
+inline int RetransmissionRequest_VariableRequest::tiers_size() const {
+  return _internal_tiers_size();
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 RetransmissionRequest_ChunkRequest::tier_id() const {
-  // @@protoc_insertion_point(field_get:DATA.RetransmissionRequest.ChunkRequest.tier_id)
-  return _internal_tier_id();
+inline void RetransmissionRequest_VariableRequest::clear_tiers() {
+  tiers_.Clear();
 }
-inline void RetransmissionRequest_ChunkRequest::_internal_set_tier_id(::PROTOBUF_NAMESPACE_ID::int32 value) {
-  
-  tier_id_ = value;
+inline ::DATA::RetransmissionRequest_VariableRequest_TierRequest* RetransmissionRequest_VariableRequest::mutable_tiers(int index) {
+  // @@protoc_insertion_point(field_mutable:DATA.RetransmissionRequest.VariableRequest.tiers)
+  return tiers_.Mutable(index);
 }
-inline void RetransmissionRequest_ChunkRequest::set_tier_id(::PROTOBUF_NAMESPACE_ID::int32 value) {
-  _internal_set_tier_id(value);
-  // @@protoc_insertion_point(field_set:DATA.RetransmissionRequest.ChunkRequest.tier_id)
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_VariableRequest_TierRequest >*
+RetransmissionRequest_VariableRequest::mutable_tiers() {
+  // @@protoc_insertion_point(field_mutable_list:DATA.RetransmissionRequest.VariableRequest.tiers)
+  return &tiers_;
 }
-
-// int32 chunk_id = 3;
-inline void RetransmissionRequest_ChunkRequest::clear_chunk_id() {
-  chunk_id_ = 0;
+inline const ::DATA::RetransmissionRequest_VariableRequest_TierRequest& RetransmissionRequest_VariableRequest::_internal_tiers(int index) const {
+  return tiers_.Get(index);
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 RetransmissionRequest_ChunkRequest::_internal_chunk_id() const {
-  return chunk_id_;
+inline const ::DATA::RetransmissionRequest_VariableRequest_TierRequest& RetransmissionRequest_VariableRequest::tiers(int index) const {
+  // @@protoc_insertion_point(field_get:DATA.RetransmissionRequest.VariableRequest.tiers)
+  return _internal_tiers(index);
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 RetransmissionRequest_ChunkRequest::chunk_id() const {
-  // @@protoc_insertion_point(field_get:DATA.RetransmissionRequest.ChunkRequest.chunk_id)
-  return _internal_chunk_id();
+inline ::DATA::RetransmissionRequest_VariableRequest_TierRequest* RetransmissionRequest_VariableRequest::_internal_add_tiers() {
+  return tiers_.Add();
 }
-inline void RetransmissionRequest_ChunkRequest::_internal_set_chunk_id(::PROTOBUF_NAMESPACE_ID::int32 value) {
-  
-  chunk_id_ = value;
+inline ::DATA::RetransmissionRequest_VariableRequest_TierRequest* RetransmissionRequest_VariableRequest::add_tiers() {
+  // @@protoc_insertion_point(field_add:DATA.RetransmissionRequest.VariableRequest.tiers)
+  return _internal_add_tiers();
 }
-inline void RetransmissionRequest_ChunkRequest::set_chunk_id(::PROTOBUF_NAMESPACE_ID::int32 value) {
-  _internal_set_chunk_id(value);
-  // @@protoc_insertion_point(field_set:DATA.RetransmissionRequest.ChunkRequest.chunk_id)
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_VariableRequest_TierRequest >&
+RetransmissionRequest_VariableRequest::tiers() const {
+  // @@protoc_insertion_point(field_list:DATA.RetransmissionRequest.VariableRequest.tiers)
+  return tiers_;
 }
 
 // -------------------------------------------------------------------
 
 // RetransmissionRequest
 
-// repeated .DATA.RetransmissionRequest.ChunkRequest requests = 1;
-inline int RetransmissionRequest::_internal_requests_size() const {
-  return requests_.size();
+// repeated .DATA.RetransmissionRequest.VariableRequest variables = 1;
+inline int RetransmissionRequest::_internal_variables_size() const {
+  return variables_.size();
 }
-inline int RetransmissionRequest::requests_size() const {
-  return _internal_requests_size();
+inline int RetransmissionRequest::variables_size() const {
+  return _internal_variables_size();
 }
-inline void RetransmissionRequest::clear_requests() {
-  requests_.Clear();
+inline void RetransmissionRequest::clear_variables() {
+  variables_.Clear();
 }
-inline ::DATA::RetransmissionRequest_ChunkRequest* RetransmissionRequest::mutable_requests(int index) {
-  // @@protoc_insertion_point(field_mutable:DATA.RetransmissionRequest.requests)
-  return requests_.Mutable(index);
+inline ::DATA::RetransmissionRequest_VariableRequest* RetransmissionRequest::mutable_variables(int index) {
+  // @@protoc_insertion_point(field_mutable:DATA.RetransmissionRequest.variables)
+  return variables_.Mutable(index);
 }
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_ChunkRequest >*
-RetransmissionRequest::mutable_requests() {
-  // @@protoc_insertion_point(field_mutable_list:DATA.RetransmissionRequest.requests)
-  return &requests_;
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_VariableRequest >*
+RetransmissionRequest::mutable_variables() {
+  // @@protoc_insertion_point(field_mutable_list:DATA.RetransmissionRequest.variables)
+  return &variables_;
 }
-inline const ::DATA::RetransmissionRequest_ChunkRequest& RetransmissionRequest::_internal_requests(int index) const {
-  return requests_.Get(index);
+inline const ::DATA::RetransmissionRequest_VariableRequest& RetransmissionRequest::_internal_variables(int index) const {
+  return variables_.Get(index);
 }
-inline const ::DATA::RetransmissionRequest_ChunkRequest& RetransmissionRequest::requests(int index) const {
-  // @@protoc_insertion_point(field_get:DATA.RetransmissionRequest.requests)
-  return _internal_requests(index);
+inline const ::DATA::RetransmissionRequest_VariableRequest& RetransmissionRequest::variables(int index) const {
+  // @@protoc_insertion_point(field_get:DATA.RetransmissionRequest.variables)
+  return _internal_variables(index);
 }
-inline ::DATA::RetransmissionRequest_ChunkRequest* RetransmissionRequest::_internal_add_requests() {
-  return requests_.Add();
+inline ::DATA::RetransmissionRequest_VariableRequest* RetransmissionRequest::_internal_add_variables() {
+  return variables_.Add();
 }
-inline ::DATA::RetransmissionRequest_ChunkRequest* RetransmissionRequest::add_requests() {
-  // @@protoc_insertion_point(field_add:DATA.RetransmissionRequest.requests)
-  return _internal_add_requests();
+inline ::DATA::RetransmissionRequest_VariableRequest* RetransmissionRequest::add_variables() {
+  // @@protoc_insertion_point(field_add:DATA.RetransmissionRequest.variables)
+  return _internal_add_variables();
 }
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_ChunkRequest >&
-RetransmissionRequest::requests() const {
-  // @@protoc_insertion_point(field_list:DATA.RetransmissionRequest.requests)
-  return requests_;
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::RetransmissionRequest_VariableRequest >&
+RetransmissionRequest::variables() const {
+  // @@protoc_insertion_point(field_list:DATA.RetransmissionRequest.variables)
+  return variables_;
+}
+
+// -------------------------------------------------------------------
+
+// TierMetadata
+
+// uint32 tier_id = 1;
+inline void TierMetadata::clear_tier_id() {
+  tier_id_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 TierMetadata::_internal_tier_id() const {
+  return tier_id_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 TierMetadata::tier_id() const {
+  // @@protoc_insertion_point(field_get:DATA.TierMetadata.tier_id)
+  return _internal_tier_id();
+}
+inline void TierMetadata::_internal_set_tier_id(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  tier_id_ = value;
+}
+inline void TierMetadata::set_tier_id(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_set_tier_id(value);
+  // @@protoc_insertion_point(field_set:DATA.TierMetadata.tier_id)
+}
+
+// uint32 k = 2;
+inline void TierMetadata::clear_k() {
+  k_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 TierMetadata::_internal_k() const {
+  return k_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 TierMetadata::k() const {
+  // @@protoc_insertion_point(field_get:DATA.TierMetadata.k)
+  return _internal_k();
+}
+inline void TierMetadata::_internal_set_k(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  k_ = value;
+}
+inline void TierMetadata::set_k(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_set_k(value);
+  // @@protoc_insertion_point(field_set:DATA.TierMetadata.k)
+}
+
+// repeated uint32 chunk_ids = 3;
+inline int TierMetadata::_internal_chunk_ids_size() const {
+  return chunk_ids_.size();
+}
+inline int TierMetadata::chunk_ids_size() const {
+  return _internal_chunk_ids_size();
+}
+inline void TierMetadata::clear_chunk_ids() {
+  chunk_ids_.Clear();
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 TierMetadata::_internal_chunk_ids(int index) const {
+  return chunk_ids_.Get(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 TierMetadata::chunk_ids(int index) const {
+  // @@protoc_insertion_point(field_get:DATA.TierMetadata.chunk_ids)
+  return _internal_chunk_ids(index);
+}
+inline void TierMetadata::set_chunk_ids(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  chunk_ids_.Set(index, value);
+  // @@protoc_insertion_point(field_set:DATA.TierMetadata.chunk_ids)
+}
+inline void TierMetadata::_internal_add_chunk_ids(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  chunk_ids_.Add(value);
+}
+inline void TierMetadata::add_chunk_ids(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_add_chunk_ids(value);
+  // @@protoc_insertion_point(field_add:DATA.TierMetadata.chunk_ids)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+TierMetadata::_internal_chunk_ids() const {
+  return chunk_ids_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+TierMetadata::chunk_ids() const {
+  // @@protoc_insertion_point(field_list:DATA.TierMetadata.chunk_ids)
+  return _internal_chunk_ids();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+TierMetadata::_internal_mutable_chunk_ids() {
+  return &chunk_ids_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+TierMetadata::mutable_chunk_ids() {
+  // @@protoc_insertion_point(field_mutable_list:DATA.TierMetadata.chunk_ids)
+  return _internal_mutable_chunk_ids();
+}
+
+// -------------------------------------------------------------------
+
+// VariableMetadata
+
+// string var_name = 1;
+inline void VariableMetadata::clear_var_name() {
+  var_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline const std::string& VariableMetadata::var_name() const {
+  // @@protoc_insertion_point(field_get:DATA.VariableMetadata.var_name)
+  return _internal_var_name();
+}
+inline void VariableMetadata::set_var_name(const std::string& value) {
+  _internal_set_var_name(value);
+  // @@protoc_insertion_point(field_set:DATA.VariableMetadata.var_name)
+}
+inline std::string* VariableMetadata::mutable_var_name() {
+  // @@protoc_insertion_point(field_mutable:DATA.VariableMetadata.var_name)
+  return _internal_mutable_var_name();
+}
+inline const std::string& VariableMetadata::_internal_var_name() const {
+  return var_name_.Get();
+}
+inline void VariableMetadata::_internal_set_var_name(const std::string& value) {
+  
+  var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value, GetArena());
+}
+inline void VariableMetadata::set_var_name(std::string&& value) {
+  
+  var_name_.Set(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArena());
+  // @@protoc_insertion_point(field_set_rvalue:DATA.VariableMetadata.var_name)
+}
+inline void VariableMetadata::set_var_name(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  
+  var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
+              GetArena());
+  // @@protoc_insertion_point(field_set_char:DATA.VariableMetadata.var_name)
+}
+inline void VariableMetadata::set_var_name(const char* value,
+    size_t size) {
+  
+  var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
+      reinterpret_cast<const char*>(value), size), GetArena());
+  // @@protoc_insertion_point(field_set_pointer:DATA.VariableMetadata.var_name)
+}
+inline std::string* VariableMetadata::_internal_mutable_var_name() {
+  
+  return var_name_.Mutable(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline std::string* VariableMetadata::release_var_name() {
+  // @@protoc_insertion_point(field_release:DATA.VariableMetadata.var_name)
+  return var_name_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline void VariableMetadata::set_allocated_var_name(std::string* var_name) {
+  if (var_name != nullptr) {
+    
+  } else {
+    
+  }
+  var_name_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), var_name,
+      GetArena());
+  // @@protoc_insertion_point(field_set_allocated:DATA.VariableMetadata.var_name)
+}
+inline std::string* VariableMetadata::unsafe_arena_release_var_name() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:DATA.VariableMetadata.var_name)
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  
+  return var_name_.UnsafeArenaRelease(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      GetArena());
+}
+inline void VariableMetadata::unsafe_arena_set_allocated_var_name(
+    std::string* var_name) {
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  if (var_name != nullptr) {
+    
+  } else {
+    
+  }
+  var_name_.UnsafeArenaSetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      var_name, GetArena());
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:DATA.VariableMetadata.var_name)
+}
+
+// repeated .DATA.TierMetadata tiers = 2;
+inline int VariableMetadata::_internal_tiers_size() const {
+  return tiers_.size();
+}
+inline int VariableMetadata::tiers_size() const {
+  return _internal_tiers_size();
+}
+inline void VariableMetadata::clear_tiers() {
+  tiers_.Clear();
+}
+inline ::DATA::TierMetadata* VariableMetadata::mutable_tiers(int index) {
+  // @@protoc_insertion_point(field_mutable:DATA.VariableMetadata.tiers)
+  return tiers_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::TierMetadata >*
+VariableMetadata::mutable_tiers() {
+  // @@protoc_insertion_point(field_mutable_list:DATA.VariableMetadata.tiers)
+  return &tiers_;
+}
+inline const ::DATA::TierMetadata& VariableMetadata::_internal_tiers(int index) const {
+  return tiers_.Get(index);
+}
+inline const ::DATA::TierMetadata& VariableMetadata::tiers(int index) const {
+  // @@protoc_insertion_point(field_get:DATA.VariableMetadata.tiers)
+  return _internal_tiers(index);
+}
+inline ::DATA::TierMetadata* VariableMetadata::_internal_add_tiers() {
+  return tiers_.Add();
+}
+inline ::DATA::TierMetadata* VariableMetadata::add_tiers() {
+  // @@protoc_insertion_point(field_add:DATA.VariableMetadata.tiers)
+  return _internal_add_tiers();
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::TierMetadata >&
+VariableMetadata::tiers() const {
+  // @@protoc_insertion_point(field_list:DATA.VariableMetadata.tiers)
+  return tiers_;
+}
+
+// -------------------------------------------------------------------
+
+// Metadata
+
+// repeated .DATA.VariableMetadata variables = 1;
+inline int Metadata::_internal_variables_size() const {
+  return variables_.size();
+}
+inline int Metadata::variables_size() const {
+  return _internal_variables_size();
+}
+inline void Metadata::clear_variables() {
+  variables_.Clear();
+}
+inline ::DATA::VariableMetadata* Metadata::mutable_variables(int index) {
+  // @@protoc_insertion_point(field_mutable:DATA.Metadata.variables)
+  return variables_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::VariableMetadata >*
+Metadata::mutable_variables() {
+  // @@protoc_insertion_point(field_mutable_list:DATA.Metadata.variables)
+  return &variables_;
+}
+inline const ::DATA::VariableMetadata& Metadata::_internal_variables(int index) const {
+  return variables_.Get(index);
+}
+inline const ::DATA::VariableMetadata& Metadata::variables(int index) const {
+  // @@protoc_insertion_point(field_get:DATA.Metadata.variables)
+  return _internal_variables(index);
+}
+inline ::DATA::VariableMetadata* Metadata::_internal_add_variables() {
+  return variables_.Add();
+}
+inline ::DATA::VariableMetadata* Metadata::add_variables() {
+  // @@protoc_insertion_point(field_add:DATA.Metadata.variables)
+  return _internal_add_variables();
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::DATA::VariableMetadata >&
+Metadata::variables() const {
+  // @@protoc_insertion_point(field_list:DATA.Metadata.variables)
+  return variables_;
 }
 
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

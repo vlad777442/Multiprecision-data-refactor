@@ -1,3 +1,4 @@
+// Working veraion of sender without retranmission 12/16/2024
 #include <iostream>
 #include <ctime>
 #include <cstdlib>
@@ -31,11 +32,11 @@
 #include <chrono>
 
 #define IPADDRESS "127.0.0.1" // "192.168.1.64"
-#define UDP_PORT 12345
+#define UDP_PORT "12345"
 // #define IPADDRESS "10.51.197.229"
 // #define UDP_PORT 34565
 #define TCPIPADDRESS "127.0.0.1"
-#define TCP_PORT 54321
+#define TCP_PORT 9001
 
 
 using boost::asio::ip::tcp;
@@ -274,7 +275,47 @@ void senderBoost(boost::asio::io_service& io_service, udp::socket& socket, udp::
         // std::cout << "Sent Payload --- " << sent << "\n";
     }
     // Sleep to limit sending rate
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000 / send_rate));
+    // std::this_thread::sleep_for(std::chrono::milliseconds(1000 / send_rate));
+}
+
+
+void senderTcp(boost::asio::io_service& io_service, tcp::socket& socket, const DATA::Fragment& message) {
+    std::string serialized_data;
+    if (!message.SerializeToString(&serialized_data)) {
+        std::cerr << "Failed to serialize the protobuf message." << std::endl;
+        return;
+    }
+
+    // boost::asio::io_service io_service;
+    // tcp::socket socket(io_service);
+
+    // tcp::endpoint remote_endpoint = tcp::endpoint(boost::asio::ip::address::from_string(IPADDRESS), UDP_PORT);
+
+    try {
+        // socket.connect(remote_endpoint);
+        boost::system::error_code err;
+        auto sent = boost::asio::write(socket, boost::asio::buffer(serialized_data), err);
+
+        if (err) {
+            std::cerr << "Error sending data: " << err.message() << std::endl;
+        } else {
+            // Data sent successfully
+            // std::cout << "Sent Payload --- " << sent << "\n";
+        }
+
+        // socket.close();
+    } catch (const std::exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+    }
+}
+
+void senderZmq(zmq::socket_t& socket, const DATA::Fragment& message) {
+    // Serialize the message
+    std::string serialized_message;
+    message.SerializeToString(&serialized_message);
+
+    // Send the message
+    socket.send(zmq::buffer(serialized_message), zmq::send_flags::none);
 }
 
 void send_messages_boost(boost::asio::io_service& io_service, const std::string& host, const std::string& port, const std::vector<DATA::Fragment>& fragments) {
@@ -353,224 +394,6 @@ void setFragmentParameters(DATA::Fragment& fragment, int ec_k, int ec_m, int ec_
     fragment.set_encoded_fragment_length(encoded_fragment_len);
 }
 
-std::vector<DATA::Fragment> find_fragments(const std::vector<DATA::Fragment>& fragments, const std::string& var_name, uint32_t tier_id, uint32_t chunk_id) {
-    std::vector<DATA::Fragment> matching_fragments;
-    std::copy_if(fragments.begin(), fragments.end(), std::back_inserter(matching_fragments),
-                 [&](const DATA::Fragment& fragment) {
-                     return fragment.var_name() == var_name &&
-                            fragment.tier_id() == tier_id &&
-                            fragment.chunk_id() == chunk_id;
-                 });
-    return matching_fragments;
-}
-
-class Sender {
-private:
-    boost::asio::io_context& io_context_;
-    udp::socket udp_socket_;
-    udp::endpoint receiver_endpoint_;
-    tcp::socket tcp_socket_;
-    std::vector<DATA::Fragment> fragments_;
-    const size_t MAX_BUFFER_SIZE = 65507;
-    bool tcp_connected_ = false;
-    
-public:
-    Sender(boost::asio::io_context& io_context, 
-           const std::string& receiver_address, 
-           unsigned short udp_port,
-           unsigned short tcp_port)
-        : io_context_(io_context),
-          udp_socket_(io_context, udp::endpoint(udp::v4(), 0)),
-          receiver_endpoint_(boost::asio::ip::address::from_string(receiver_address), udp_port),
-          tcp_socket_(io_context)
-    {
-        GOOGLE_PROTOBUF_VERIFY_VERSION;
-        connect_to_receiver(receiver_address, tcp_port);
-    }
-
-    void connect_to_receiver(const std::string& receiver_address, unsigned short tcp_port) {
-        try {
-            tcp::endpoint receiver_endpoint(
-                boost::asio::ip::address::from_string(receiver_address),
-                tcp_port
-            );
-            
-            std::cout << "Connecting to receiver at " << receiver_address << ":" << tcp_port << std::endl;
-            tcp_socket_.connect(receiver_endpoint);
-            tcp_connected_ = true;
-            std::cout << "Connected to receiver." << std::endl;
-            
-            // Start handling retransmission requests
-            handle_retransmission_request();
-        } catch (const std::exception& e) {
-            std::cerr << "Connection error: " << e.what() << std::endl;
-            throw;
-        }
-    }
-
-    void send_fragments(const std::vector<DATA::Fragment>& fragments) {
-        if (!tcp_connected_) {
-            std::cerr << "Error: TCP connection not established" << std::endl;
-            return;
-        }
-
-        fragments_ = fragments;
-        
-        // Send all fragments via UDP
-        for (const auto& fragment : fragments_) {
-            
-            std::string serialized_fragment;
-            fragment.SerializeToString(&serialized_fragment);
-            
-            for (size_t offset = 0; offset < serialized_fragment.size(); offset += MAX_BUFFER_SIZE) {
-                size_t chunk_size = std::min(MAX_BUFFER_SIZE, serialized_fragment.size() - offset);
-                udp_socket_.send_to(
-                    boost::asio::buffer(serialized_fragment.data() + offset, chunk_size),
-                    receiver_endpoint_
-                );
-                // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                // std::this_thread::sleep_for(std::chrono::microseconds(1)); // 0.001 milliseconds
-                std::cout << "Sent fragment: " << fragment.var_name() 
-                            << " tier=" << fragment.tier_id() 
-                            << " chunk=" << fragment.chunk_id() 
-                            << " frag=" << fragment.fragment_id() << std::endl;  
-            }
-            
-        }
-
-        // Send EOT via TCP
-        send_eot();
-    }
-
-    void send_metadata(const std::vector<DATA::Fragment>& fragments) {
-        if (!tcp_connected_) {
-            std::cerr << "Error: TCP connection not established" << std::endl;
-            return;
-        }
-        DATA::Metadata metadata;
-        
-        // Track chunks and k values per var/tier
-        std::map<std::string, std::map<uint32_t, std::pair<std::set<uint32_t>, uint32_t>>> var_tier_info; // var -> tier -> (chunks, k)
-        
-        for (const auto& fragment : fragments) {
-            auto& [chunks, k] = var_tier_info[fragment.var_name()][fragment.tier_id()];
-            chunks.insert(fragment.chunk_id());
-            k = fragment.k();
-        }
-        
-        for (const auto& [var_name, tier_map] : var_tier_info) {
-            auto* var_meta = metadata.add_variables();
-            var_meta->set_var_name(var_name);
-            
-            for (const auto& [tier_id, info] : tier_map) {
-                auto* tier_meta = var_meta->add_tiers();
-                tier_meta->set_tier_id(tier_id);
-                tier_meta->set_k(info.second);
-                
-                for (uint32_t chunk_id : info.first) {
-                    tier_meta->add_chunk_ids(chunk_id);
-                }
-            }
-        }
-        
-        std::string serialized_metadata;
-        metadata.SerializeToString(&serialized_metadata);
-        
-        uint32_t message_size = serialized_metadata.size();
-        boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
-        boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_metadata));
-        std::cout << "Sent metadata via TCP" << std::endl;
-    }
-
-private:
-    void send_eot() {
-        if (!tcp_connected_) {
-            std::cerr << "Error: TCP connection not established" << std::endl;
-            return;
-        }
-
-        DATA::Fragment eot;
-        eot.set_fragment_id(-1);
-        std::string serialized_eot;
-        eot.SerializeToString(&serialized_eot);
-        
-        uint32_t message_size = serialized_eot.size();
-        
-        try {
-            boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
-            boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_eot));
-            std::cout << "Sent EOT marker via TCP" << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "Error sending EOT: " << e.what() << std::endl;
-            tcp_connected_ = false;
-        }
-    }
-
-    void handle_retransmission_request() {
-        auto size_buffer = std::make_shared<uint32_t>();
-        boost::asio::async_read(
-            tcp_socket_,
-            boost::asio::buffer(size_buffer.get(), sizeof(*size_buffer)),
-            [this, size_buffer](boost::system::error_code ec, std::size_t /*length*/) {
-                if (!ec) {
-                    auto message_buffer = std::make_shared<std::vector<char>>(*size_buffer);
-                    boost::asio::async_read(
-                        tcp_socket_,
-                        boost::asio::buffer(message_buffer->data(), message_buffer->size()),
-                        [this, message_buffer](boost::system::error_code ec, std::size_t /*length*/) {
-                            if (!ec) {
-                                handle_request_data(*message_buffer);
-                                handle_retransmission_request();
-                            } else {
-                                std::cout << "TCP read error: " << ec.message() << std::endl;
-                                tcp_connected_ = false;
-                            }
-                        });
-                } else {
-                    std::cout << "TCP size read error: " << ec.message() << std::endl;
-                    tcp_connected_ = false;
-                }
-            });
-    }
-
-    void handle_request_data(const std::vector<char>& buffer) {
-        DATA::RetransmissionRequest request;
-        if (request.ParseFromArray(buffer.data(), buffer.size())) {
-            std::cout << "Received retransmission request." << std::endl;
-            if (request.variables_size() == 0) {
-                std::cerr << "No variables in retransmission request. All data received." << std::endl;
-                return;
-            }
-            for (const auto& var_request : request.variables()) {
-                for (const auto& tier_request : var_request.tiers()) {
-                    for (int chunk_id : tier_request.chunk_ids()) {
-                        std::vector<DATA::Fragment> matching_fragments = find_fragments(fragments_, var_request.var_name(), tier_request.tier_id(), chunk_id);
-                        std::cout << "Found " << matching_fragments.size() << " matching fragments." << std::endl;
-                        for (const auto& fragment : matching_fragments) {
-                            std::string serialized_fragment;
-                            fragment.SerializeToString(&serialized_fragment);
-                            udp_socket_.send_to(
-                                boost::asio::buffer(serialized_fragment),
-                                receiver_endpoint_
-                            );
-                        }
-                        std::cout << "Retransmitting chunk: " << var_request.var_name() 
-                                << " tier=" << tier_request.tier_id() 
-                                << " chunk=" << chunk_id << std::endl;
-                        
-                    }
-                }
-            }
-            
-            // std::cout << "Sent retransmitted fragment." << std::endl;
-            
-            // Send EOT after retransmission via TCP
-            send_eot();
-        }
-    }
-};
-
-
 int main(int argc, char *argv[])
 {  
     std::string inputFileName;
@@ -593,6 +416,18 @@ int main(int argc, char *argv[])
     ec_backend_id_t backendID;
     size_t fragmentSize;
     GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+    // // TCP setup
+    // const std::string receiver_ip = "127.0.0.1";
+    // const std::string receiver_tcp_port = "9001";
+
+    // boost::asio::io_service io_service;
+    // tcp::resolver resolver(io_service);
+    // tcp::resolver::query query(receiver_ip, receiver_tcp_port);
+    // tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+
+    // tcp::socket tcp_socket(io_service);
+    // boost::asio::connect(tcp_socket, endpoint_iterator);
 
     // Start the timer
     auto start = std::chrono::steady_clock::now();
@@ -977,6 +812,8 @@ int main(int argc, char *argv[])
             DATA::QueryTable protoQueryTable;
             protoQueryTable.set_rows(queryTable.size());
             protoQueryTable.set_cols(5);
+
+            
           
 
             std::string varQueryTableName = variableName+":QueryTable"; 
@@ -985,6 +822,9 @@ int main(int argc, char *argv[])
                 protoQueryTable.add_content(data);
             }
             *protoVariable.mutable_table_content() = protoQueryTable;
+
+            
+    
 
 
             std::string varDimensionsName = variableName+":Dimensions";
@@ -1242,20 +1082,8 @@ int main(int argc, char *argv[])
         } 
         break;
     }
-    // boost::asio::io_service io_service;
-    // send_messages_boost(io_service, IPADDRESS, UDP_PORT, fragments);
-    try {
-        std::cout << "Sending fragments via UDP" << std::endl;
-        boost::asio::io_context io_context;
-        Sender sender(io_context, "127.0.0.1", 12345, 12346);
-        
-        sender.send_metadata(fragments);
-        sender.send_fragments(fragments);
-        io_context.run();
-    }
-    catch (std::exception& e) {
-        std::cerr << "Exception: " << e.what() << "\n";
-    }
+    boost::asio::io_service io_service;
+    send_messages_boost(io_service, IPADDRESS, UDP_PORT, fragments);
     
     google::protobuf::ShutdownProtobufLibrary();
 
