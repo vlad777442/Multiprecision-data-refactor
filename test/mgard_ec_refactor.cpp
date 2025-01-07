@@ -484,6 +484,7 @@ public:
 
 private:
     void send_eot() {
+        std::this_thread::sleep_for(std::chrono::microseconds(10)); // 0.01 milliseconds
         if (!tcp_connected_) {
             std::cerr << "Error: TCP connection not established" << std::endl;
             return;
@@ -543,6 +544,21 @@ private:
             }
             for (const auto& var_request : request.variables()) {
                 for (const auto& tier_request : var_request.tiers()) {
+                    if (tier_request.tier_id() == -1) {
+                        // Retransmit all chunks of the variable
+                        std::cout << "Received retransmission request for all chunks of variable: " << var_request.var_name() << std::endl;
+                        for (const auto& fragment : fragments_) {
+                            if (fragment.var_name() == var_request.var_name()) {
+                                std::string serialized_fragment;
+                                fragment.SerializeToString(&serialized_fragment);
+                                udp_socket_.send_to(
+                                    boost::asio::buffer(serialized_fragment),
+                                    receiver_endpoint_
+                                );
+                            }
+                        }
+                        continue;
+                    }
                     for (int chunk_id : tier_request.chunk_ids()) {
                         std::vector<DATA::Fragment> matching_fragments = find_fragments(fragments_, var_request.var_name(), tier_request.tier_id(), chunk_id);
                         std::cout << "Found " << matching_fragments.size() << " matching fragments." << std::endl;

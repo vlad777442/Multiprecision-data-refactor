@@ -177,6 +177,11 @@ struct Chunk
         auto& fragment_map = new_fragment.is_data ? data_fragments : parity_fragments;
         fragment_map[new_fragment.fragment_id] = new_fragment; // Insert or update
     }
+
+    void clearFragments() {
+        data_fragments.clear();
+        parity_fragments.clear();
+    }
 };
 
 struct Tier {
@@ -263,11 +268,14 @@ struct Variable
 };
 
 struct MissingChunkInfo {
-    std::string var_name; // Variable name
-    uint32_t tier_id;     // Tier ID
-    uint32_t chunk_id;    // Chunk ID
-    size_t dataFragmentCount; // Number of data fragments
-    int32_t required_k;   // Required number of fragments (k)
+    std::string var_name;
+    int32_t tier_id;
+    int32_t chunk_id;
+    size_t dataFragmentCount;
+    int32_t k;
+
+    MissingChunkInfo(const std::string& var_name, int32_t tier_id, int32_t chunk_id, size_t dataFragmentCount, int32_t k)
+        : var_name(var_name), tier_id(tier_id), chunk_id(chunk_id), dataFragmentCount(dataFragmentCount), k(k) {}
 };
 
 void setFragment(const DATA::Fragment& received_message, Fragment& myFragment)
@@ -368,10 +376,6 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
         std::unique_ptr<int> pVarECParam_k_Result = std::make_unique<int>(static_cast<int>(var1.tiers[i].k));
         std::cout << varECParam_k_Name << ", " << *pVarECParam_k_Result << std::endl;
         dataTiersECParam_k[i] = *pVarECParam_k_Result;
-        // dataTiersECParam_k[i] = var1.tiers[i].k;
-        // dataTiersECParam_m[i] = var1.tiers[i].m;
-        // dataTiersECParam_w[i] = var1.tiers[i].w;
-        // dataTiersECParam_hd[i] = var1.tiers[i].hd;
 
         // std::cout << varECParam_k_Name << ", " << dataTiersECParam_k[i] << std::endl;
 
@@ -470,15 +474,6 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
         level_squared_errors[i].insert(level_squared_errors[i].end(), varSquaredErrors.begin() + pos, varSquaredErrors.begin() + pos + varSquaredErrorsShape[1]);
         pos += varSquaredErrorsShape[1];
     }
-    // for (size_t i = 0; i < level_squared_errors.size(); i++)
-    // {
-    //     //std::cout << "level " << i << " squared errors: ";
-    //     for (size_t j = 0; j < level_squared_errors[i].size(); j++)
-    //     {
-    //         std::cout << level_squared_errors[i][j] << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
 
     std::string varStopIndicesName = variableName + ":StopIndices";
   
@@ -559,7 +554,7 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
                 std::vector<std::vector<uint8_t>> dataChunkValues;
                 for (size_t chunkIndex = 0; chunkIndex < var1.tiers[i].chunks.size(); ++chunkIndex)
                 {
-                    std::cout << "Size of chunks: " << var1.tiers[i].chunks.size() << std::endl;
+                    // std::cout << "Size of chunks: " << var1.tiers[i].chunks.size() << std::endl;
                     const Chunk &chunk = var1.tiers[i].chunks[chunkIndex];
                     
                     if (dataTiersECParam_m[i] < unavaialbleSites)
@@ -575,6 +570,7 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
                         .ct = CHKSUM_NONE,
                     };
                     std::cout << "K:" << args.k << ";M:" << args.m << ";W:" << args.w << ";HD:" << args.hd << std::endl;
+                    std::cout << "Recovering. Tier: " << i << " Chunk: " << chunkIndex << " Num frags: " << chunk.data_fragments.size() + chunk.parity_fragments.size() <<  std::endl;
                     if (chunk.data_fragments.empty()) {
                         std::cerr << "Error: chunk.data_fragments is empty!" << std::endl;
                     }
@@ -585,12 +581,12 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
                     std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = std::make_unique<uint64_t>(static_cast<uint64_t>(first_fragment.encoded_fragment_length));
                     // std::unique_ptr<uint64_t> pVarECParam_EncodedFragLen_Result = std::make_unique<uint64_t>(static_cast<uint64_t>(chunk.data_fragments[0].encoded_fragment_length));
                     uint64_t encoded_fragment_len = *pVarECParam_EncodedFragLen_Result;
-                    std::cout << varECParam_EncodedFragLen_Name << ", " << encoded_fragment_len << std::endl;
+                    // std::cout << varECParam_EncodedFragLen_Name << ", " << encoded_fragment_len << std::endl;
 
                     std::string varECBackendName = variableName + ":Tier:" + std::to_string(i) + ":ECBackendName";
                     std::string ECBackendName = first_fragment.ec_backend_name;
         
-                    std::cout << varECBackendName << ", " << ECBackendName << std::endl;
+                    // std::cout << varECBackendName << ", " << ECBackendName << std::endl;
 
                     ec_backend_id_t backendID;
                     if (ECBackendName == "flat_xor_hd")
@@ -641,7 +637,7 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
                     char *decoded_data = NULL;
                     char **avail_frags = NULL;
                     int num_avail_frags = 0;
-                    std::cout << "K:" << dataTiersECParam_k[i] << "; M:" << dataTiersECParam_m[i] << std::endl;
+                    
                     avail_frags = (char **)malloc((dataTiersECParam_k[i] + dataTiersECParam_m[i]) * sizeof(char *));
                     if (avail_frags == NULL)
                     {
@@ -665,7 +661,8 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
                     {
                         assert(desc > 0);
                     }
-                    std::cout << "checking data" << std::endl;
+                    
+                    // std::cout << "checking data" << std::endl;
                     for (const auto& [frag_id, fragment] : chunk.data_fragments) {
                         /* Check if the fragment ID is in the unavailableSiteList */
                         if (std::find(unavailableSiteList.begin(), unavailableSiteList.end(), frag_id) != unavailableSiteList.end()) {
@@ -689,7 +686,7 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
                         }
                     }
 
-                    std::cout << "checking parities" << std::endl;
+                    // std::cout << "checking parities" << std::endl;
                     // for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
                     for (const auto& [frag_id, fragment] : chunk.parity_fragments) {
                         /* Check if parity chunks are available */
@@ -733,7 +730,7 @@ int restoreData(Variable var1, int error_mode = 0, int totalSites = 0, int unava
                         break;
                     }
 
-                    std::cout << "rc: " << rc << std::endl;
+                    // std::cout << "rc: " << rc << std::endl;
 
                     uint8_t *tmp = static_cast<uint8_t *>(static_cast<void *>(decoded_data));
                     // std::vector<uint8_t> oneTierDecodedData(tmp, tmp+decoded_data_len);
@@ -975,19 +972,6 @@ private:
         send_retransmission_request();
     }
 
-    // void handle_metadata(const DATA::Metadata& metadata) {
-    //     for (const auto& var : metadata.variables()) {
-    //         auto& var_info = variablesMetadata[var.var_name()];
-    //         std::cout << "Received metadata for variable " << var.var_name() << "num_tiers=" << var.tiers_size() << std::endl;
-            
-    //         for (const auto& tier : var.tiers()) {
-    //             auto& tier_info = var_info.tiers[tier.tier_id()];
-    //             tier_info.k = tier.k();
-    //             tier_info.chunk_len = tier.chunk_len();
-    //             std::cout << "Tier " << tier.tier_id() << " k=" << tier.k() << " chunk_len=" << tier.chunk_len() << std::endl;
-    //         }
-    //     }
-    // }
     void handle_metadata(const DATA::Metadata& metadata) {
         std::cout << "Handling metadata..." << std::endl;
         for (const auto& var : metadata.variables()) {
@@ -1052,31 +1036,36 @@ private:
 
         DATA::RetransmissionRequest request;
         
-        // for (const auto& [var_name, tiers] : received_chunks_) {
-        //     auto* var_request = request.add_variables();
-        //     var_request->set_var_name(var_name);
-            
-        //     for (const auto& [tier_id, chunks] : tiers) {
-        //         uint32_t max_chunk_id = 0;
-        //         for (const auto& [chunk_id, received] : chunks) {
-        //             max_chunk_id = std::max(max_chunk_id, chunk_id);
-        //         }
-                
-        //         std::vector<int32_t> missing_chunks;
-        //         missing_chunks.push_back(1);
-                
-        //         if (!missing_chunks.empty()) {
-        //             auto* tier_request = var_request->add_tiers();
-        //             tier_request->set_tier_id(tier_id);
-        //             for (int32_t chunk_id : missing_chunks) {
-        //                 tier_request->add_chunk_ids(chunk_id);
-        //             }
-        //         }
-        //     }
-        // }
         std::vector<MissingChunkInfo> missingChunks = findMissingChunks();  
         if (missingChunks.empty()) {
             std::cout << "No missing chunks found. Transmission complete." << std::endl;
+            std::cout << "metadata size: " << variablesMetadata.size() << std::endl;
+            
+            // // Print metadata
+            // for (const auto& [var_name, variable_info] : variablesMetadata) {
+            //     std::cout << "Variable Name: " << var_name << std::endl;
+            //     for (const auto& [tier_id, tier_info] : variable_info.tiers) {
+            //         std::cout << "  Tier ID: " << tier_id << std::endl;
+            //         std::cout << "    k: " << tier_info.k << std::endl;
+            //         std::cout << "    Expected Chunks: ";
+            //         for (uint32_t chunk_id : tier_info.expected_chunks) {
+            //             std::cout << chunk_id << " ";
+            //         }
+            //         std::cout << std::endl;
+            //     }
+            // }
+            for (const auto& [var_name, var]: variables) {
+                std::cout << "Data for variable: " << var_name << std::endl;
+                for (const auto& [tier_id, tier]: var.tiers) {
+                    std::cout << "  Tier: " << tier_id << std::endl;
+                    for (const auto& [chunk_id, chunk]: tier.chunks) {
+                        std::cout << "    Chunk: " << chunk_id << " fragments+parity size: " << chunk.data_fragments.size() + chunk.parity_fragments.size() << std::endl;
+                    } 
+                }
+            }
+            for (const auto& [var_name, var]: variables) {
+                restoreData(var, 0, totalSites, unavailableSites, rawDataName);
+            }
             return;
         }
         std::map<std::string, std::map<uint32_t, std::vector<uint32_t>>> groupedChunks;
@@ -1120,38 +1109,76 @@ private:
     std::vector<MissingChunkInfo> findMissingChunks() {
         std::vector<MissingChunkInfo> missingChunks;
 
-        for (const auto& [var_id, variable] : variables) {
-            const std::string& var_name = variable.var_name; // Get variable name
+        for (const auto& [var_name, var_info] : variablesMetadata) {
+            std::cout << "Checking variable: " << var_name << std::endl;
+            if (variables.find(var_name) == variables.end()) {
+                missingChunks.push_back({
+                    var_name,
+                    -1,
+                    -1,
+                    0,
+                    -1
+                });
+                continue;
+            }
 
-            for (const auto& [tier_id, tier] : variable.tiers) {
-                for (const auto& [chunk_id, chunk] : tier.chunks) {
-                    size_t dataFragmentCount = chunk.data_fragments.size() + chunk.parity_fragments.size();
+            const auto& variable = variables.at(var_name);
+            
+            // Check each tier
+            for (const auto& [tier_id, tier_info] : var_info.tiers) {
+                std::cout << "  Checking tier: " << tier_id << std::endl;
+                // Check if tier exists in variable
+                if (variable.tiers.find(tier_id) == variable.tiers.end()) {
+                    missingChunks.push_back({
+                        var_name,
+                        tier_id,
+                        -1,
+                        0,
+                        tier_info.k
+                    });
+                    continue;
+                }
 
-                    // Check if there are any fragments in the chunk
+                const auto& tier = variable.tiers.at(tier_id);
+                
+                // Check for missing chunks in this tier
+                for (uint32_t expected_chunk_id : tier_info.expected_chunks) {
+                    std::cout << "    Checking chunk: " << expected_chunk_id << std::endl;
+                    if (tier.chunks.find(expected_chunk_id) == tier.chunks.end()) {
+                        missingChunks.push_back({
+                            var_name,
+                            tier_id,
+                            expected_chunk_id,
+                            0,
+                            tier_info.k
+                        });
+                        continue;
+                    }
+
+                    // Verify that chunk has the expected number of data fragments
+                    const auto& chunk = tier.chunks.at(expected_chunk_id);
+                    int32_t k;
                     if (!chunk.data_fragments.empty()) {
-                        // Retrieve `k` from the first data fragment
-                        int32_t k = chunk.data_fragments.begin()->second.k;
-
-                        if (dataFragmentCount < static_cast<size_t>(k)) {
-                            missingChunks.push_back({
-                                var_name,
-                                tier_id,
-                                chunk_id,
-                                dataFragmentCount,
-                                k
-                            });
-
-                            std::cout << "Missing Chunk Found: Variable Name " << var_name
-                                    << ", Tier ID " << tier_id
-                                    << ", Chunk ID " << chunk_id
-                                    << ", Data Fragments " << dataFragmentCount
-                                    << " < Required k (" << k << ")" << std::endl;
-                        }
+                        k = chunk.data_fragments.begin()->second.k;
                     } else {
-                        // Handle case where chunk has no fragments
-                        std::cout << "Chunk ID " << chunk_id
-                                << " in Tier ID " << tier_id
-                                << " has no data fragments in Variable " << var_name << "!" << std::endl;
+                        k = chunk.parity_fragments.begin()->second.k;
+                    }
+                                        
+                    // std::cout << "      Chunk has " << chunk.data_fragments.size() + chunk.parity_fragments.size() << " fragments. K: " << k << std::endl;
+                    // if (static_cast<size_t>(k) == 0) {
+                    //     std::cerr << "Error: k is 0" << "Data Len: " << chunk.data_fragments.size() <<  << std::endl;
+                    //     for (const auto& [frag_id, fragment] : chunk.data_fragments) {
+                    //         std::cout << "      Fragment: " << frag_id << " K: " << fragment.k <<  std::endl;
+                    //     }
+                    // }
+                    if (chunk.data_fragments.size() + chunk.parity_fragments.size() < static_cast<size_t>(k)) {
+                        missingChunks.push_back({
+                            var_name,
+                            tier_id,
+                            expected_chunk_id,
+                            chunk.data_fragments.size() + chunk.parity_fragments.size(),
+                            k
+                        });
                     }
                 }
             }
