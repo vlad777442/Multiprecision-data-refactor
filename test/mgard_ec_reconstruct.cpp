@@ -1,3 +1,4 @@
+// Working version hybrid TCP and UDP with retransmissions
 #include <iostream>
 #include <ctime>
 #include <cstdlib>
@@ -1041,6 +1042,24 @@ private:
             std::cout << "No missing chunks found. Transmission complete." << std::endl;
             std::cout << "metadata size: " << variablesMetadata.size() << std::endl;
             
+            // Sending request that all variables have been received
+            auto* var_request = request.add_variables();
+            var_request->set_var_name("all_variables_received");
+            std::string serialized_request;
+            request.SerializeToString(&serialized_request);
+
+            try {
+                uint32_t message_size = serialized_request.size();
+                boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
+                boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_request));
+                std::cout << "Retransmission request sent." << std::endl;
+                
+                transmission_complete_ = false;
+            } catch (const std::exception& e) {
+                std::cerr << "Send error: " << e.what() << std::endl;
+                tcp_connected_ = false;
+            }
+            
             // // Print metadata
             // for (const auto& [var_name, variable_info] : variablesMetadata) {
             //     std::cout << "Variable Name: " << var_name << std::endl;
@@ -1165,12 +1184,6 @@ private:
                     }
                                         
                     // std::cout << "      Chunk has " << chunk.data_fragments.size() + chunk.parity_fragments.size() << " fragments. K: " << k << std::endl;
-                    // if (static_cast<size_t>(k) == 0) {
-                    //     std::cerr << "Error: k is 0" << "Data Len: " << chunk.data_fragments.size() <<  << std::endl;
-                    //     for (const auto& [frag_id, fragment] : chunk.data_fragments) {
-                    //         std::cout << "      Fragment: " << frag_id << " K: " << fragment.k <<  std::endl;
-                    //     }
-                    // }
                     if (chunk.data_fragments.size() + chunk.parity_fragments.size() < static_cast<size_t>(k)) {
                         missingChunks.push_back({
                             var_name,
@@ -1210,9 +1223,6 @@ struct BoostReceiver {
 
     std::set<uint64_t> receivedSequenceNumbers;
     uint64_t highestSequenceNumber = 0;
-
-    // bool sender_connected;
-    // BoostReceiver() : sender_connected(false) {}
 
     void connectToSender(const std::string& tcpAddress, unsigned short tcpPort) {
         try {
@@ -1555,19 +1565,6 @@ int main(int argc, char *argv[])
         }
     }
 
-
-    // BoostReceiver receiver;
-    // // ZmqTCP client;
-    // receiver.rawDataName = rawDataFileName;
-    // receiver.totalSites = totalSites;
-    // receiver.unavailableSites = unavaialbleSites;
-    // // receiver.connectToSender(SENDER_TCP_IP, SENDER_TCP_PORT);
-
-    // // client.run();
-    // std::thread r([&]
-    //               { receiver.Receiver(); });
-
-    // r.join();
     try {
         boost::asio::io_context io_context;
         Receiver receiver(io_context, UDP_PORT, SENDER_TCP_PORT);

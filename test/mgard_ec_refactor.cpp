@@ -1,3 +1,4 @@
+// Working version hybrid TCP and UDP with retransmissions
 #include <iostream>
 #include <ctime>
 #include <cstdlib>
@@ -373,7 +374,11 @@ private:
     std::vector<DATA::Fragment> fragments_;
     const size_t MAX_BUFFER_SIZE = 65507;
     bool tcp_connected_ = false;
-    
+
+    std::chrono::steady_clock::time_point start_transmission_time_;
+    size_t total_bytes_sent_ = 0;
+    bool transmission_complete_ = false;
+  
 public:
     Sender(boost::asio::io_context& io_context, 
            const std::string& receiver_address, 
@@ -408,11 +413,35 @@ public:
         }
     }
 
+    void stop_transmission() {
+        transmission_complete_ = true;
+        auto end_time = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_transmission_time_);
+        double duration_seconds = duration.count() / 1000000.0;
+        double throughput_mbps = (total_bytes_sent_ * 8.0 / 1000000.0) / duration_seconds;
+        
+        std::cout << "\nTransmission Statistics:" << std::endl;
+        std::cout << "Duration: " << duration_seconds << " seconds" << std::endl;
+        std::cout << "Total bytes sent: " << total_bytes_sent_ << " bytes" << std::endl;
+        std::cout << "Throughput: " << throughput_mbps << " Mbps" << std::endl;
+        std::cout << "Fragment count: " << fragments_.size() << std::endl;
+        
+        // Close sockets
+        if (tcp_socket_.is_open()) {
+            tcp_socket_.close();
+        }
+        if (udp_socket_.is_open()) {
+            udp_socket_.close();
+        }
+        tcp_connected_ = false;
+    }
+
     void send_fragments(const std::vector<DATA::Fragment>& fragments) {
         if (!tcp_connected_) {
             std::cerr << "Error: TCP connection not established" << std::endl;
             return;
         }
+        start_transmission_time_ = std::chrono::steady_clock::now();
 
         fragments_ = fragments;
         
@@ -428,6 +457,8 @@ public:
                     boost::asio::buffer(serialized_fragment.data() + offset, chunk_size),
                     receiver_endpoint_
                 );
+
+                total_bytes_sent_ += sizeof(serialized_fragment.size()) + serialized_fragment.size();
                 // std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 // std::this_thread::sleep_for(std::chrono::microseconds(1)); // 0.001 milliseconds
                 std::cout << "Sent fragment: " << fragment.var_name() 
@@ -501,6 +532,7 @@ private:
             boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
             boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_eot));
             std::cout << "Sent EOT marker via TCP" << std::endl;
+            total_bytes_sent_ += sizeof(serialized_eot.size()) + serialized_eot.size();
         } catch (const std::exception& e) {
             std::cerr << "Error sending EOT: " << e.what() << std::endl;
             tcp_connected_ = false;
@@ -508,6 +540,9 @@ private:
     }
 
     void handle_retransmission_request() {
+        if (transmission_complete_) {
+            return;
+        }
         auto size_buffer = std::make_shared<uint32_t>();
         boost::asio::async_read(
             tcp_socket_,
@@ -538,11 +573,16 @@ private:
         DATA::RetransmissionRequest request;
         if (request.ParseFromArray(buffer.data(), buffer.size())) {
             std::cout << "Received retransmission request." << std::endl;
-            if (request.variables_size() == 0) {
-                std::cerr << "No variables in retransmission request. All data received." << std::endl;
-                return;
-            }
+            // if (request.variables_size() == 0) {
+            //     std::cerr << "No variables in retransmission request. All data received." << std::endl;
+            //     return;
+            // }
             for (const auto& var_request : request.variables()) {
+                if (var_request.var_name() == "all_variables_received") {
+                    std::cout << "All variables received. Stopping retransmission." << std::endl;
+                    stop_transmission();
+                    return;
+                }
                 for (const auto& tier_request : var_request.tiers()) {
                     if (tier_request.tier_id() == -1) {
                         // Retransmit all chunks of the variable
@@ -555,11 +595,30 @@ private:
                                     boost::asio::buffer(serialized_fragment),
                                     receiver_endpoint_
                                 );
+
+                                total_bytes_sent_ += sizeof(serialized_fragment.size()) + serialized_fragment.size();
                             }
                         }
                         continue;
                     }
                     for (int chunk_id : tier_request.chunk_ids()) {
+                        if (chunk_id == -1) {
+                            // Retransmit all chunks of the tier
+                            std::cout << "Received retransmission request for all chunks of variable: " << var_request.var_name() << " tier=" << tier_request.tier_id() << std::endl;
+                            for (const auto& fragment : fragments_) {
+                                if (fragment.var_name() == var_request.var_name() && fragment.tier_id() == tier_request.tier_id()) {
+                                    std::string serialized_fragment;
+                                    fragment.SerializeToString(&serialized_fragment);
+                                    udp_socket_.send_to(
+                                        boost::asio::buffer(serialized_fragment),
+                                        receiver_endpoint_
+                                    );
+
+                                    total_bytes_sent_ += sizeof(serialized_fragment.size()) + serialized_fragment.size();
+                                }
+                            }
+                            continue;
+                        }
                         std::vector<DATA::Fragment> matching_fragments = find_fragments(fragments_, var_request.var_name(), tier_request.tier_id(), chunk_id);
                         std::cout << "Found " << matching_fragments.size() << " matching fragments." << std::endl;
                         for (const auto& fragment : matching_fragments) {
@@ -569,6 +628,7 @@ private:
                                 boost::asio::buffer(serialized_fragment),
                                 receiver_endpoint_
                             );
+                            total_bytes_sent_ += sizeof(serialized_fragment.size()) + serialized_fragment.size();
                         }
                         std::cout << "Retransmitting chunk: " << var_request.var_name() 
                                 << " tier=" << tier_request.tier_id() 
@@ -577,8 +637,6 @@ private:
                     }
                 }
             }
-            
-            // std::cout << "Sent retransmitted fragment." << std::endl;
             
             // Send EOT after retransmission via TCP
             send_eot();
@@ -1256,7 +1314,8 @@ int main(int argc, char *argv[])
             packetsSent = 0;
             *variableCollection.add_variables() = protoVariable;
         } 
-        break;
+        // break to send only 1 variable
+        // break;
     }
     // boost::asio::io_service io_service;
     // send_messages_boost(io_service, IPADDRESS, UDP_PORT, fragments);
@@ -1282,10 +1341,10 @@ int main(int argc, char *argv[])
     auto end = std::chrono::steady_clock::now();
 
     // Calculate the elapsed time
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     // Output the elapsed time
-    std::cout << "Work completed in " << duration.count() << " seconds." << std::endl;
+    std::cout << "Total time (Encoding+Transmission): " << duration.count() << " ms." << std::endl;
     
     DATA::Fragment stopping;
     stopping.set_var_name("stop");
