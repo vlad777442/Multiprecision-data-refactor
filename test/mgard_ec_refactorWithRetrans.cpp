@@ -37,7 +37,6 @@
 // #define UDP_PORT 34565
 #define TCPIPADDRESS "127.0.0.1"
 #define TCP_PORT 54321
-#define SLEEP_DURATION 0
 
 
 using boost::asio::ip::tcp;
@@ -255,11 +254,73 @@ std::vector<std::vector<uint8_t>> splitVector(const std::vector<uint8_t>& origin
     return splitVectors;
 }
 
+void senderBoost(boost::asio::io_service& io_service, udp::socket& socket, udp::endpoint& remote_endpoint, 
+                                                                        const DATA::Fragment& message) {
+    std::string serialized_data;
+    if (!message.SerializeToString(&serialized_data)) {
+        std::cerr << "Failed to serialize the protobuf message." << std::endl;
+        return;
+    }
+
+    // udp::endpoint remote_endpoint = udp::endpoint(address::from_string(IPADDRESS), UDP_PORT);
+
+    boost::system::error_code err;
+    auto sent = socket.send_to(boost::asio::buffer(serialized_data), remote_endpoint, 0, err);
+
+    if (err) {
+        std::cerr << "Error sending data: " << err.message() << std::endl;
+    } else {
+        packetsSentTotal++;
+        // Data sent successfully
+        // std::cout << "Sent Payload --- " << sent << "\n";
+    }
+    // Sleep to limit sending rate
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000 / send_rate));
+}
+
+void send_messages_boost(boost::asio::io_service& io_service, const std::string& host, const std::string& port, const std::vector<DATA::Fragment>& fragments) {
+    udp::socket socket(io_service, udp::v4());
+    udp::resolver resolver(io_service);
+    udp::resolver::query query(udp::v4(), host, port);
+    udp::resolver::iterator iter = resolver.resolve(query);
+    int packetsSent = 0;
+    boost::system::error_code ec;
+
+    for (const auto& fragment : fragments) {
+        std::cout << "Sending fragment: Tier ID: " << fragment.tier_id() << "Chunk ID: " << fragment.chunk_id() << "Fragment ID: " << fragment.fragment_id() << std::endl;
+        std::string serialized_fragment;
+        if (!fragment.SerializeToString(&serialized_fragment)) {
+            std::cerr << "Failed to serialize fragment." << std::endl;
+            continue;
+        }
+
+        socket.send_to(boost::asio::buffer(serialized_fragment), *iter);
+
+        if (ec) {
+            std::cerr << "Send failed: " << ec.message() << std::endl;
+        }
+        packetsSent++;
+        // std::this_thread::sleep_for(std::chrono::microseconds(50)); // 0.05 milliseconds
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    // Send an EOT message
+    DATA::Fragment eot;
+    eot.set_fragment_id(-1);  // Using -1 to indicate the end of transmission
+    std::string serialized_eot;
+    eot.SerializeToString(&serialized_eot);
+    for (size_t i = 0; i < 10; i++)
+    {
+        socket.send_to(boost::asio::buffer(serialized_eot), *iter);
+    }
+
+    std::cout << "Packets sent: " << packetsSent << std::endl;
+}
+
 void setFragmentParameters(DATA::Fragment& fragment, int ec_k, int ec_m, int ec_w, int ec_hd, const std::string& ECBackendName,
                            int idx, size_t size, size_t orig_data_size, const char* frag, size_t encoded_fragment_len,
                            bool is_data, int tier_id, int chunk_id, int fragment_id, const std::string& variableName,
                            const DATA::QueryTable& protoQueryTable, const std::vector<uint32_t>& dimensions, const std::string& variableType,
-                           u_int32_t numLevels, const std::vector<float>& level_error_bounds, const std::vector<uint8_t>& stopping_indices,
+                           int numLevels, const std::vector<double>& level_error_bounds, const std::vector<uint8_t>& stopping_indices,
                            const DATA::SquaredErrorsTable& protoAllSquaredErrors, int numTiers) {
     fragment.set_k(ec_k);
     fragment.set_m(ec_m);
@@ -293,23 +354,6 @@ void setFragmentParameters(DATA::Fragment& fragment, int ec_k, int ec_m, int ec_
     fragment.set_encoded_fragment_length(encoded_fragment_len);
 }
 
-struct VariableParameters {
-    std::vector<std::vector<std::vector<uint8_t>>> splitDataTiers;
-    std::vector<int> dataTiersECParam_k;
-    std::vector<int> dataTiersECParam_m;
-    std::vector<int> dataTiersECParam_w;
-    std::string ECBackendName;
-    std::string variableName;
-    DATA::QueryTable protoQueryTable;
-    std::vector<uint32_t> dimensions;
-    std::string variableType;
-    u_int32_t numLevels;
-    std::vector<float> level_error_bounds;
-    std::vector<uint8_t> stopping_indices;
-    DATA::SquaredErrorsTable protoAllSquaredErrors;
-    u_int32_t numTiers;
-};
-
 std::vector<DATA::Fragment> find_fragments(const std::vector<DATA::Fragment>& fragments, const std::string& var_name, uint32_t tier_id, uint32_t chunk_id) {
     std::vector<DATA::Fragment> matching_fragments;
     std::copy_if(fragments.begin(), fragments.end(), std::back_inserter(matching_fragments),
@@ -330,7 +374,6 @@ private:
     std::vector<DATA::Fragment> fragments_;
     const size_t MAX_BUFFER_SIZE = 65507;
     bool tcp_connected_ = false;
-    boost::asio::steady_timer timer_; // Timer for sleep
 
     std::chrono::steady_clock::time_point start_transmission_time_;
     size_t total_bytes_sent_ = 0;
@@ -344,8 +387,7 @@ public:
         : io_context_(io_context),
           udp_socket_(io_context, udp::endpoint(udp::v4(), 0)),
           receiver_endpoint_(boost::asio::ip::address::from_string(receiver_address), udp_port),
-          tcp_socket_(io_context),
-          timer_(io_context)
+          tcp_socket_(io_context)
     {
         GOOGLE_PROTOBUF_VERIFY_VERSION;
         connect_to_receiver(receiver_address, tcp_port);
@@ -373,8 +415,8 @@ public:
 
     void stop_transmission() {
         transmission_complete_ = true;
-        auto end_transmission_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_transmission_time - start_transmission_time_);
+        auto end_time = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_transmission_time_);
         double duration_seconds = duration.count() / 1000000.0;
         double throughput_mbps = (total_bytes_sent_ * 8.0 / 1000000.0) / duration_seconds;
         
@@ -418,62 +460,20 @@ public:
 
                 total_bytes_sent_ += sizeof(serialized_fragment.size()) + serialized_fragment.size();
                 // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                // std::this_thread::sleep_for(std::chrono::nanoseconds(SLEEP_DURATION)); // 0.001 milliseconds
-                // Use Boost.Asio timer for sleep
-                timer_.expires_after(std::chrono::nanoseconds(SLEEP_DURATION));
-                timer_.wait();
+                // std::this_thread::sleep_for(std::chrono::microseconds(1)); // 0.001 milliseconds
                 std::cout << "Sent fragment: " << fragment.var_name() 
                             << " tier=" << fragment.tier_id() 
                             << " chunk=" << fragment.chunk_id() 
                             << " frag=" << fragment.fragment_id() << std::endl;  
             }
-        }
-    }
-
-    void start_sender(std::vector<VariableParameters> params) {
-        for (const auto& param : params) {
             
-
-            for (size_t i = 0; i < param.splitDataTiers.size(); i++) {
-                for (size_t k = 0; k < param.splitDataTiers[i].size(); k++) {
-                    try {
-                        std::vector<DATA::Fragment> newFragments = generateFragments(
-                            param.splitDataTiers[i][k],
-                            param.dataTiersECParam_k[i],
-                            param.dataTiersECParam_m[i],
-                            param.dataTiersECParam_w[i],
-                            param.ECBackendName,
-                            param.variableName,
-                            i,  // tierIndex
-                            k,  // chunkIndex
-                            param.protoQueryTable,
-                            param.dimensions,
-                            param.variableType,
-                            param.numLevels,
-                            param.level_error_bounds,
-                            param.stopping_indices,
-                            param.protoAllSquaredErrors,
-                            param.numTiers
-                        );
-                        
-                        fragments_.insert(fragments_.end(), newFragments.begin(), newFragments.end());
-                        // packetsSent += newFragments.size();
-                        send_fragments(newFragments);
-                        
-                        std::cout << "Encoded Tier: " << i << " Chunk: " << k << std::endl;
-                    } catch (const std::exception& e) {
-                        std::cerr << "Error generating fragments: " << e.what() << std::endl;
-                    }
-                }
-            }
         }
 
         // Send EOT via TCP
         send_eot();
     }
 
-
-    void send_metadata(std::vector<VariableParameters> params) {
+    void send_metadata(const std::vector<DATA::Fragment>& fragments) {
         if (!tcp_connected_) {
             std::cerr << "Error: TCP connection not established" << std::endl;
             return;
@@ -483,14 +483,10 @@ public:
         // Track chunks and k values per var/tier
         std::map<std::string, std::map<uint32_t, std::pair<std::set<uint32_t>, uint32_t>>> var_tier_info; // var -> tier -> (chunks, k)
         
-        for (const auto& param : params) {
-            for (size_t i = 0; i < param.splitDataTiers.size(); ++i) {
-                for (size_t k = 0; k < param.splitDataTiers[i].size(); ++k) {
-                    auto& [chunks, k_value] = var_tier_info[param.variableName][i];
-                    chunks.insert(k);
-                    k_value = param.dataTiersECParam_k[i];
-                }
-            }
+        for (const auto& fragment : fragments) {
+            auto& [chunks, k] = var_tier_info[fragment.var_name()][fragment.tier_id()];
+            chunks.insert(fragment.chunk_id());
+            k = fragment.k();
         }
         
         for (const auto& [var_name, tier_map] : var_tier_info) {
@@ -507,29 +503,6 @@ public:
                 }
             }
         }
-        // Track chunks and k values per var/tier
-        // std::map<std::string, std::map<uint32_t, std::pair<std::set<uint32_t>, uint32_t>>> var_tier_info; // var -> tier -> (chunks, k)
-        
-        // for (const auto& fragment : fragments) {
-        //     auto& [chunks, k] = var_tier_info[fragment.var_name()][fragment.tier_id()];
-        //     chunks.insert(fragment.chunk_id());
-        //     k = fragment.k();
-        // }
-        
-        // for (const auto& [var_name, tier_map] : var_tier_info) {
-        //     auto* var_meta = metadata.add_variables();
-        //     var_meta->set_var_name(var_name);
-            
-        //     for (const auto& [tier_id, info] : tier_map) {
-        //         auto* tier_meta = var_meta->add_tiers();
-        //         tier_meta->set_tier_id(tier_id);
-        //         tier_meta->set_k(info.second);
-                
-        //         for (uint32_t chunk_id : info.first) {
-        //             tier_meta->add_chunk_ids(chunk_id);
-        //         }
-        //     }
-        // }
         
         std::string serialized_metadata;
         metadata.SerializeToString(&serialized_metadata);
@@ -542,9 +515,7 @@ public:
 
 private:
     void send_eot() {
-        // std::this_thread::sleep_for(std::chrono::nanoseconds(SLEEP_DURATION)); // 0.01 milliseconds
-        timer_.expires_after(std::chrono::nanoseconds(SLEEP_DURATION));
-        timer_.wait();
+        std::this_thread::sleep_for(std::chrono::microseconds(10)); // 0.01 milliseconds
         if (!tcp_connected_) {
             std::cerr << "Error: TCP connection not established" << std::endl;
             return;
@@ -624,9 +595,7 @@ private:
                                     boost::asio::buffer(serialized_fragment),
                                     receiver_endpoint_
                                 );
-                                // std::this_thread::sleep_for(std::chrono::microseconds(SLEEP_DURATION)); // 0.001 milliseconds
-                                timer_.expires_after(std::chrono::nanoseconds(SLEEP_DURATION));
-                                timer_.wait();
+
                                 total_bytes_sent_ += sizeof(serialized_fragment.size()) + serialized_fragment.size();
                             }
                         }
@@ -644,7 +613,7 @@ private:
                                         boost::asio::buffer(serialized_fragment),
                                         receiver_endpoint_
                                     );
-                                    std::this_thread::sleep_for(std::chrono::nanoseconds(SLEEP_DURATION)); // 0.001 milliseconds   
+
                                     total_bytes_sent_ += sizeof(serialized_fragment.size()) + serialized_fragment.size();
                                 }
                             }
@@ -659,9 +628,6 @@ private:
                                 boost::asio::buffer(serialized_fragment),
                                 receiver_endpoint_
                             );
-                            // std::this_thread::sleep_for(std::chrono::nanoseconds(SLEEP_DURATION)); // 0.001 milliseconds
-                            timer_.expires_after(std::chrono::nanoseconds(SLEEP_DURATION));
-                            timer_.wait();
                             total_bytes_sent_ += sizeof(serialized_fragment.size()) + serialized_fragment.size();
                         }
                         std::cout << "Retransmitting chunk: " << var_request.var_name() 
@@ -671,101 +637,10 @@ private:
                     }
                 }
             }
+            
             // Send EOT after retransmission via TCP
             send_eot();
         }
-    }
-
-    std::vector<DATA::Fragment> generateFragments(
-        const std::vector<uint8_t>& data, int k,int m, int w,
-        const std::string& ECBackendName, const std::string& variableName,
-        int tierIndex, int chunkIndex, const DATA::QueryTable& protoQueryTable, const std::vector<uint32_t>& dimensions, const std::string& variableType,
-        uint32_t numLevels, const std::vector<float>& level_error_bounds, const std::vector<uint8_t>& stopping_indices, 
-        const DATA::SquaredErrorsTable& protoAllSquaredErrors, uint32_t numTiers
-    ) {
-        std::vector<DATA::Fragment> fragments;
-        
-        // Set up EC parameters
-        struct ec_args args = {
-            .k = k,
-            .m = m,
-            .w = w,
-            .hd = m + 1,
-            .ct = CHKSUM_NONE,
-        };
-
-        // Determine backend ID
-        ec_backend_id_t backendID;
-        if (ECBackendName == "flat_xor_hd") backendID = EC_BACKEND_FLAT_XOR_HD;
-        else if (ECBackendName == "jerasure_rs_vand") backendID = EC_BACKEND_JERASURE_RS_VAND;
-        else if (ECBackendName == "jerasure_rs_cauchy") backendID = EC_BACKEND_JERASURE_RS_CAUCHY;
-        else if (ECBackendName == "isa_l_rs_vand") backendID = EC_BACKEND_ISA_L_RS_VAND;
-        else if (ECBackendName == "isa_l_rs_cauchy") backendID = EC_BACKEND_ISA_L_RS_CAUCHY;
-        else if (ECBackendName == "shss") backendID = EC_BACKEND_SHSS;
-        else if (ECBackendName == "liberasurecode_rs_vand") backendID = EC_BACKEND_LIBERASURECODE_RS_VAND;
-        else if (ECBackendName == "libphazr") backendID = EC_BACKEND_LIBPHAZR;
-        else backendID = EC_BACKEND_NULL;
-
-        // Create erasure coding instance
-        int desc = liberasurecode_instance_create(backendID, &args);
-        if (desc < 0) {
-            throw std::runtime_error("Failed to create erasure coding instance");
-        }
-
-        // Prepare data for encoding
-        char **encoded_data = NULL, **encoded_parity = NULL;
-        uint64_t encoded_fragment_len = 0;
-        char *orig_data = static_cast<char*>(static_cast<void*>(const_cast<uint8_t*>(data.data())));
-        int orig_data_size = data.size();
-
-        // Encode the data
-        int rc = liberasurecode_encode(desc, orig_data, orig_data_size,
-            &encoded_data, &encoded_parity, &encoded_fragment_len);
-        if (rc != 0) {
-            liberasurecode_instance_destroy(desc);
-            throw std::runtime_error("Failed to encode data");
-        }
-
-        // Process data fragments
-        size_t frag_header_size = sizeof(fragment_header_t);
-        for (int j = 0; j < k; j++) {
-            char *frag = encoded_data[j];
-            fragment_header_t *header = (fragment_header_t*)frag;
-            fragment_metadata_t metadata = header->meta;
-
-            DATA::Fragment dataFragment;
-            setFragmentParameters(dataFragment, k, m, w, m + 1, ECBackendName, args.k + j,
-                encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size,
-                orig_data_size, frag, encoded_fragment_len, true, tierIndex, chunkIndex, j,
-                variableName, protoQueryTable, dimensions, variableType, numLevels,
-                std::vector<float>(level_error_bounds.begin(), level_error_bounds.end()),
-                stopping_indices, protoAllSquaredErrors, numTiers);
-            
-            fragments.push_back(dataFragment);
-        }
-
-        // Process parity fragments
-        for (int j = 0; j < m; j++) {
-            char *frag = encoded_parity[j];
-            fragment_header_t *header = (fragment_header_t*)frag;
-            fragment_metadata_t metadata = header->meta;
-
-            DATA::Fragment parityFragment;
-            setFragmentParameters(parityFragment, k, m, w, m + 1, ECBackendName, args.k + j,
-                encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size,
-                orig_data_size, frag, encoded_fragment_len, false, tierIndex, chunkIndex, j,
-                variableName, protoQueryTable, dimensions, variableType, numLevels,
-                std::vector<float>(level_error_bounds.begin(), level_error_bounds.end()),
-                stopping_indices, protoAllSquaredErrors, numTiers);
-            
-            fragments.push_back(parityFragment);
-        }
-
-        // Cleanup
-        liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
-        liberasurecode_instance_destroy(desc);
-
-        return fragments;
     }
 };
 
@@ -792,8 +667,6 @@ int main(int argc, char *argv[])
     ec_backend_id_t backendID;
     size_t fragmentSize;
     GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-    std::vector<VariableParameters> variableParameters; 
 
     // Start the timer
     auto start = std::chrono::steady_clock::now();
@@ -1274,177 +1147,175 @@ int main(int argc, char *argv[])
         
             protoVariable.set_tiers(numTiers);
 
-            variableParameters.push_back(VariableParameters{splitDataTiers,dataTiersECParam_k, dataTiersECParam_m, dataTiersECParam_w, ECBackendName, 
-                                            variableName, protoQueryTable, dimensions, variableType, numLevels, level_error_bounds, stopping_indices, 
-                                            protoAllSquaredErrors, numTiers});
-            // std::cout << "split data tiers size " << splitDataTiers.size() << std::endl;
-            // for (size_t i = 0; i < splitDataTiers.size(); i++)
-            // {
-            //     struct ec_args args = {
-            //         .k = dataTiersECParam_k[i],
-            //         .m = dataTiersECParam_m[i],
-            //         .w = dataTiersECParam_w[i],
-            //         .hd = dataTiersECParam_m[i]+1,
-            //         .ct = CHKSUM_NONE,
-            //     };
-            //     std::cout << "K:" << args.k << ";M:" << args.m << ";W:" << args.w << ";HD:" << args.hd << std::endl;
-            //     std::string varECParam_k_Name = variableName+":Tier:"+std::to_string(i)+":K";
+
+            std::cout << "split data tiers size " << splitDataTiers.size() << std::endl;
+            for (size_t i = 0; i < splitDataTiers.size(); i++)
+            {
+                struct ec_args args = {
+                    .k = dataTiersECParam_k[i],
+                    .m = dataTiersECParam_m[i],
+                    .w = dataTiersECParam_w[i],
+                    .hd = dataTiersECParam_m[i]+1,
+                    .ct = CHKSUM_NONE,
+                };
+                std::cout << "K:" << args.k << ";M:" << args.m << ";W:" << args.w << ";HD:" << args.hd << std::endl;
+                std::string varECParam_k_Name = variableName+":Tier:"+std::to_string(i)+":K";
                  
-            //     int ec_k = dataTiersECParam_k[i];
+                int ec_k = dataTiersECParam_k[i];
 
-            //     std::string varECParam_m_Name = variableName+":Tier:"+std::to_string(i)+":M";
-            //     //adios2::Variable<int> varECParam_m = writer_io.DefineVariable<int>(varECParam_m_Name);
-            //     int ec_m = dataTiersECParam_m[i];
+                std::string varECParam_m_Name = variableName+":Tier:"+std::to_string(i)+":M";
+                //adios2::Variable<int> varECParam_m = writer_io.DefineVariable<int>(varECParam_m_Name);
+                int ec_m = dataTiersECParam_m[i];
                 
-            //     std::cout << "Key: " << varECParam_m_Name << "; Value: " << PackSingleElement(&ec_m) << std::endl;
+                std::cout << "Key: " << varECParam_m_Name << "; Value: " << PackSingleElement(&ec_m) << std::endl;
                 
 
-            //     std::string varECParam_w_Name = variableName+":Tier:"+std::to_string(i)+":W";
-            //     //adios2::Variable<int> varECParam_w = writer_io.DefineVariable<int>(varECParam_w_Name);
-            //     int ec_w = dataTiersECParam_w[i];
+                std::string varECParam_w_Name = variableName+":Tier:"+std::to_string(i)+":W";
+                //adios2::Variable<int> varECParam_w = writer_io.DefineVariable<int>(varECParam_w_Name);
+                int ec_w = dataTiersECParam_w[i];
 
-            //     std::string varECParam_hd_Name = variableName+":Tier:"+std::to_string(i)+":HD";
-            //     //adios2::Variable<int> varECParam_hd = writer_io.DefineVariable<int>(varECParam_hd_Name);
-            //     int ec_hd = dataTiersECParam_m[i]+1;
+                std::string varECParam_hd_Name = variableName+":Tier:"+std::to_string(i)+":HD";
+                //adios2::Variable<int> varECParam_hd = writer_io.DefineVariable<int>(varECParam_hd_Name);
+                int ec_hd = dataTiersECParam_m[i]+1;
                 
-            //     std::cout << "Key: " << varECParam_hd_Name << "; Value: " << PackSingleElement(&ec_hd) << std::endl;
+                std::cout << "Key: " << varECParam_hd_Name << "; Value: " << PackSingleElement(&ec_hd) << std::endl;
 
-            //     std::string varECBackendName = variableName+":Tier:"+std::to_string(i)+":ECBackendName";
+                std::string varECBackendName = variableName+":Tier:"+std::to_string(i)+":ECBackendName";
                 
-            //     std::string varECBackendResult;
-            //     std::cout << varECBackendName << ", " << varECBackendResult << std::endl;  
+                std::string varECBackendResult;
+                std::cout << varECBackendName << ", " << varECBackendResult << std::endl;  
 
                 
-            //     std::cout << "Encoding tier chunks" << std::endl;
-            //     for (size_t k = 0; k < splitDataTiers[i].size(); k++)
-            //     {
-            //         int desc = -1;
-            //         int rc = 0;
-            //         //std::cout << "backendID: " << backendID << std::endl;
-            //         desc = liberasurecode_instance_create(backendID, &args);
+                std::cout << "Encoding tier chunks" << std::endl;
+                for (size_t k = 0; k < splitDataTiers[i].size(); k++)
+                {
+                    int desc = -1;
+                    int rc = 0;
+                    //std::cout << "backendID: " << backendID << std::endl;
+                    desc = liberasurecode_instance_create(backendID, &args);
                     
-            //         if (-EBACKENDNOTAVAIL == desc) 
-            //         {
-            //             std::cerr << "backend library not available!" << std::endl;
-            //             return 1;
-            //         } else if ((args.k + args.m) > EC_MAX_FRAGMENTS) 
-            //         {
-            //             assert(-EINVALIDPARAMS == desc);
-            //             std::cerr << "invalid parameters!" << std::endl;
-            //             return 1;
-            //         } else
-            //         {
-            //             assert(desc > 0);
-            //         }   
+                    if (-EBACKENDNOTAVAIL == desc) 
+                    {
+                        std::cerr << "backend library not available!" << std::endl;
+                        return 1;
+                    } else if ((args.k + args.m) > EC_MAX_FRAGMENTS) 
+                    {
+                        assert(-EINVALIDPARAMS == desc);
+                        std::cerr << "invalid parameters!" << std::endl;
+                        return 1;
+                    } else
+                    {
+                        assert(desc > 0);
+                    }   
 
-            //         // std::cout << "split data tiers size: " << splitDataTiers.size() << " k: " << k << std::endl;
-            //         char **encoded_data = NULL, **encoded_parity = NULL;
-            //         uint64_t encoded_fragment_len = 0;
-            //         char *orig_data = NULL;
-            //         int orig_data_size = splitDataTiers[i][k].size();
-            //         // std::cout << "orig_data_size: " << orig_data_size << std::endl;
-            //         orig_data = static_cast<char*>(static_cast<void *>(splitDataTiers[i][k].data()));
+                    // std::cout << "split data tiers size: " << splitDataTiers.size() << " k: " << k << std::endl;
+                    char **encoded_data = NULL, **encoded_parity = NULL;
+                    uint64_t encoded_fragment_len = 0;
+                    char *orig_data = NULL;
+                    int orig_data_size = splitDataTiers[i][k].size();
+                    // std::cout << "orig_data_size: " << orig_data_size << std::endl;
+                    orig_data = static_cast<char*>(static_cast<void *>(splitDataTiers[i][k].data()));
 
                                  
-            //         rc = liberasurecode_encode(desc, orig_data, orig_data_size,
-            //                 &encoded_data, &encoded_parity, &encoded_fragment_len);          
-            //         assert(0 == rc);
-            //         std::cout << "encoded_fragment_len: " << encoded_fragment_len << std::endl;
+                    rc = liberasurecode_encode(desc, orig_data, orig_data_size,
+                            &encoded_data, &encoded_parity, &encoded_fragment_len);          
+                    assert(0 == rc);
+                    std::cout << "encoded_fragment_len: " << encoded_fragment_len << std::endl;
 
 
-            //         size_t frag_header_size =  sizeof(fragment_header_t);
-            //         for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
-            //         {
-            //             char *frag = NULL;
-            //             frag = encoded_data[j];
-            //             assert(frag != NULL);
-            //             fragment_header_t *header = (fragment_header_t*)frag;
-            //             assert(header != NULL);
+                    size_t frag_header_size =  sizeof(fragment_header_t);
+                    for (size_t j = 0; j < dataTiersECParam_k[i]; j++)
+                    {
+                        char *frag = NULL;
+                        frag = encoded_data[j];
+                        assert(frag != NULL);
+                        fragment_header_t *header = (fragment_header_t*)frag;
+                        assert(header != NULL);
                   
 
-            //             fragment_metadata_t metadata = header->meta;
-            //             assert(metadata.idx == j);
-            //             assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
-            //             assert(metadata.orig_data_size == orig_data_size);
-            //             assert(metadata.backend_id == backendID);
-            //             assert(metadata.chksum_mismatch == 0);     
+                        fragment_metadata_t metadata = header->meta;
+                        assert(metadata.idx == j);
+                        assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
+                        assert(metadata.orig_data_size == orig_data_size);
+                        assert(metadata.backend_id == backendID);
+                        assert(metadata.chksum_mismatch == 0);     
 
-            //             std::string varDataValuesName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j);   
-            //             // adios2::Variable<char> varDataValues = writer_io.DefineVariable<char>(varDataValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});
-            //             std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
+                        std::string varDataValuesName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j);   
+                        // adios2::Variable<char> varDataValues = writer_io.DefineVariable<char>(varDataValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});
+                        std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
 
-            //             std::string varDataLocationName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j)+":Location";
+                        std::string varDataLocationName = variableName+":Tier:"+std::to_string(i)+":Data:"+std::to_string(j)+":Location";
 
-            //             DATA::Fragment protoFragment1;
-            //             setFragmentParameters(protoFragment1, ec_k, ec_m, ec_w, ec_hd, ECBackendName, args.k + j,
-            //             encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size,
-            //             orig_data_size, frag, encoded_fragment_len, true, i, k, j, variableName,
-            //             protoQueryTable, dimensions, variableType, numLevels, std::vector<float>(level_error_bounds.begin(), level_error_bounds.end()),
-            //             stopping_indices, protoAllSquaredErrors, numTiers);
+                        DATA::Fragment protoFragment1;
+                        setFragmentParameters(protoFragment1, ec_k, ec_m, ec_w, ec_hd, ECBackendName, args.k + j,
+                        encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size,
+                        orig_data_size, frag, encoded_fragment_len, true, i, k, j, variableName,
+                        protoQueryTable, dimensions, variableType, numLevels, std::vector<double>(level_error_bounds.begin(), level_error_bounds.end()),
+                        stopping_indices, protoAllSquaredErrors, numTiers);
                     
-            //             // send_protobuf_message(socket2, protoFragment1);
+                        // send_protobuf_message(socket2, protoFragment1);
                         
-            //             // fragments_vector.push_back(protoFragment1);
+                        // fragments_vector.push_back(protoFragment1);
                        
-            //             packetsSent++;
-            //             fragments.push_back(protoFragment1);
-            //             // senderBoost(io_service, socket, receiver_endpoint, protoFragment1);
+                        packetsSent++;
+                        fragments.push_back(protoFragment1);
+                        // senderBoost(io_service, socket, receiver_endpoint, protoFragment1);
                         
-            //             // std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                        // std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
-            //             std::cout << "Encoded Tier: " << i << " Chunk: " << k << " Data:   " << j << std::endl;
-            //         }
-            //         for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
-            //         {
-            //             char *frag = NULL;
-            //             frag = encoded_parity[j];
-            //             assert(frag != NULL);
-            //             fragment_header_t *header = (fragment_header_t*)frag;
-            //             assert(header != NULL);
+                        std::cout << "Encoded Tier: " << i << " Chunk: " << k << " Data:   " << j << std::endl;
+                    }
+                    for (size_t j = 0; j < dataTiersECParam_m[i]; j++)
+                    {
+                        char *frag = NULL;
+                        frag = encoded_parity[j];
+                        assert(frag != NULL);
+                        fragment_header_t *header = (fragment_header_t*)frag;
+                        assert(header != NULL);
 
-            //             fragment_metadata_t metadata = header->meta;
-            //             assert(metadata.idx == args.k+j);
-            //             assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
-            //             assert(metadata.orig_data_size == orig_data_size);
-            //             assert(metadata.backend_id == backendID);
-            //             assert(metadata.chksum_mismatch == 0);     
+                        fragment_metadata_t metadata = header->meta;
+                        assert(metadata.idx == args.k+j);
+                        assert(metadata.size == encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size);
+                        assert(metadata.orig_data_size == orig_data_size);
+                        assert(metadata.backend_id == backendID);
+                        assert(metadata.chksum_mismatch == 0);     
 
-            //             std::string varParityValuesName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j);        
-            //             // adios2::Variable<char> varParityValues = writer_io.DefineVariable<char>(varParityValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});  
-            //             std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
+                        std::string varParityValuesName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j);        
+                        // adios2::Variable<char> varParityValues = writer_io.DefineVariable<char>(varParityValuesName, {encoded_fragment_len}, {0}, {encoded_fragment_len});  
+                        std::string idxStr = std::to_string(i)+"_"+std::to_string(j);
 
-            //             std::string varParityLocationName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j)+":Location";
+                        std::string varParityLocationName = variableName+":Tier:"+std::to_string(i)+":Parity:"+std::to_string(j)+":Location";
 
-            //             DATA::Fragment protoFragment2;
-            //             setFragmentParameters(protoFragment2, ec_k, ec_m, ec_w, ec_hd, ECBackendName, args.k + j,
-            //             encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size,
-            //             orig_data_size, frag, encoded_fragment_len, false, i, k, j, variableName,
-            //             protoQueryTable, dimensions, variableType, numLevels, std::vector<float>(level_error_bounds.begin(), level_error_bounds.end()),
-            //             stopping_indices, protoAllSquaredErrors, numTiers);
-            //             // fragments_vector.push_back(protoFragment2);
+                        DATA::Fragment protoFragment2;
+                        setFragmentParameters(protoFragment2, ec_k, ec_m, ec_w, ec_hd, ECBackendName, args.k + j,
+                        encoded_fragment_len - frag_header_size - metadata.frag_backend_metadata_size,
+                        orig_data_size, frag, encoded_fragment_len, false, i, k, j, variableName,
+                        protoQueryTable, dimensions, variableType, numLevels, std::vector<double>(level_error_bounds.begin(), level_error_bounds.end()),
+                        stopping_indices, protoAllSquaredErrors, numTiers);
+                        // fragments_vector.push_back(protoFragment2);
                       
-            //             // senderBoost(io_service, socket, receiver_endpoint, protoFragment2);
+                        // senderBoost(io_service, socket, receiver_endpoint, protoFragment2);
                         
-            //             fragments.push_back(protoFragment2);
-            //             packetsSent++;
-            //             // std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            //             std::cout << "Encoded Tier: " << i << " Chunk: " << k << " Parity: " << j << std::endl;
-            //         }
+                        fragments.push_back(protoFragment2);
+                        packetsSent++;
+                        // std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                        std::cout << "Encoded Tier: " << i << " Chunk: " << k << " Parity: " << j << std::endl;
+                    }
 
-            //         rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
-            //         assert(rc == 0);    
-            //         assert(0 == liberasurecode_instance_destroy(desc));   
-            //     }
-            //     std::cout << "Encoded tier: " << i << std::endl;
+                    rc = liberasurecode_encode_cleanup(desc, encoded_data, encoded_parity);
+                    assert(rc == 0);    
+                    assert(0 == liberasurecode_instance_destroy(desc));   
+                }
+                std::cout << "Encoded tier: " << i << std::endl;
       
-            // }
+            }
             std::cout << "split data tiers size " << splitDataTiers.size() << std::endl;
             totalPacketsSent.push_back(packetsSent);
             packetsSent = 0;
             *variableCollection.add_variables() = protoVariable;
         } 
         // break to send only 1 variable
-        break;
+        // break;
     }
     // boost::asio::io_service io_service;
     // send_messages_boost(io_service, IPADDRESS, UDP_PORT, fragments);
@@ -1452,10 +1323,9 @@ int main(int argc, char *argv[])
         std::cout << "Sending fragments via UDP" << std::endl;
         boost::asio::io_context io_context;
         Sender sender(io_context, "127.0.0.1", 12345, 12346);
-        sender.send_metadata(variableParameters);
-        sender.start_sender(variableParameters);
-        // sender.send_metadata(fragments);
-        // sender.send_fragments(fragments);
+        
+        sender.send_metadata(fragments);
+        sender.send_fragments(fragments);
         io_context.run();
     }
     catch (std::exception& e) {
