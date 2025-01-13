@@ -869,6 +869,11 @@ private:
     bool tcp_connected_ = false;
     std::map<std::string, Variable> variables;
     std::map<std::string, VariableInfo> variablesMetadata;
+
+    std::map<std::string, std::map<uint32_t, int>> fragments_per_chunk_;
+    std::map<std::string, std::map<uint32_t, int>> processed_chunks_count_;
+    const int CHUNKS_THRESHOLD = 10;
+    const int EXPECTED_FRAGMENTS_PER_CHUNK = 32;
     
 public:
     Receiver(boost::asio::io_context& io_context, 
@@ -917,11 +922,12 @@ private:
                     if (received_message.ParseFromArray(buffer_.data(), bytes_transferred)) {
                         // received_fragments_.push_back(fragment);
                         received_chunks_[received_message.var_name()][received_message.tier_id()][received_message.chunk_id()] = true;
-                        std::cout << "Received fragment: " << received_message.var_name() 
-                                << " tier=" << received_message.tier_id() 
-                                << " chunk=" << received_message.chunk_id() 
-                                << " frag=" << received_message.fragment_id() << std::endl;
+                        // std::cout << "Received fragment: " << received_message.var_name() 
+                        //         << " tier=" << received_message.tier_id() 
+                        //         << " chunk=" << received_message.chunk_id() 
+                        //         << " frag=" << received_message.fragment_id() << std::endl;
                         // Convert received_message into Fragment structure
+                        update_fragments_tracking(received_message);
                         Fragment myFragment;
                         setFragment(received_message, myFragment);
 
@@ -948,6 +954,74 @@ private:
                     std::cerr << "Error receiving fragment: " << ec.message() << std::endl;
                 }
             });
+    }
+
+    void send_fragments_report(const std::string& var_name, uint32_t tier_id) {
+        DATA::FragmentsReport report;
+        report.set_var_name(var_name);
+        report.set_tier_id(tier_id);
+        
+        // Calculate total received fragments for last 10 chunks
+        int total_fragments = 0;
+        int chunks_counted = 0;
+        auto& tier_chunks = fragments_per_chunk_[var_name];
+        
+        // Get the chunk IDs in order
+        std::vector<uint32_t> chunk_ids;
+        for (const auto& [chunk_id, _] : tier_chunks) {
+            chunk_ids.push_back(chunk_id);
+        }
+        
+        // Sort in descending order to get the most recent chunks
+        std::sort(chunk_ids.rbegin(), chunk_ids.rend());
+        
+        // Take the last 10 chunks (or fewer if less are available)
+        for (size_t i = 0; i < std::min(size_t(10), chunk_ids.size()); ++i) {
+            uint32_t chunk_id = chunk_ids[i];
+            total_fragments += tier_chunks[chunk_id];
+            chunks_counted++;
+        }
+        
+        report.set_chunks_processed(chunks_counted);
+        report.set_total_fragments(total_fragments);
+        report.set_expected_fragments(chunks_counted * EXPECTED_FRAGMENTS_PER_CHUNK);
+        
+        // Serialize and send the report via TCP
+        std::string serialized_report;
+        report.SerializeToString(&serialized_report);
+        
+        try {
+            uint32_t message_size = serialized_report.size();
+            boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
+            boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_report));
+            std::cout << "Fragments report sent for " << var_name 
+                     << " tier " << tier_id 
+                     << ": " << total_fragments << "/" 
+                     << (chunks_counted * EXPECTED_FRAGMENTS_PER_CHUNK) 
+                     << " fragments received for last " 
+                     << chunks_counted << " chunks" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "Error sending fragments report: " << e.what() << std::endl;
+            tcp_connected_ = false;
+        }
+    }
+
+    void update_fragments_tracking(const DATA::Fragment& received_message) {
+        const std::string& var_name = received_message.var_name();
+        uint32_t tier_id = received_message.tier_id();
+        uint32_t chunk_id = received_message.chunk_id();
+        
+        fragments_per_chunk_[var_name][chunk_id]++;
+        // std::cout << fragments_per_chunk_[var_name][chunk_id] << " fragments received for chunk " << chunk_id << std::endl;
+        // std::cout << "  Total fragments received for " << var_name << ": " << fragments_per_chunk_[var_name].size() << std::endl;
+        // std::cout << "  Total chunks received for " << var_name << ": " << processed_chunks_count_[var_name][tier_id] << std::endl;
+        // Check if we need to send a report (every 10 chunks)
+        if (fragments_per_chunk_[var_name].size() % CHUNKS_THRESHOLD == 0 && 
+            fragments_per_chunk_[var_name].size() > processed_chunks_count_[var_name][tier_id]) {
+            
+            processed_chunks_count_[var_name][tier_id] = fragments_per_chunk_[var_name].size();
+            send_fragments_report(var_name, tier_id);
+        }
     }
 
     void handle_tcp_message(const std::vector<char>& buffer) {
@@ -977,11 +1051,12 @@ private:
         std::cout << "Handling metadata..." << std::endl;
         for (const auto& var : metadata.variables()) {
             auto& var_info = variablesMetadata[var.var_name()];
-            
+            std::cout << "Variable: " << var.var_name() << std::endl;
             for (const auto& tier : var.tiers()) {
                 auto& tier_info = var_info.tiers[tier.tier_id()];
                 tier_info.k = tier.k();
                 tier_info.expected_chunks.insert(tier.chunk_ids().begin(), tier.chunk_ids().end());
+                std::cout << "  Tier: " << tier.tier_id() << " k=" << tier.k() << " chunks=" << tier.chunk_ids_size() << std::endl;
             }
         }
     }
@@ -998,21 +1073,6 @@ private:
                         tcp_socket_,
                         boost::asio::buffer(message_buffer->data(), message_buffer->size()),
                         [this, message_buffer](boost::system::error_code ec, std::size_t /*length*/) {
-                            // if (!ec) {
-                            //     DATA::Fragment eot;
-                            //     if (eot.ParseFromArray(message_buffer->data(), message_buffer->size())) {
-                            //         if (eot.fragment_id() == -1) {
-                            //             std::cout << "Received EOT via TCP. Starting retransmission check..." << std::endl;
-                                        
-                            //             // for (const auto& [var_name, var]: variables) {
-                            //             //     restoreData(var, 0, totalSites, unavailableSites, rawDataName);
-                            //             // }
-                            //             transmission_complete_ = true;
-                            //             send_retransmission_request();
-                            //         }
-                            //     }
-                            //     receive_tcp_eot();
-                            // } 
                             if (!ec) {
                                 handle_tcp_message(*message_buffer);
                                 receive_tcp_message();

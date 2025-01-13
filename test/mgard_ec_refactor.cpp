@@ -335,6 +335,7 @@ private:
     std::chrono::steady_clock::time_point start_transmission_time_;
     size_t total_bytes_sent_ = 0;
     bool transmission_complete_ = false;
+    bool should_stop_ = false;
   
 public:
     Sender(boost::asio::io_context& io_context, 
@@ -394,39 +395,83 @@ public:
         tcp_connected_ = false;
     }
 
+    // void send_fragments(const std::vector<DATA::Fragment>& fragments) {
+    //     if (!tcp_connected_) {
+    //         std::cerr << "Error: TCP connection not established" << std::endl;
+    //         return;
+    //     }
+    //     start_transmission_time_ = std::chrono::steady_clock::now();
+        
+    //     // Send all fragments via UDP
+    //     for (const auto& fragment : fragments) {
+            
+    //         std::string serialized_fragment;
+    //         fragment.SerializeToString(&serialized_fragment);
+            
+    //         for (size_t offset = 0; offset < serialized_fragment.size(); offset += MAX_BUFFER_SIZE) {
+    //             size_t chunk_size = std::min(MAX_BUFFER_SIZE, serialized_fragment.size() - offset);
+    //             udp_socket_.send_to(
+    //                 boost::asio::buffer(serialized_fragment.data() + offset, chunk_size),
+    //                 receiver_endpoint_
+    //             );
+
+    //             total_bytes_sent_ += sizeof(serialized_fragment.size()) + serialized_fragment.size();
+    //             std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    //             // std::this_thread::sleep_for(std::chrono::nanoseconds(SLEEP_DURATION)); // 0.001 milliseconds
+    //             // Use Boost.Asio timer for sleep
+    //             timer_.expires_after(std::chrono::nanoseconds(SLEEP_DURATION));
+    //             timer_.wait();
+    //             std::cout << "Sent fragment: " << fragment.var_name() 
+    //                         << " tier=" << fragment.tier_id() 
+    //                         << " chunk=" << fragment.chunk_id() 
+    //                         << " frag=" << fragment.fragment_id() << std::endl;  
+    //         }
+    //     }
+    // }
+
     void send_fragments(const std::vector<DATA::Fragment>& fragments) {
         if (!tcp_connected_) {
             std::cerr << "Error: TCP connection not established" << std::endl;
             return;
         }
+
+        // Create a strand to ensure UDP sending is sequential
+        boost::asio::strand<boost::asio::io_context::executor_type> strand(io_context_.get_executor());
+
         start_transmission_time_ = std::chrono::steady_clock::now();
 
-        fragments_ = fragments;
-        
-        // Send all fragments via UDP
-        for (const auto& fragment : fragments_) {
-            
+        for (const auto& fragment : fragments) {
+            if (should_stop_) {
+                break;
+            }
+
             std::string serialized_fragment;
             fragment.SerializeToString(&serialized_fragment);
             
             for (size_t offset = 0; offset < serialized_fragment.size(); offset += MAX_BUFFER_SIZE) {
                 size_t chunk_size = std::min(MAX_BUFFER_SIZE, serialized_fragment.size() - offset);
-                udp_socket_.send_to(
-                    boost::asio::buffer(serialized_fragment.data() + offset, chunk_size),
-                    receiver_endpoint_
-                );
+                
+                // Post UDP send operation to strand
+                boost::asio::post(strand, [this, serialized_fragment, offset, chunk_size]() {
+                    if (!should_stop_) {
+                        udp_socket_.send_to(
+                            boost::asio::buffer(serialized_fragment.data() + offset, chunk_size),
+                            receiver_endpoint_
+                        );
 
-                total_bytes_sent_ += sizeof(serialized_fragment.size()) + serialized_fragment.size();
-                // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                // std::this_thread::sleep_for(std::chrono::nanoseconds(SLEEP_DURATION)); // 0.001 milliseconds
-                // Use Boost.Asio timer for sleep
-                timer_.expires_after(std::chrono::nanoseconds(SLEEP_DURATION));
-                timer_.wait();
-                std::cout << "Sent fragment: " << fragment.var_name() 
-                            << " tier=" << fragment.tier_id() 
-                            << " chunk=" << fragment.chunk_id() 
-                            << " frag=" << fragment.fragment_id() << std::endl;  
+                        total_bytes_sent_ += chunk_size;
+                        
+                        // Schedule the timer using the strand
+                        timer_.expires_after(std::chrono::nanoseconds(SLEEP_DURATION));
+                        timer_.async_wait([](const boost::system::error_code&) {});
+                    }
+                });
             }
+            
+            std::cout << "Queued fragment: " << fragment.var_name() 
+                     << " tier=" << fragment.tier_id() 
+                     << " chunk=" << fragment.chunk_id() 
+                     << " frag=" << fragment.fragment_id() << std::endl;
         }
     }
 
@@ -507,29 +552,6 @@ public:
                 }
             }
         }
-        // Track chunks and k values per var/tier
-        // std::map<std::string, std::map<uint32_t, std::pair<std::set<uint32_t>, uint32_t>>> var_tier_info; // var -> tier -> (chunks, k)
-        
-        // for (const auto& fragment : fragments) {
-        //     auto& [chunks, k] = var_tier_info[fragment.var_name()][fragment.tier_id()];
-        //     chunks.insert(fragment.chunk_id());
-        //     k = fragment.k();
-        // }
-        
-        // for (const auto& [var_name, tier_map] : var_tier_info) {
-        //     auto* var_meta = metadata.add_variables();
-        //     var_meta->set_var_name(var_name);
-            
-        //     for (const auto& [tier_id, info] : tier_map) {
-        //         auto* tier_meta = var_meta->add_tiers();
-        //         tier_meta->set_tier_id(tier_id);
-        //         tier_meta->set_k(info.second);
-                
-        //         for (uint32_t chunk_id : info.first) {
-        //             tier_meta->add_chunk_ids(chunk_id);
-        //         }
-        //     }
-        // }
         
         std::string serialized_metadata;
         metadata.SerializeToString(&serialized_metadata);
@@ -538,6 +560,11 @@ public:
         boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
         boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_metadata));
         std::cout << "Sent metadata via TCP" << std::endl;
+    }
+    
+    void stop() {
+        should_stop_ = true;
+        stop_transmission();
     }
 
 private:
@@ -568,10 +595,41 @@ private:
         }
     }
 
+    // void handle_retransmission_request() {
+    //     if (transmission_complete_) {
+    //         return;
+    //     }
+    //     auto size_buffer = std::make_shared<uint32_t>();
+    //     boost::asio::async_read(
+    //         tcp_socket_,
+    //         boost::asio::buffer(size_buffer.get(), sizeof(*size_buffer)),
+    //         [this, size_buffer](boost::system::error_code ec, std::size_t /*length*/) {
+    //             if (!ec) {
+    //                 auto message_buffer = std::make_shared<std::vector<char>>(*size_buffer);
+    //                 boost::asio::async_read(
+    //                     tcp_socket_,
+    //                     boost::asio::buffer(message_buffer->data(), message_buffer->size()),
+    //                     [this, message_buffer](boost::system::error_code ec, std::size_t /*length*/) {
+    //                         if (!ec) {
+    //                             // handle_request_data(*message_buffer);
+    //                             handle_tcp_message(*message_buffer);
+    //                             handle_retransmission_request();
+    //                         } else {
+    //                             std::cout << "TCP read error: " << ec.message() << std::endl;
+    //                             tcp_connected_ = false;
+    //                         }
+    //                     });
+    //             } else {
+    //                 std::cout << "TCP size read error: " << ec.message() << std::endl;
+    //                 tcp_connected_ = false;
+    //             }
+    //         });
+    // }
     void handle_retransmission_request() {
         if (transmission_complete_) {
             return;
         }
+
         auto size_buffer = std::make_shared<uint32_t>();
         boost::asio::async_read(
             tcp_socket_,
@@ -584,7 +642,11 @@ private:
                         boost::asio::buffer(message_buffer->data(), message_buffer->size()),
                         [this, message_buffer](boost::system::error_code ec, std::size_t /*length*/) {
                             if (!ec) {
-                                handle_request_data(*message_buffer);
+                                // Handle the message in the io_context thread
+                                boost::asio::post(io_context_, [this, message_buffer]() {
+                                    handle_tcp_message(*message_buffer);
+                                });
+                                // Continue listening for more messages
                                 handle_retransmission_request();
                             } else {
                                 std::cout << "TCP read error: " << ec.message() << std::endl;
@@ -598,9 +660,26 @@ private:
             });
     }
 
-    void handle_request_data(const std::vector<char>& buffer) {
+    void handle_tcp_message(const std::vector<char>& buffer) {
+        std::cout << "Received TCP message of size " << buffer.size() << std::endl;
+        // First try to parse as EOT
+        DATA::FragmentsReport report;
+        if (report.ParseFromArray(buffer.data(), buffer.size())) {
+            handle_report(report);
+            return;
+        }
+
+        // Try to parse as metadata
         DATA::RetransmissionRequest request;
         if (request.ParseFromArray(buffer.data(), buffer.size())) {
+            handle_request_data(request);
+            return;
+        }
+    }
+
+    void handle_request_data(DATA::RetransmissionRequest request) {
+        // DATA::RetransmissionRequest request;
+        // if (request.ParseFromArray(buffer.data(), buffer.size())) {
             std::cout << "Received retransmission request." << std::endl;
             // if (request.variables_size() == 0) {
             //     std::cerr << "No variables in retransmission request. All data received." << std::endl;
@@ -651,7 +730,7 @@ private:
                             continue;
                         }
                         std::vector<DATA::Fragment> matching_fragments = find_fragments(fragments_, var_request.var_name(), tier_request.tier_id(), chunk_id);
-                        std::cout << "Found " << matching_fragments.size() << " matching fragments." << std::endl;
+                        std::cout << "Found " << matching_fragments.size() << " matching fragments. Var name: " << var_request.var_name() << " Tier: " << tier_request.tier_id() << " Chunk: " << chunk_id << std::endl;
                         for (const auto& fragment : matching_fragments) {
                             std::string serialized_fragment;
                             fragment.SerializeToString(&serialized_fragment);
@@ -670,10 +749,30 @@ private:
                         
                     }
                 }
-            }
+            // }
             // Send EOT after retransmission via TCP
             send_eot();
         }
+    }
+
+    void handle_report(DATA::FragmentsReport report) {
+        std::cout << "Received fragments report." << std::endl;
+
+        // Extract information from the report
+        std::string var_name = report.var_name();
+        uint32_t tier_id = report.tier_id();
+        uint32_t total_fragments = report.total_fragments();
+        uint32_t expected_fragments = report.expected_fragments();
+
+        // Calculate the number of lost fragments
+        int lost_fragments = expected_fragments - total_fragments;
+
+        // Output the result
+        std::cout << "Variable Name: " << var_name << std::endl;
+        std::cout << "Tier ID: " << tier_id << std::endl;
+        std::cout << "Total Fragments: " << total_fragments << std::endl;
+        std::cout << "Expected Fragments: " << expected_fragments << std::endl;
+        std::cout << "Lost Fragments: " << lost_fragments << std::endl;
     }
 
     std::vector<DATA::Fragment> generateFragments(
@@ -1452,11 +1551,18 @@ int main(int argc, char *argv[])
         std::cout << "Sending fragments via UDP" << std::endl;
         boost::asio::io_context io_context;
         Sender sender(io_context, "127.0.0.1", 12345, 12346);
+
+        std::thread io_thread([&io_context]() {
+            io_context.run();
+        });
+
         sender.send_metadata(variableParameters);
         sender.start_sender(variableParameters);
         // sender.send_metadata(fragments);
         // sender.send_fragments(fragments);
-        io_context.run();
+        // io_context.run();
+        sender.stop();
+        io_thread.join();
     }
     catch (std::exception& e) {
         std::cerr << "Exception: " << e.what() << "\n";
