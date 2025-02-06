@@ -1,3 +1,4 @@
+// Working version with TCP transmission
 #include <iostream>
 #include <ctime>
 #include <cstdlib>
@@ -8,292 +9,113 @@
 #include <queue>
 #include <unordered_map>
 
+#include "../fragment.pb.h"
 
 #include <boost/asio.hpp>
 #include <iostream>
 #include <thread>
 #include <chrono>
 
-#include <limits>
-#include <algorithm>
-#include <numeric>
-#include "../fragment.pb.h"
 // #define IPADDRESS "127.0.0.1" // "192.168.1.64"
 #define IPADDRESS "149.165.175.25"
-#define UDP_PORT 60001
+#define UDP_PORT 12345
 // #define IPADDRESS "10.51.197.229"
 // #define UDP_PORT 34565
-
+#define TCPIPADDRESS "127.0.0.1"
 #define TCP_PORT 12346
-#define SLEEP_DURATION 10000000000
-#define FRAGMENT_SIZE 4096
-#define RATE_FRAG 19144.6
-#define T_TRANSMISSION 0.01
-#define T_RETRANS 0.01
-#define N 32
-#define DEFAULT_M 6
 
 
 using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
 using boost::asio::ip::address;
 
-
-
-std::vector<DATA::Fragment> find_fragments(const std::vector<DATA::Fragment>& fragments, const std::string& var_name, uint32_t tier_id, uint32_t chunk_id) {
-    std::vector<DATA::Fragment> matching_fragments;
-    std::copy_if(fragments.begin(), fragments.end(), std::back_inserter(matching_fragments),
-                 [&](const DATA::Fragment& fragment) {
-                     return fragment.var_name() == var_name &&
-                            fragment.tier_id() == tier_id &&
-                            fragment.chunk_id() == chunk_id;
-                 });
-    return matching_fragments;
-}
-
-void set_timestamp(DATA::Fragment& fragment) {
-    // uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-    //     std::chrono::steady_clock::now().time_since_epoch()).count();
-    auto now = std::chrono::system_clock::now();
-    auto micros = std::chrono::duration_cast<std::chrono::microseconds>(
-            now.time_since_epoch()
-        ).count();
-    
-    fragment.set_timestamp(micros);
-}
-
-struct VariableParameters {
-    std::string ECBackendName;
-    std::string variableName;
-    u_int32_t numTiers;
-};
-
-struct FragmentStore {
-    // Vector of tiers, each containing a vector of chunks, each containing fragments
-    std::vector<std::vector<std::vector<DATA::Fragment>>> fragments;  // [tier][chunk][fragment]
-    
-    void addFragment(const DATA::Fragment& fragment) {
-        size_t tier = fragment.tier_id();
-        size_t chunk = fragment.chunk_id();
-        
-        // Expand tiers if needed
-        if (tier >= fragments.size()) {
-            fragments.resize(tier + 1);
-        }
-        
-        // Expand chunks if needed
-        if (chunk >= fragments[tier].size()) {
-            fragments[tier].resize(chunk + 1);
-        }
-        
-        // Add fragment to appropriate location
-        fragments[tier][chunk].push_back(fragment);
-    }
-    
-    DATA::Fragment* findFragment(size_t tier, size_t chunk, size_t fragment_id) {
-        if (tier < fragments.size() && chunk < fragments[tier].size()) {
-            auto& chunk_fragments = fragments[tier][chunk];
-            for (auto& fragment : chunk_fragments) {
-                if (fragment.fragment_id() == fragment_id) {
-                    return &fragment;
-                }
-            }
-        }
-        return nullptr;
-    }
-
-    std::vector<DATA::Fragment>* findChunk(size_t tier_id, size_t chunk_id) {
-        if (tier_id < fragments.size() && chunk_id < fragments[tier_id].size()) {
-            return &fragments[tier_id][chunk_id];
-        }
-        return nullptr;
-    }
-    
-};
-
-class TransmissionTimeCalculator {
-private:
-    std::vector<long long> tier_sizes;
-    double frag_size;
-    double t_trans_frag;
-    double Tretrans;
-    double lam;
-    double rate_frag;
-    int n;
-
-    static double factorial(int n) {
-        double result = 1.0;
-        for(int i = 2; i <= n; i++) {
-            result *= i;
-        }
-        return result;
-    }
-
-    // Helper function to calculate combination (n choose k)
-    static double combination(int n, int k) {
-        if (k > n) return 0;
-        if (k == 0 || k == n) return 1;
-        
-        double result = 1;
-        k = std::min(k, n - k); // Take advantage of symmetry
-        
-        for (int i = 0; i < k; i++) {
-            result *= (n - i);
-            result /= (i + 1);
-        }
-        return result;
-    }
-
-    static double poisson_pmf(double lambda_val, double T, int m) {
-        return std::pow(lambda_val * T, m) * std::exp(-lambda_val * T) / factorial(m);
-    }
-
-    double fault_tolerant_group_loss_prob_big_lambda(double lambda_val, double t_frag, double rate_f, int m) const {
-        double t_group = t_frag + (32.0 - 1.0) / rate_f;
-        double mu = lambda_val * t_group / (t_group / (32.0 / rate_f));
-        
-        double cumulative_sum = 0.0;
-        for(int i = 0; i <= m; i++) {
-            cumulative_sum += std::pow(mu, i) * std::exp(-mu) / factorial(i);
-        }
-        
-        return 1.0 - cumulative_sum;
-    }
-
-    double fault_tolerant_group_loss_prob_small_lambda(double lambda_val, double t_frag, double rate_f, int m) const {
-        double t_group = t_frag + (32.0 - 1.0) / rate_f;
-        int L = static_cast<int>(rate_f * t_frag + 32.0 - 1.0);
-        
-        double cumulative_sum = 0.0;
-        int start = (m > 0) ? m + 1 : 1;
-        
-        for(int i = start; i <= L; i++) {
-            double poisson_term = std::exp(i * std::log(lambda_val * t_group) - lambda_val * t_group) / factorial(i);
-            
-            double numerator_sum = 0.0;
-            for(int k = m + 1; k <= std::min(i, 32); k++) {
-                numerator_sum += combination(32, k) * combination(L - 32, i - k);
-            }
-            
-            double denominator = combination(L, i);
-            cumulative_sum += poisson_term * (numerator_sum / denominator);
-        }
-        
-        return cumulative_sum;
-    }
-
-    double expected_total_transmission_time(double S, double frag_size, double t_trans_frag, 
-                                         double Tretrans, int m, double lam) const {
-        int N_group = static_cast<int>(std::ceil(S / ((n - m) * frag_size)));
-        
-        double t_ft_group = t_trans_frag + (32.0 - 1.0) / rate_frag;
-        double frag_loss_per_ft_group = lam * t_ft_group / (t_ft_group / (32.0 / rate_frag));
-        
-        double p;
-        if(frag_loss_per_ft_group > 1.0) {
-            p = fault_tolerant_group_loss_prob_big_lambda(lam, t_trans_frag, rate_frag, m);
-        } else {
-            p = fault_tolerant_group_loss_prob_small_lambda(lam, t_trans_frag, rate_frag, m);
-        }
-        
-        double E_Ttotal = t_trans_frag + (n * N_group - 1.0) / rate_frag;
-        
-        for(int i = 0; i < 500; i++) {
-            double term = (1.0 - std::pow(1.0 - p, N_group * std::pow(p, i))) * 
-                         (t_trans_frag + (n * N_group * std::pow(p, i + 1) - 1.0) / rate_frag);
-            E_Ttotal += term;
-        }
-        
-        return E_Ttotal;
-    }
-
-public:
-    TransmissionTimeCalculator(const std::vector<long long>& tier_sizes_, double frag_size_, 
-                             double t_trans_frag_, double Tretrans_, double lam_, 
-                             double rate_frag_, int n_)
-        : tier_sizes(tier_sizes_), frag_size(frag_size_), t_trans_frag(t_trans_frag_),
-          Tretrans(Tretrans_), lam(lam_), rate_frag(rate_frag_), n(n_) {}
-
-    double calculate_expected_total_transmission_time_for_all_tiers(const std::vector<int>& ms) {
-        double E_Toverall = 0.0;
-        for(size_t i = 0; i < tier_sizes.size(); i++) {
-            E_Toverall += expected_total_transmission_time(tier_sizes[i], frag_size, 
-                                                         t_trans_frag, Tretrans, ms[i], lam);
-        }
-        return E_Toverall;
-    }
-
-    std::pair<double, std::vector<int>> find_min_time_configuration() {
-        double min_time = std::numeric_limits<double>::infinity();
-        std::vector<int> best_m(4, 0);
-        
-        for(int i = 0; i < 17; i++) {
-            std::vector<int> current_m(4, i);
-            double E_Toverall = calculate_expected_total_transmission_time_for_all_tiers(current_m);
-            
-            if(E_Toverall < min_time) {
-                min_time = E_Toverall;
-                best_m = current_m;
-            }
-        }
-        
-        return {min_time, best_m};
-    }
-};
-
-void busy_wait(int iterations) {
-    int a = 1;
-    int b = 2;
-    for (volatile int i = 0; i < iterations; ++i) {
-        // Do nothing, just loop to burn CPU cycles
-    }
-}
-
 class Sender {
 private:
     boost::asio::io_context& io_context_;
-    udp::socket udp_socket_;
-    udp::endpoint receiver_endpoint_;
+    tcp::socket tcp_socket_;
     std::vector<DATA::Fragment> fragments_;
+    bool tcp_connected_ = false;
     
     std::chrono::steady_clock::time_point start_time_;
     size_t total_bytes_sent_ = 0;
     int packetsSentTotal = 0;
 
+    void set_timestamp(DATA::Fragment& fragment) {
+        // uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+        //     std::chrono::steady_clock::now().time_since_epoch()).count();
+        auto now = std::chrono::system_clock::now();
+        auto micros = std::chrono::duration_cast<std::chrono::microseconds>(
+                now.time_since_epoch()
+            ).count();
+        
+        fragment.set_timestamp(micros);
+    }
+    
 public:
     Sender(boost::asio::io_context& io_context, 
            const std::string& receiver_address, 
-           unsigned short udp_port)
+           unsigned short tcp_port)
         : io_context_(io_context),
-          udp_socket_(io_context, udp::v4())
+          tcp_socket_(io_context)
     {
         GOOGLE_PROTOBUF_VERIFY_VERSION;
-        receiver_endpoint_ = udp::endpoint(
-            boost::asio::ip::address::from_string(receiver_address),
-            udp_port
-        );
-        
-        std::cout << "Configured to send to " << receiver_address << ":" << udp_port << std::endl;
+        connect_to_receiver(receiver_address, tcp_port);
+    }
+
+    void connect_to_receiver(const std::string& receiver_address, unsigned short tcp_port) {
+        try {
+            tcp::endpoint receiver_endpoint(
+                boost::asio::ip::address::from_string(receiver_address),
+                tcp_port
+            );
+            
+            std::cout << "Connecting to receiver at " << receiver_address << ":" << tcp_port << std::endl;
+            tcp_socket_.connect(receiver_endpoint);
+            tcp_connected_ = true;
+            std::cout << "Connected to receiver." << std::endl;
+            
+
+
+        } catch (const std::exception& e) {
+            std::cerr << "Connection error: " << e.what() << std::endl;
+            throw;
+        }
     }
 
     void send_fragments(const std::vector<DATA::Fragment>& fragments) {
+        if (!tcp_connected_) {
+            std::cerr << "Error: TCP connection not established" << std::endl;
+            return;
+        }
         start_time_ = std::chrono::steady_clock::now();
+
         fragments_ = fragments;
         
-        // Send each fragment via UDP
+        // Send each fragment via TCP
         for (auto& fragment : fragments_) {
             fragment.set_timestamp(
                 std::chrono::system_clock::now().time_since_epoch().count()
             );
+            // fragment.set_frag(std::string(4116 - fragment.ByteSizeLong(), '\0'));
             fragment.set_frag(std::string(4096 - fragment.ByteSizeLong(), '\0'));
+            // fragment.set_frag(std::string(4096, '\0'));
 
             std::string serialized_fragment;
             fragment.SerializeToString(&serialized_fragment);
+
+            // if (serialized_fragment.size() < 4096) {
+            //     serialized_fragment.resize(4096, '\0');
+            // } else if (serialized_fragment.size() > 4096) {
+            //     serialized_fragment.resize(4096);
+            // }
             
+            uint32_t message_size = serialized_fragment.size();
+            std::cout << "Message size: " << message_size << std::endl;
             try {
-                udp_socket_.send_to(boost::asio::buffer(serialized_fragment), receiver_endpoint_);
+                boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
+                boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_fragment));
                 
-                total_bytes_sent_ += serialized_fragment.size();
+                total_bytes_sent_ += sizeof(message_size) + serialized_fragment.size();
                 packetsSentTotal++;
 
                 std::cout << "Sent fragment: " << fragment.var_name() 
@@ -302,21 +124,25 @@ public:
                          << " frag=" << fragment.fragment_id() << std::endl;
             } catch (const std::exception& e) {
                 std::cerr << "Error sending fragment: " << e.what() << std::endl;
+                tcp_connected_ = false;
                 return;
             }
         }
 
-        // Send completion marker
+        // Send completion marker (empty fragment with fragment_id = -1)
         DATA::Fragment completion_marker;
         completion_marker.set_fragment_id(-1);
         std::string serialized_marker;
         completion_marker.SerializeToString(&serialized_marker);
         
+        uint32_t marker_size = serialized_marker.size();
         try {
-            udp_socket_.send_to(boost::asio::buffer(serialized_marker), receiver_endpoint_);
+            boost::asio::write(tcp_socket_, boost::asio::buffer(&marker_size, sizeof(marker_size)));
+            boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_marker));
             std::cout << "Sent completion marker" << std::endl;
         } catch (const std::exception& e) {
             std::cerr << "Error sending completion marker: " << e.what() << std::endl;
+            tcp_connected_ = false;
         }
 
         auto end_time_ = std::chrono::steady_clock::now();
@@ -337,6 +163,10 @@ public:
     }
 
     void send_metadata(const std::vector<DATA::Fragment>& fragments) {
+        if (!tcp_connected_) {
+            std::cerr << "Error: TCP connection not established" << std::endl;
+            return;
+        }
         DATA::Metadata metadata;
         
         std::map<std::string, std::map<uint32_t, std::pair<std::set<uint32_t>, uint32_t>>> var_tier_info;
@@ -365,8 +195,10 @@ public:
         std::string serialized_metadata;
         metadata.SerializeToString(&serialized_metadata);
         
-        udp_socket_.send_to(boost::asio::buffer(serialized_metadata), receiver_endpoint_);
-        std::cout << "Sent metadata via UDP" << std::endl;
+        uint32_t message_size = serialized_metadata.size();
+        boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
+        boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_metadata));
+        std::cout << "Sent metadata via TCP" << std::endl;
     }
 };
 
@@ -498,15 +330,15 @@ std::vector<DATA::Fragment> generateFragments(std::vector<long long> tier_sizes,
     return fragments;
 }
 
-int main() {
-    std::cout << "Program started!" << std::endl;
-
-    // std::vector<int> tier_sizes_orig = {5474475, 22402608, 45505266, 150891984}; // 5.2 MB, 21.4 MB, 43.4 MB, 146.3 MB
+int main()
+{  
+    std::cout << "Starting TCP..." << std::endl;
+    auto start = std::chrono::steady_clock::now();
 
     int frag_size = 4096;
     std::vector<long long> tier_sizes_orig = {5474475, 22402608, 45505266, 150891984}; // Use long long
     // long long k = 128; // Use long long for k
-    long long k = 16;
+    long long k = 1;
     std::vector<long long> tier_sizes;
 
     for (long long size : tier_sizes_orig) {
@@ -520,32 +352,18 @@ int main() {
     std::cout << std::endl;
     
     std::cout << "Calling generateFragments..." << std::endl;
-    // FragmentStore fragments = generateFragments(tier_sizes, frag_size);
     std::vector<DATA::Fragment> fragments = generateFragments(tier_sizes, frag_size);
     std::cout << "Fragments generated!" << std::endl;
 
-
     try {
-        std::cout << "Sending fragments via UDP" << std::endl;
+        std::cout << "Sending fragments via TCP" << std::endl;
         boost::asio::io_context io_context;
-        // Sender sender(io_context, "127.0.0.1", 12345, 12346, tier_sizes);
-        // Sender sender(io_context, "149.165.153.98", UDP_PORT, TCP_PORT, tier_sizes);
-        // Sender sender(io_context, "149.165.153.98", UDP_PORT);
-        Sender sender(io_context, IPADDRESS, UDP_PORT);
-        // Sender sender(io_context, "127.0.0.1", UDP_PORT, TCP_PORT, tier_sizes);
-
-        std::thread io_thread([&io_context]() {
-            io_context.run();
-        });
-
-        // sender.start_sender(fragments);
-        sender.send_fragments(fragments);
+        // Sender sender(io_context, "149.165.153.98", 12346);
+        Sender sender(io_context, IPADDRESS, TCP_PORT);
+        
         // sender.send_metadata(fragments);
-        // sender.send_fragments(fragments);
-        // io_context.run();
-
-        // sender.stop();
-        io_thread.join();
+        sender.send_fragments(fragments);
+        io_context.run();
     }
     catch (std::exception& e) {
         std::cerr << "Exception: " << e.what() << "\n";
@@ -555,5 +373,16 @@ int main() {
 
     std::cout << "Completed!" << std::endl;
 
-    return 0;
+
+    // End the timer
+    auto end = std::chrono::steady_clock::now();
+
+    // Calculate the elapsed time
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    // Output the elapsed time
+    std::cout << "Total time encoding+transmission: " << duration.count() << " ms." << std::endl;
+    
+   
+
 }

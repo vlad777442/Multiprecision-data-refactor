@@ -24,7 +24,7 @@
 #define UDP_PORT 12345
 #define TIMEOUT_DURATION_SECONDS 30
 #define SENDER_TCP_IP "127.0.0.1"
-#define SENDER_TCP_PORT 12346
+#define SENDER_TCP_PORT 60001
 #define MESSAGE_SIZE 16384
 
 using namespace boost::asio;
@@ -215,6 +215,8 @@ private:
     std::map<std::string, Variable> variables;
  
     bool tcp_connected_ = false;
+    int cnt = 0;
+    double total_time = 0;
     
 public:
     Receiver(boost::asio::io_context& io_context, 
@@ -259,6 +261,14 @@ private:
         // Try to parse as regular fragment
         DATA::Fragment received_message;
         if (received_message.ParseFromArray(buffer.data(), buffer.size())) {
+            auto receive_time = std::chrono::system_clock::now().time_since_epoch().count();
+        
+            // Calculate latency
+            auto latency = receive_time - received_message.timestamp();
+            total_time += latency;
+            cnt++;
+            std::cout << "Packet latency: " << latency << " nanoseconds" << std::endl;
+
             Fragment myFragment;
             setFragment(received_message, myFragment);
 
@@ -281,42 +291,26 @@ private:
 
     void handle_completion() {
         std::cout << "All fragments received. Processing data..." << std::endl;
-        
-        // Print summary and process data
-        for (const auto& [var_name, var]: variables) {
-            std::cout << "Data for variable: " << var_name << std::endl;
-            for (const auto& [tier_id, tier]: var.tiers) {
-                std::cout << "  Tier: " << tier_id << std::endl;
-                for (const auto& [chunk_id, chunk]: tier.chunks) {
-                    std::cout << "    Chunk: " << chunk_id 
-                             << " fragments+parity size: " 
-                             << chunk.data_fragments.size() + chunk.parity_fragments.size() 
-                             << std::endl;
-                }
-            }
-        }
+        std::cout << "Average latency: " << total_time / cnt << " nanoseconds" << std::endl;
+        // // Print summary and process data
+        // for (const auto& [var_name, var]: variables) {
+        //     std::cout << "Data for variable: " << var_name << std::endl;
+        //     for (const auto& [tier_id, tier]: var.tiers) {
+        //         std::cout << "  Tier: " << tier_id << std::endl;
+        //         for (const auto& [chunk_id, chunk]: tier.chunks) {
+        //             std::cout << "    Chunk: " << chunk_id 
+        //                      << " fragments+parity size: " 
+        //                      << chunk.data_fragments.size() + chunk.parity_fragments.size() 
+        //                      << std::endl;
+        //         }
+        //     }
+        // }
 
         // Restore data for each variable
         // for (const auto& [var_name, var]: variables) {
         //     restoreData(var, 0, totalSites, unavailableSites, rawDataName);
         // }
     }
-
-    // void handle_metadata(const DATA::Metadata& metadata) {
-    //     std::cout << "Handling metadata..." << std::endl;
-    //     for (const auto& var : metadata.variables()) {
-    //         auto& var_info = variablesMetadata[var.var_name()];
-            
-    //         for (const auto& tier : var.tiers()) {
-    //             auto& tier_info = var_info.tiers[tier.tier_id()];
-    //             tier_info.k = tier.k();
-    //             tier_info.expected_chunks.insert(
-    //                 tier.chunk_ids().begin(), 
-    //                 tier.chunk_ids().end()
-    //             );
-    //         }
-    //     }
-    // }
 
     void receive_tcp_message() {
         auto size_buffer = std::make_shared<uint32_t>();

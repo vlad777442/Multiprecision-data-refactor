@@ -245,6 +245,7 @@ private:
     std::map<std::string, std::map<uint32_t, int>> processed_chunks_count_;
     const int CHUNKS_THRESHOLD = 100;
     const int EXPECTED_FRAGMENTS_PER_CHUNK = 32;
+    int packets_received = 0;
     
 public:
     Receiver(boost::asio::io_context& io_context, 
@@ -257,7 +258,8 @@ public:
           buffer_(65507)
     {
         GOOGLE_PROTOBUF_VERIFY_VERSION;
-        wait_for_tcp_connection();
+        start_receiving();
+        // wait_for_tcp_connection();
     }
 
     std::string rawDataName;
@@ -290,12 +292,14 @@ private:
                     DATA::Fragment received_message;
                     if (received_message.ParseFromArray(buffer_.data(), bytes_transferred)) {
                         // received_fragments_.push_back(fragment);
+                        packets_received++;
                         received_chunks_[received_message.var_name()][received_message.tier_id()][received_message.chunk_id()] = true;
                         std::cout << "Received fragment: " << received_message.var_name() 
                                 << " tier=" << received_message.tier_id() 
                                 << " chunk=" << received_message.chunk_id() 
-                                << " frag=" << received_message.fragment_id() << std::endl;
-                      
+                                << " frag=" << received_message.fragment_id() 
+                                << " cnt=" << packets_received << std::endl;
+                        
                         // update_fragments_tracking(received_message);
                         Fragment myFragment;
                         setFragment(received_message, myFragment);

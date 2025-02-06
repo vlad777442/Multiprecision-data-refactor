@@ -18,13 +18,15 @@
 #include <algorithm>
 #include <numeric>
 
-#define IPADDRESS "127.0.0.1" // "192.168.1.64"
-#define UDP_PORT 12345
+#define IPADDRESS "149.165.175.25" // "192.168.1.64"
+// #define UDP_PORT 12345
+#define UDP_PORT 60001
 // #define IPADDRESS "10.51.197.229"
 // #define UDP_PORT 34565
 #define TCPIPADDRESS "127.0.0.1"
-#define TCP_PORT 54321
-#define SLEEP_DURATION 10000000000
+#define TCP_PORT 12346
+// #define SLEEP_DURATION 1000000 
+#define SLEEP_DURATION 0 
 #define FRAGMENT_SIZE 4096
 #define RATE_FRAG 19144.6
 #define T_TRANSMISSION 0.01
@@ -57,7 +59,7 @@ void set_timestamp(DATA::Fragment& fragment) {
     auto micros = std::chrono::duration_cast<std::chrono::microseconds>(
             now.time_since_epoch()
         ).count();
-    
+    // std::cout << "Timestamp: " << micros << std::endl;
     fragment.set_timestamp(micros);
 }
 
@@ -325,69 +327,95 @@ public:
             return;
         }
 
-        // Create a strand to ensure UDP sending is sequential
-        boost::asio::strand<boost::asio::io_context::executor_type> strand(io_context_.get_executor());
+        struct SendState {
+            std::queue<DATA::Fragment> fragment_queue;
+            std::function<void()> send_next;
+            std::function<void()> send_chunk;
+            size_t current_offset = 0;
+            std::string current_serialized;
+        };
 
+        auto strand = boost::asio::make_strand(io_context_);
         start_transmission_time_ = std::chrono::steady_clock::now();
 
+        // Use shared_ptr for shared state management
+        auto state = std::make_shared<SendState>();
+
+        // Populate the queue
         for (size_t tier_id = 0; tier_id < fragments.fragments.size(); ++tier_id) {
-            auto& tier = fragments.fragments[tier_id];  
-            std::cout << std::endl;
-            std::cout << "Processing tier " << tier_id << " with " << tier.size() << " chunks" << std::endl;
-            std::cout << std::endl;
+            auto& tier = fragments.fragments[tier_id];
             for (auto& chunk : tier) {
-                // Set k as the chunk size (number of fragments)
-                int k = chunk.size();
-
-                // Get current m value for this tier
-                int current_m;
-                {
-                    std::lock_guard<std::mutex> lock(ec_params_mutex_);
-                    current_m = (tier_id < current_ec_params_m_.size()) ? 
-                            current_ec_params_m_[tier_id] : DEFAULT_M; // You'll need to define DEFAULT_M_VALUE
-                }
-                
                 for (auto& fragment : chunk) {
-                    if (should_stop_) {
-                        break;
-                    }
-                    fragment.set_k(N - current_m);
-                    fragment.set_m(current_m);
-                    // Process fragment
-                    set_timestamp(fragment);
-                    std::string serialized_fragment;
-                    fragment.SerializeToString(&serialized_fragment);
-                    
-                    for (size_t offset = 0; offset < serialized_fragment.size(); offset += MAX_BUFFER_SIZE) {
-                        size_t chunk_size = std::min(MAX_BUFFER_SIZE, serialized_fragment.size() - offset);
-                        
-                        // Post UDP send operation to strand
-                        boost::asio::post(strand, [this, serialized_fragment, offset, chunk_size]() {
-                            if (!should_stop_) {
-                                udp_socket_.send_to(
-                                    boost::asio::buffer(serialized_fragment.data() + offset, chunk_size),
-                                    receiver_endpoint_
-                                );
-
-                                total_bytes_sent_ += chunk_size;
-                                
-                                // Schedule the timer using the strand
-                                timer_.expires_after(std::chrono::nanoseconds(SLEEP_DURATION));
-                                timer_.async_wait([](const boost::system::error_code&) {});
-                            }
-                        });
-                    }
-                    
-                    // std::cout << "Sent fragment: " << fragment.var_name() 
-                    //         << " tier=" << fragment.tier_id() 
-                    //         << " chunk=" << fragment.chunk_id() 
-                    //         << " frag=" << fragment.fragment_id() << std::endl;
-                        }
+                    state->fragment_queue.push(fragment);
+                }
             }
         }
-        std::cout << "Sent all fragments" << std::endl;
-        
-        send_eot();
+
+        // Define send_next inside the state capture
+        state->send_next = [this, strand, state]() {
+            if (state->fragment_queue.empty() || should_stop_) {
+                std::cout << "All fragments sent" << std::endl;
+                // std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+                send_eot();
+                return;
+            }
+
+            auto fragment = state->fragment_queue.front();
+            state->fragment_queue.pop();
+
+            // Set EC parameters
+            int current_m;
+            {
+                std::lock_guard<std::mutex> lock(ec_params_mutex_);
+                current_m = (fragment.tier_id() < current_ec_params_m_.size()) 
+                        ? current_ec_params_m_[fragment.tier_id()] : DEFAULT_M;
+            }
+            fragment.set_k(N - current_m);
+            fragment.set_m(current_m);
+            set_timestamp(fragment);
+            // std::cout << fragment.var_name() << " tier=" << fragment.tier_id() << " chunk=" << fragment.chunk_id() << " frag=" << fragment.fragment_id() << " m=" << fragment.m() << std::endl;
+
+            fragment.SerializeToString(&state->current_serialized);
+            state->current_offset = 0;
+
+            // Modify the send_chunk lambda in send_fragments
+            state->send_chunk = [this, strand, state]() {
+                if (state->current_offset >= state->current_serialized.size()) {
+                    // Immediately schedule next fragment without delay
+                    boost::asio::post(strand, [state]() {
+                        state->send_next();
+                    });
+                    return;
+                }
+                
+                const size_t chunk_size = std::min(MAX_BUFFER_SIZE, 
+                                                state->current_serialized.size() - state->current_offset);
+
+                udp_socket_.async_send_to(
+                    boost::asio::buffer(state->current_serialized.data() + state->current_offset, chunk_size),
+                    receiver_endpoint_,
+                    boost::asio::bind_executor(strand, 
+                        [this, state, chunk_size](boost::system::error_code ec, std::size_t /*length*/) {
+                            if (!ec) {
+                                // std::cout << "Sent fragment: " << state->current_serialized.size() << " bytes" << std::endl;
+                                total_bytes_sent_ += chunk_size;
+                                state->current_offset += chunk_size;
+                                state->send_chunk();
+                            } else {
+                                std::cerr << "Send error: " << ec.message() << std::endl;
+                                // Continue processing despite errors
+                                state->send_chunk();
+                            }
+                        })
+                );
+            };
+
+            // Start sending chunks
+            boost::asio::post(strand, state->send_chunk);
+        };
+
+        // Start the sending process
+        boost::asio::post(strand, state->send_next);
     }
 
     void start_sender(FragmentStore& fragments) {
@@ -395,6 +423,7 @@ public:
 
         send_metadata(fragments_);
         // Send fragments
+        start_transmission_time_ = std::chrono::steady_clock::now();
         send_fragments(fragments_);
 
     }
@@ -471,6 +500,9 @@ public:
 
 private:
     void send_eot() {
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_transmission_time_);
+        std::cout << "End of Transmission. Duration: " << duration.count() << " ms" << std::endl;
+
         std::this_thread::sleep_for(std::chrono::nanoseconds(100)); // 0.01 milliseconds
         timer_.expires_after(std::chrono::nanoseconds(SLEEP_DURATION));
         timer_.wait();
@@ -533,27 +565,28 @@ private:
     }
 
     void handle_tcp_message(const std::vector<char>& buffer) {
-        std::cout << "Received TCP message of size " << buffer.size() << std::endl;
+        // std::cout << "Received TCP message of size " << buffer.size() << std::endl;
         // First try to parse as EOT
+        DATA::RetransmissionRequest request;
+        if (request.ParseFromArray(buffer.data(), buffer.size())) {
+            handle_request_data(request);
+            return;
+        }
         DATA::FragmentsReport report;
         if (report.ParseFromArray(buffer.data(), buffer.size())) {
             handle_report(report);
             return;
         }
 
-        DATA::RetransmissionRequest request;
-        if (request.ParseFromArray(buffer.data(), buffer.size())) {
-            handle_request_data(request);
-            return;
-        }
+        
     }
 
     void handle_request_data(DATA::RetransmissionRequest request) {
-        // DATA::RetransmissionRequest request;
-        // if (request.ParseFromArray(buffer.data(), buffer.size())) {
+        
             std::cout << "Received retransmission request." << std::endl;
         
             for (const auto& var_request : request.variables()) {
+                std::cout << "Variable: " << var_request.var_name() << std::endl;
                 if (var_request.var_name() == "all_variables_received") {
                     std::cout << "All variables received. Stopping retransmission." << std::endl;
                     stop_transmission();
@@ -594,7 +627,7 @@ private:
                         std::vector<DATA::Fragment>* matching_fragments_ptr = fragments_.findChunk(tier_request.tier_id(), chunk_id);
                         if (matching_fragments_ptr) {
                             std::vector<DATA::Fragment>& matching_fragments = *matching_fragments_ptr;
-                        std::cout << "Found " << matching_fragments.size() << " matching fragments. Var name: " << var_request.var_name() << " Tier: " << tier_request.tier_id() << " Chunk: " << chunk_id << std::endl;
+                        // std::cout << "Found " << matching_fragments.size() << " matching fragments. Var name: " << var_request.var_name() << " Tier: " << tier_request.tier_id() << " Chunk: " << chunk_id << std::endl;
                         for (auto& fragment : matching_fragments) {
                             send_fragment(fragment);
                         }
@@ -609,10 +642,14 @@ private:
         }
     }
 
-    double calculate_lambda(int lost_fragments, double time_window) {
-        return static_cast<double>(lost_fragments) / time_window;
-    }
-
+    // double calculate_lambda(int lost_fragments, double time_window) {
+    //     // Ensure time_window is not zero to avoid division by zero
+    //     if (time_window == 0) {
+    //         std::cerr << "Error: time_window is zero, cannot calculate lambda." << std::endl;
+    //         return 0.0;
+    //     }
+    //     return static_cast<double>(lost_fragments) / time_window;
+    // }
     void handle_report(DATA::FragmentsReport report) {
         std::cout << "Received fragments report." << std::endl;
 
@@ -624,8 +661,12 @@ private:
 
         // Calculate the number of lost fragments
         int lost_fragments = expected_fragments - total_fragments;
-        double time_window = T_TRANSMISSION * 320; // change to actual transmission time
-        double lam = calculate_lambda(lost_fragments, time_window);
+        
+        uint64_t time_window = report.time_window(); 
+        // std::cout << report.time_window() << std::endl;
+        // double lam = calculate_lambda(lost_fragments, static_cast<double>(time_window));
+        // std::cout << "Lambda: " << lam  << " Lost fragments: " << lost_fragments << " Time window: " << time_window << std::endl;
+        double lam = report.lambda();
         
         // should I use real time?
         TransmissionTimeCalculator calculator(tier_sizes, FRAGMENT_SIZE, T_TRANSMISSION, 
@@ -647,119 +688,95 @@ private:
 
 };
 
-FragmentStore generateFragments(std::vector<long long> tier_sizes, int frag_size) {
+void setupCommonFields(DATA::Fragment& fragment) {
+    fragment.set_var_name("example_variable");
+    fragment.add_var_dimensions(100);
+    fragment.add_var_dimensions(200);
+    fragment.set_var_type("example_type");
+    fragment.set_var_levels(20);
+    fragment.add_var_level_error_bounds(0.1);
+    fragment.add_var_level_error_bounds(0.2);
+    fragment.add_var_stopping_indices("example_index");
+    fragment.mutable_var_table_content()->set_rows(10);
+    fragment.mutable_var_table_content()->set_cols(10);
+    fragment.mutable_var_squared_errors()->set_rows(10);
+    fragment.mutable_var_squared_errors()->set_cols(10);
+    fragment.set_var_tiers(25);
+}
+
+void setupFragmentBase(DATA::Fragment& fragment, int n, int m, int tier, int chunk_id, 
+    int fragment_id, bool is_data) {
+    fragment.set_k(n - m);
+    fragment.set_m(m);
+    fragment.set_w(3);
+    fragment.set_hd(4);
+    fragment.set_ec_backend_name("example_backend");
+    fragment.set_encoded_fragment_length(1024);
+    fragment.set_idx(7);
+    fragment.set_size(4096);
+    fragment.set_orig_data_size(4096);
+    fragment.set_chksum_mismatch(0);
+    fragment.set_backend_id(11);
+    fragment.set_frag(is_data ? "example_fragment_data" : "parity_fragment");
+    fragment.set_is_data(is_data);
+    fragment.set_tier_id(tier);
+    fragment.set_chunk_id(chunk_id);
+    fragment.set_fragment_id(fragment_id);
+    setupCommonFields(fragment);
+}
+FragmentStore generateFragments(std::vector<long long> tier_sizes, int frag_size, const std::vector<int>& current_m) {
     FragmentStore store;
     std::vector<int> numFragments;
-    std::cout << "Number of fragments: ";
     for (size_t i = 0; i < tier_sizes.size(); i++) {
-        numFragments.push_back(static_cast<int>(std::ceil(tier_sizes[i] / frag_size)));
-        // numFragments.push_back(static_cast<int>(tier_sizes[i] / frag_size) + 1);
-        std::cout << numFragments[i] << ", ";
+        numFragments.push_back(static_cast<int>(std::ceil(tier_sizes[i] / static_cast<double>(frag_size))));
     }
 
-    std::vector<DATA::Fragment> fragments;
-    const int k = 32;  // Target number of fragments per chunk
-    int chunk_id = 0;
-    int fragment_id = 0;
+    const int n = 32;
 
     for (size_t tier = 0; tier < numFragments.size(); tier++) {
-        for (size_t j = 0; j < numFragments[tier]; j++) {
+        int data_frags_per_chunk = n - current_m[tier];
+        int total_chunks = (numFragments[tier] + data_frags_per_chunk - 1) / data_frags_per_chunk;
+        
+        // Data fragments
+        for (int i = 0; i < numFragments[tier]; i++) {
+            int chunk_id = i / data_frags_per_chunk;
+            int fragment_id = i % data_frags_per_chunk;
+            
             DATA::Fragment fragment;
-            
-            // Set basic parameters
-            fragment.set_k(k);
-            fragment.set_m(0);
-            fragment.set_w(3);
-            fragment.set_hd(4);
-            fragment.set_ec_backend_name("example_backend");
-            fragment.set_encoded_fragment_length(1024);
-            fragment.set_idx(7);
-            fragment.set_size(4096);
-            fragment.set_orig_data_size(4096);
-            fragment.set_chksum_mismatch(0);
-            fragment.set_backend_id(11);
-            fragment.set_frag("example_fragment_data");
-            fragment.set_is_data(true);
-            fragment.set_tier_id(tier);
-            fragment.set_chunk_id(chunk_id);
-            fragment.set_fragment_id(fragment_id);
-            fragment.set_var_name("example_variable");
-            fragment.add_var_dimensions(100);
-            fragment.add_var_dimensions(200);
-            fragment.set_var_type("example_type");
-            fragment.set_var_levels(20);
-            fragment.add_var_level_error_bounds(0.1);
-            fragment.add_var_level_error_bounds(0.2);
-            fragment.add_var_stopping_indices("example_index");
-            fragment.mutable_var_table_content()->set_rows(10);
-            fragment.mutable_var_table_content()->set_cols(10);
-            fragment.mutable_var_squared_errors()->set_rows(10);
-            fragment.mutable_var_squared_errors()->set_cols(10);
-            fragment.set_var_tiers(25);
-            
-            set_timestamp(fragment);
-            fragments.push_back(fragment);
+            setupFragmentBase(fragment, n, current_m[tier], tier, chunk_id, fragment_id, true);
+            fragment.set_frag(std::string(4096 - fragment.ByteSizeLong(), '\0'));
             store.addFragment(fragment);
-
-            fragment_id++;
-            if (fragment_id % k == 0) {
-                chunk_id++;
-                fragment_id = 0;
-            }
         }
 
-        // Pad the last chunk to k fragments if needed
-        if (fragment_id > 0) {
-            // Calculate how many padding fragments we need
-            int padding_needed = k - fragment_id;
-            
+        // Handle last chunk padding for data fragments
+        int last_chunk_data_frags = numFragments[tier] % data_frags_per_chunk;
+        if (last_chunk_data_frags > 0) {
+            int padding_needed = data_frags_per_chunk - last_chunk_data_frags;
             for (int p = 0; p < padding_needed; p++) {
                 DATA::Fragment padding_fragment;
-                
-                // Copy the same parameters as regular fragments
-                padding_fragment.set_k(k);
-                padding_fragment.set_m(0);
-                padding_fragment.set_w(3);
-                padding_fragment.set_hd(4);
-                padding_fragment.set_ec_backend_name("example_backend");
-                padding_fragment.set_encoded_fragment_length(1024);
-                padding_fragment.set_idx(7);
-                padding_fragment.set_size(4096);
-                padding_fragment.set_orig_data_size(4096);
-                padding_fragment.set_chksum_mismatch(0);
-                padding_fragment.set_backend_id(11);
-                padding_fragment.set_frag("padding_fragment");  // Mark as padding
-                padding_fragment.set_is_data(true);
-                padding_fragment.set_tier_id(tier);
-                padding_fragment.set_chunk_id(chunk_id);
-                padding_fragment.set_fragment_id(fragment_id + p);
-                padding_fragment.set_var_name("example_variable");
-                padding_fragment.add_var_dimensions(100);
-                padding_fragment.add_var_dimensions(200);
-                padding_fragment.set_var_type("example_type");
-                padding_fragment.set_var_levels(20);
-                padding_fragment.add_var_level_error_bounds(0.1);
-                padding_fragment.add_var_level_error_bounds(0.2);
-                padding_fragment.add_var_stopping_indices("example_index");
-                padding_fragment.mutable_var_table_content()->set_rows(10);
-                padding_fragment.mutable_var_table_content()->set_cols(10);
-                padding_fragment.mutable_var_squared_errors()->set_rows(10);
-                padding_fragment.mutable_var_squared_errors()->set_cols(10);
-                padding_fragment.set_var_tiers(25);
-                
-                set_timestamp(padding_fragment);
-                fragments.push_back(padding_fragment);
+                setupFragmentBase(padding_fragment, n, current_m[tier], tier, total_chunks - 1, 
+                    last_chunk_data_frags + p, true);
+                padding_fragment.set_frag("padding_fragment");
+                padding_fragment.set_frag(std::string(4096 - padding_fragment.ByteSizeLong(), '\0'));
                 store.addFragment(padding_fragment);
             }
-            
-            chunk_id++;
         }
-        chunk_id = 0;
-        fragment_id = 0;
+
+        // Parity fragments
+        if (current_m[tier] > 0) {
+            for (int chunk = 0; chunk < total_chunks; chunk++) {
+                for (int p = 0; p < current_m[tier]; p++) {
+                    DATA::Fragment parity_fragment;
+                    setupFragmentBase(parity_fragment, n, current_m[tier], tier, chunk, 
+                        data_frags_per_chunk + p, false);
+                    parity_fragment.set_frag(std::string(4096 - parity_fragment.ByteSizeLong(), '\0'));
+                    store.addFragment(parity_fragment);
+                }
+            }
+        }
     }
     
     return store;
-    // return all_fragments;
 }
 
 int main() {
@@ -770,7 +787,8 @@ int main() {
     int frag_size = 4096;
     std::vector<long long> tier_sizes_orig = {5474475, 22402608, 45505266, 150891984}; // Use long long
     // long long k = 128; // Use long long for k
-    long long k = 16;
+    long long k = 32;
+    std::vector<int> current_m = {16, 0, 0, 0}; 
     std::vector<long long> tier_sizes;
 
     for (long long size : tier_sizes_orig) {
@@ -784,25 +802,32 @@ int main() {
     std::cout << std::endl;
     
     std::cout << "Calling generateFragments..." << std::endl;
-    FragmentStore fragments = generateFragments(tier_sizes, frag_size);
+    // FragmentStore fragments = generateFragments(tier_sizes, frag_size);
+    FragmentStore fragments = generateFragments(tier_sizes, 4096, current_m);
     std::cout << "Fragments generated!" << std::endl;
 
 
+   // In main()
     try {
         std::cout << "Sending fragments via UDP" << std::endl;
         boost::asio::io_context io_context;
-        Sender sender(io_context, "127.0.0.1", 12345, 12346, tier_sizes);
+        Sender sender(io_context, IPADDRESS, UDP_PORT, TCP_PORT, tier_sizes);
 
         std::thread io_thread([&io_context]() {
+            std::cout << "IO context starting\n";
             io_context.run();
+            std::cout << "IO context finished\n";
         });
 
         sender.start_sender(fragments);
-        // sender.send_metadata(fragments);
-        // sender.send_fragments(fragments);
-        // io_context.run();
-
-        // sender.stop();
+        
+        // Add progress monitoring
+        while (!io_context.stopped()) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            // std::cout << "Progress: " 
+            //         << (sender.total_bytes_sent() * 100.0 / total_data_size) << "%\r";
+        }
+        
         io_thread.join();
     }
     catch (std::exception& e) {

@@ -107,9 +107,11 @@ message Metadata {
 }
 
 message FragmentsReport {
-    string var_name = 1;
+    bytes var_name = 1;
     uint32 tier_id = 2;
     uint32 chunks_processed = 3;
     uint32 total_fragments = 4;
     uint32 expected_fragments = 5;
+    uint64 time_window = 6; // Add this line to include the time window
+    double lambda = 7;
 }

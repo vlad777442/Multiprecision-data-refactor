@@ -2785,14 +2785,16 @@ class FragmentsReport PROTOBUF_FINAL :
     kChunksProcessedFieldNumber = 3,
     kTotalFragmentsFieldNumber = 4,
     kExpectedFragmentsFieldNumber = 5,
+    kTimeWindowFieldNumber = 6,
+    kLambdaFieldNumber = 7,
   };
-  // string var_name = 1;
+  // bytes var_name = 1;
   void clear_var_name();
   const std::string& var_name() const;
   void set_var_name(const std::string& value);
   void set_var_name(std::string&& value);
   void set_var_name(const char* value);
-  void set_var_name(const char* value, size_t size);
+  void set_var_name(const void* value, size_t size);
   std::string* mutable_var_name();
   std::string* release_var_name();
   void set_allocated_var_name(std::string* var_name);
@@ -2847,6 +2849,24 @@ class FragmentsReport PROTOBUF_FINAL :
   void _internal_set_expected_fragments(::PROTOBUF_NAMESPACE_ID::uint32 value);
   public:
 
+  // uint64 time_window = 6;
+  void clear_time_window();
+  ::PROTOBUF_NAMESPACE_ID::uint64 time_window() const;
+  void set_time_window(::PROTOBUF_NAMESPACE_ID::uint64 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint64 _internal_time_window() const;
+  void _internal_set_time_window(::PROTOBUF_NAMESPACE_ID::uint64 value);
+  public:
+
+  // double lambda = 7;
+  void clear_lambda();
+  double lambda() const;
+  void set_lambda(double value);
+  private:
+  double _internal_lambda() const;
+  void _internal_set_lambda(double value);
+  public:
+
   // @@protoc_insertion_point(class_scope:DATA.FragmentsReport)
  private:
   class _Internal;
@@ -2859,6 +2879,8 @@ class FragmentsReport PROTOBUF_FINAL :
   ::PROTOBUF_NAMESPACE_ID::uint32 chunks_processed_;
   ::PROTOBUF_NAMESPACE_ID::uint32 total_fragments_;
   ::PROTOBUF_NAMESPACE_ID::uint32 expected_fragments_;
+  ::PROTOBUF_NAMESPACE_ID::uint64 time_window_;
+  double lambda_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_fragment_2eproto;
 };
@@ -5326,7 +5348,7 @@ Metadata::variables() const {
 
 // FragmentsReport
 
-// string var_name = 1;
+// bytes var_name = 1;
 inline void FragmentsReport::clear_var_name() {
   var_name_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
@@ -5362,7 +5384,7 @@ inline void FragmentsReport::set_var_name(const char* value) {
               GetArena());
   // @@protoc_insertion_point(field_set_char:DATA.FragmentsReport.var_name)
 }
-inline void FragmentsReport::set_var_name(const char* value,
+inline void FragmentsReport::set_var_name(const void* value,
     size_t size) {
   
   var_name_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
@@ -5485,6 +5507,46 @@ inline void FragmentsReport::_internal_set_expected_fragments(::PROTOBUF_NAMESPA
 inline void FragmentsReport::set_expected_fragments(::PROTOBUF_NAMESPACE_ID::uint32 value) {
   _internal_set_expected_fragments(value);
   // @@protoc_insertion_point(field_set:DATA.FragmentsReport.expected_fragments)
+}
+
+// uint64 time_window = 6;
+inline void FragmentsReport::clear_time_window() {
+  time_window_ = PROTOBUF_ULONGLONG(0);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 FragmentsReport::_internal_time_window() const {
+  return time_window_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 FragmentsReport::time_window() const {
+  // @@protoc_insertion_point(field_get:DATA.FragmentsReport.time_window)
+  return _internal_time_window();
+}
+inline void FragmentsReport::_internal_set_time_window(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  
+  time_window_ = value;
+}
+inline void FragmentsReport::set_time_window(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  _internal_set_time_window(value);
+  // @@protoc_insertion_point(field_set:DATA.FragmentsReport.time_window)
+}
+
+// double lambda = 7;
+inline void FragmentsReport::clear_lambda() {
+  lambda_ = 0;
+}
+inline double FragmentsReport::_internal_lambda() const {
+  return lambda_;
+}
+inline double FragmentsReport::lambda() const {
+  // @@protoc_insertion_point(field_get:DATA.FragmentsReport.lambda)
+  return _internal_lambda();
+}
+inline void FragmentsReport::_internal_set_lambda(double value) {
+  
+  lambda_ = value;
+}
+inline void FragmentsReport::set_lambda(double value) {
+  _internal_set_lambda(value);
+  // @@protoc_insertion_point(field_set:DATA.FragmentsReport.lambda)
 }
 
 #ifdef __GNUC__
