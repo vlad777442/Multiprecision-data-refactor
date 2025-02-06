@@ -20,7 +20,7 @@
 // #define IPADDRESS "10.51.197.229" // "192.168.1.64"
 // #define UDP_PORT 34565
 #define IPADDRESS "127.0.0.1" // "192.168.1.64"
-#define UDP_PORT 12345
+#define UDP_PORT 60001
 #define TIMEOUT_DURATION_SECONDS 30
 #define SENDER_TCP_IP "127.0.0.1"
 #define SENDER_TCP_PORT 12346
@@ -45,6 +45,7 @@ struct Fragment
     uint32_t tier_id;
     uint32_t chunk_id;
     uint32_t fragment_id;
+    uint64_t timestamp;
 
     bool operator==(const Fragment &other) const {
         return tier_id == other.tier_id &&
@@ -177,6 +178,7 @@ void setFragment(const DATA::Fragment& received_message, Fragment& myFragment)
     myFragment.tier_id = received_message.tier_id();
     myFragment.chunk_id = received_message.chunk_id();
     myFragment.fragment_id = received_message.fragment_id();
+    myFragment.timestamp = received_message.timestamp();
 }
 
 void setVariable(const DATA::Fragment& received_message, Variable& var1)
@@ -324,38 +326,99 @@ private:
                 }
             });
     }
-
     void send_fragments_report(const std::string& var_name, uint32_t tier_id) {
         DATA::FragmentsReport report;
         report.set_var_name(var_name);
         report.set_tier_id(tier_id);
-        
-        // Calculate total received fragments for last 10 chunks
-        int total_fragments = 0;
+
+        // Track analysis parameters
+        uint64_t min_timestamp = UINT64_MAX;
+        uint64_t max_timestamp = 0;
+        int total_received = 0;
         int chunks_counted = 0;
+        const int analyzed_chunks = 10;
+
+        // Get reference to chunks tracking
         auto& tier_chunks = fragments_per_chunk_[var_name];
         
-        // Get the chunk IDs in order
+        // Identify last 10 chunks
         std::vector<uint32_t> chunk_ids;
         for (const auto& [chunk_id, _] : tier_chunks) {
             chunk_ids.push_back(chunk_id);
         }
-        
-        // Sort in descending order to get the most recent chunks
         std::sort(chunk_ids.rbegin(), chunk_ids.rend());
         
-        // Take the last 10 chunks (or fewer if less are available)
-        for (size_t i = 0; i < std::min(size_t(10), chunk_ids.size()); ++i) {
+        // Process up to 10 most recent chunks
+        for (size_t i = 0; i < std::min(size_t(analyzed_chunks), chunk_ids.size()); ++i) {
             uint32_t chunk_id = chunk_ids[i];
-            total_fragments += tier_chunks[chunk_id];
             chunks_counted++;
+
+            // Get actual fragment data from variable storage
+            if (variables.find(var_name) != variables.end()) {
+                const auto& var = variables.at(var_name);
+                if (var.tiers.find(tier_id) != var.tiers.end()) {
+                    const auto& tier = var.tiers.at(tier_id);
+                    if (tier.chunks.find(chunk_id) != tier.chunks.end()) {
+                        const auto& chunk = tier.chunks.at(chunk_id);
+
+                        // Count fragments and track timestamps
+                        total_received += chunk.data_fragments.size();
+                        total_received += chunk.parity_fragments.size();
+
+                        // Find timestamps in data fragments
+                        for (const auto& [frag_id, fragment] : chunk.data_fragments) {
+                            if (fragment.timestamp < min_timestamp) {
+                                min_timestamp = fragment.timestamp;
+                            }
+                            if (fragment.timestamp > max_timestamp) {
+                                max_timestamp = fragment.timestamp;
+                            }
+                        }
+
+                        // Find timestamps in parity fragments
+                        for (const auto& [frag_id, fragment] : chunk.parity_fragments) {
+                            if (fragment.timestamp < min_timestamp) {
+                                min_timestamp = fragment.timestamp;
+                            }
+                            if (fragment.timestamp > max_timestamp) {
+                                max_timestamp = fragment.timestamp;
+                            }
+                        }
+                    }
+                }
+            }
         }
-        
-        report.set_chunks_processed(chunks_counted);
-        report.set_total_fragments(total_fragments);
-        report.set_expected_fragments(chunks_counted * EXPECTED_FRAGMENTS_PER_CHUNK);
-        
-        // Serialize and send the report via TCP
+        // std::cout << "Chunks counted: " << chunks_counted << " min: " << min_timestamp << " max: " << max_timestamp << std::endl;
+        // Calculate time window (convert �s to seconds)
+        // double time_window = 0.0;
+        // if (min_timestamp != UINT64_MAX && max_timestamp != 0) {
+        //     time_window = (max_timestamp - min_timestamp) / 1000000.0;
+        // }
+        double time_window = 0.0;
+        if (min_timestamp != UINT64_MAX && max_timestamp != 0) {
+            uint64_t delta = max_timestamp - min_timestamp;
+            // Ensure minimum 1�s window if all fragments have same timestamp
+            if (delta == 0) delta = 1; 
+            time_window = delta / 1000000.0;
+        }
+        else {
+            // Fallback if no timestamps found
+            time_window = 1e-6; // 1 microsecond default
+        }
+
+        // Calculate loss statistics
+        const int expected_fragments = chunks_counted * EXPECTED_FRAGMENTS_PER_CHUNK;
+        const int lost_fragments = expected_fragments - total_received;
+
+        // Populate report
+        // report.set_chunks_processed(chunks_counted);
+        report.set_total_fragments(total_received);
+        report.set_expected_fragments(expected_fragments);
+        report.set_total_fragments(total_received);
+        report.set_time_window(time_window);
+        report.set_lambda(lost_fragments / time_window);
+        std::cout << "Times: " << min_timestamp << " " << max_timestamp << " " << time_window << " Lost fragments: " << lost_fragments << std::endl;
+        // Send report
         std::string serialized_report;
         report.SerializeToString(&serialized_report);
         
@@ -363,17 +426,90 @@ private:
             uint32_t message_size = serialized_report.size();
             boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
             boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_report));
-            std::cout << "Fragments report sent for " << var_name 
-                     << " tier " << tier_id 
-                     << ": " << total_fragments << "/" 
-                     << (chunks_counted * EXPECTED_FRAGMENTS_PER_CHUNK) 
-                     << " fragments received for last " 
-                     << chunks_counted << " chunks" << std::endl;
+            
+            std::cout << "Fragments report for " << var_name 
+                    << " tier " << tier_id << "\n"
+                    << "Chunks analyzed: " << chunks_counted << "\n"
+                    << "Fragments received: " << total_received << "\n"
+                    << "Fragments expected: " << expected_fragments << "\n"
+                    << "Fragments lost: " << lost_fragments << "\n"
+                    << "Time window: " << time_window << " seconds\n";
         } catch (const std::exception& e) {
-            std::cerr << "Error sending fragments report: " << e.what() << std::endl;
-            tcp_connected_ = false;
+            std::cerr << "Error sending report: " << e.what() << std::endl;
         }
     }
+    // void send_fragments_report(const std::string& var_name, uint32_t tier_id) {
+    //     DATA::FragmentsReport report;
+    //     report.set_var_name(var_name);
+    //     report.set_tier_id(tier_id);
+        
+    //     // Calculate total received fragments for last 10 chunks
+    //     int total_fragments = 0;
+    //     int chunks_counted = 0;
+    //     auto& tier_chunks = fragments_per_chunk_[var_name];
+        
+    //     // Get the chunk IDs in order
+    //     std::vector<uint32_t> chunk_ids;
+    //     for (const auto& [chunk_id, _] : tier_chunks) {
+    //         chunk_ids.push_back(chunk_id);
+    //     }
+        
+    //     // Sort in descending order to get the most recent chunks
+    //     std::sort(chunk_ids.rbegin(), chunk_ids.rend());
+        
+    //     // Take the last 10 chunks (or fewer if less are available)
+    //     for (size_t i = 0; i < std::min(size_t(10), chunk_ids.size()); ++i) {
+    //         uint32_t chunk_id = chunk_ids[i];
+    //         total_fragments += tier_chunks[chunk_id];
+    //         chunks_counted++;
+    //         std::cout << "Chunk ID: " << chunk_id << " Fragments: " << tier_chunks[chunk_id] << std::endl;
+    //     }
+    //     std::cout << chunk_ids.size() << " chunks counted " << chunk_ids.empty() << std::endl;
+    //     // Get the first fragment from the first chunk and the last fragment from the last chunk
+    //     if (!chunk_ids.empty()) {
+    //         uint32_t first_chunk_id = chunk_ids.back();
+    //         uint32_t last_chunk_id = chunk_ids.front();
+
+    //         // Assuming fragments_per_chunk_ stores fragments with timestamps
+    //         auto& first_chunk_fragments = received_fragments_;
+    //         auto& last_chunk_fragments = received_fragments_;
+
+    //         if (!first_chunk_fragments.empty() && !last_chunk_fragments.empty()) {
+    //             auto first_fragment_time = first_chunk_fragments.front().timestamp();
+    //             auto last_fragment_time = last_chunk_fragments.back().timestamp();
+
+    //             // Calculate the time window
+    //             auto time_window = last_fragment_time - first_fragment_time;
+    //             std::cout << "Times: " << first_fragment_time << " " << last_fragment_time << " " << time_window << std::endl;
+    //             // Set the time window to the report
+    //             report.set_time_window(time_window);
+
+    //         }
+    //     }
+        
+    //     report.set_chunks_processed(chunks_counted);
+    //     report.set_total_fragments(total_fragments);
+    //     report.set_expected_fragments(chunks_counted * EXPECTED_FRAGMENTS_PER_CHUNK);
+        
+    //     // Serialize and send the report via TCP
+    //     std::string serialized_report;
+    //     report.SerializeToString(&serialized_report);
+        
+    //     try {
+    //         uint32_t message_size = serialized_report.size();
+    //         boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
+    //         boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_report));
+    //         std::cout << "Fragments report sent for " << var_name 
+    //                  << " tier " << tier_id 
+    //                  << ": " << total_fragments << "/" 
+    //                  << (chunks_counted * EXPECTED_FRAGMENTS_PER_CHUNK) 
+    //                  << " fragments received for last " 
+    //                  << chunks_counted << " chunks" << std::endl;
+    //     } catch (const std::exception& e) {
+    //         std::cerr << "Error sending fragments report: " << e.what() << std::endl;
+    //         tcp_connected_ = false;
+    //     }
+    // }
 
     void update_fragments_tracking(const DATA::Fragment& received_message) {
         const std::string& var_name = received_message.var_name();
@@ -482,9 +618,9 @@ private:
                 uint32_t message_size = serialized_request.size();
                 boost::asio::write(tcp_socket_, boost::asio::buffer(&message_size, sizeof(message_size)));
                 boost::asio::write(tcp_socket_, boost::asio::buffer(serialized_request));
-                std::cout << "Retransmission request sent." << std::endl;
+                std::cout << "No missing chunks found request sent." << std::endl;
                 
-                transmission_complete_ = false;
+                transmission_complete_ = true;
             } catch (const std::exception& e) {
                 std::cerr << "Send error: " << e.what() << std::endl;
                 tcp_connected_ = false;
@@ -503,15 +639,16 @@ private:
             //         std::cout << std::endl;
             //     }
             // }
-            for (const auto& [var_name, var]: variables) {
-                std::cout << "Data for variable: " << var_name << std::endl;
-                for (const auto& [tier_id, tier]: var.tiers) {
-                    std::cout << "  Tier: " << tier_id << std::endl;
-                    for (const auto& [chunk_id, chunk]: tier.chunks) {
-                        std::cout << "    Chunk: " << chunk_id << " fragments+parity size: " << chunk.data_fragments.size() + chunk.parity_fragments.size() << std::endl;
-                    } 
-                }
-            }
+
+            // for (const auto& [var_name, var]: variables) {
+            //     std::cout << "Data for variable: " << var_name << std::endl;
+            //     for (const auto& [tier_id, tier]: var.tiers) {
+            //         std::cout << "  Tier: " << tier_id << std::endl;
+            //         for (const auto& [chunk_id, chunk]: tier.chunks) {
+            //             std::cout << "    Chunk: " << chunk_id << " fragments+parity size: " << chunk.data_fragments.size() + chunk.parity_fragments.size() << std::endl;
+            //         } 
+            //     }
+            // }
             
             return;
         }
@@ -533,6 +670,7 @@ private:
 
                 for (int32_t chunk_id : chunk_ids) {
                     tier_request->add_chunk_ids(chunk_id);
+                    std::cout << "Missing chunks for " << var_name << " tier " << tier_id << ": " << chunk_id << std::endl;
                 }
             }
         }
@@ -590,7 +728,7 @@ private:
                 
                 // Check for missing chunks in this tier
                 for (uint32_t expected_chunk_id : tier_info.expected_chunks) {
-                    std::cout << "    Checking chunk: " << expected_chunk_id << std::endl;
+                    // std::cout << "    Checking chunk: " << expected_chunk_id << std::endl;
                     if (tier.chunks.find(expected_chunk_id) == tier.chunks.end()) {
                         missingChunks.push_back({
                             var_name,
@@ -610,9 +748,10 @@ private:
                     } else {
                         k = chunk.parity_fragments.begin()->second.k;
                     }
-                                        
-                    // std::cout << "      Chunk has " << chunk.data_fragments.size() + chunk.parity_fragments.size() << " fragments. K: " << k << std::endl;
+                    // std::cout << "k: " << k << " data+parity: " << chunk.data_fragments.size() + chunk.parity_fragments.size() << std::endl;
+                    
                     if (chunk.data_fragments.size() + chunk.parity_fragments.size() < static_cast<size_t>(k)) {
+                        // std::cout << "k: " << k << " data+parity: " << chunk.data_fragments.size() + chunk.parity_fragments.size() << " Tier: " << tier_id << " chunk id: " << expected_chunk_id << std::endl;
                         missingChunks.push_back({
                             var_name,
                             tier_id,
@@ -637,7 +776,7 @@ int main() {
         io_context.run();
     }
     catch (std::exception& e) {
-        std::cerr << "Exception: " << e.what() << "\n";
+        std::cerr << "Exception: " << e.what() << "\n"; 
     }
 
   
