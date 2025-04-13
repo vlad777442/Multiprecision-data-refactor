@@ -18,22 +18,23 @@
 #include <algorithm>
 #include <numeric>
 
-#define IPADDRESS "149.165.175.25" // "192.168.1.64"
+#define IPADDRESS "149.165.169.22"// "192.168.1.64"
 // #define UDP_PORT 12345
 #define UDP_PORT 60001
 // #define IPADDRESS "10.51.197.229"
 // #define UDP_PORT 34565
 #define TCPIPADDRESS "127.0.0.1"
 #define TCP_PORT 12346
-// #define SLEEP_DURATION 1000000 
-#define SLEEP_DURATION 0 
+#define SLEEP_DURATION 0
+
 #define FRAGMENT_SIZE 4096
 #define RATE_FRAG 19144.6
 #define T_TRANSMISSION 0.01
 #define T_RETRANS 0.01
 #define N 32
-#define DEFAULT_M 6
-
+#define DEFAULT_M 10
+// #define EOT_SLEEP 500000000
+#define EOT_SLEEP 0
 
 using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
@@ -355,7 +356,7 @@ public:
         state->send_next = [this, strand, state]() {
             if (state->fragment_queue.empty() || should_stop_) {
                 std::cout << "All fragments sent" << std::endl;
-                // std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+                std::this_thread::sleep_for(std::chrono::nanoseconds(EOT_SLEEP));
                 send_eot();
                 return;
             }
@@ -400,6 +401,7 @@ public:
                                 // std::cout << "Sent fragment: " << state->current_serialized.size() << " bytes" << std::endl;
                                 total_bytes_sent_ += chunk_size;
                                 state->current_offset += chunk_size;
+                                std::this_thread::sleep_for(std::chrono::nanoseconds(SLEEP_DURATION)); 
                                 state->send_chunk();
                             } else {
                                 std::cerr << "Send error: " << ec.message() << std::endl;
@@ -638,6 +640,7 @@ private:
                 }
             }
             // Send EOT after retransmission via TCP
+            std::this_thread::sleep_for(std::chrono::nanoseconds(EOT_SLEEP));
             send_eot();
         }
     }

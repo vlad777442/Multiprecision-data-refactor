@@ -32,14 +32,21 @@
 #define T_TRANSMISSION 0.01
 #define T_RETRANS 0.01
 #define N 32
-#define DEFAULT_M 6
+#define DEFAULT_M 16
+#define TIME_CONSTR 76.1015
 
 
 using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
 using boost::asio::ip::address;
 
-
+void busy(int count) {
+    int a = 1;
+    int b = 2;
+    for (volatile int i = 0; i < count; ++i) {
+        // Do nothing, just loop to burn CPU cycles
+    }
+}
 
 std::vector<DATA::Fragment> find_fragments(const std::vector<DATA::Fragment>& fragments, const std::string& var_name, uint32_t tier_id, uint32_t chunk_id) {
     std::vector<DATA::Fragment> matching_fragments;
@@ -121,6 +128,7 @@ private:
     double lam;
     double rate_frag;
     int n;
+    double time_threshold; 
 
     static double factorial(int n) {
         double result = 1.0;
@@ -215,9 +223,9 @@ private:
 public:
     TransmissionTimeCalculator(const std::vector<long long>& tier_sizes_, double frag_size_,
                                double t_trans_frag_, double Tretrans_, double lam_,
-                               double rate_frag_, int n_)
+                               double rate_frag_, int n_, double time_threshold_)
         : tier_sizes(tier_sizes_), frag_size(frag_size_), t_trans_frag(t_trans_frag_),
-          Tretrans(Tretrans_), lam(lam_), rate_frag(rate_frag_), n(n_) {}
+          Tretrans(Tretrans_), lam(lam_), rate_frag(rate_frag_), n(n_), time_threshold(time_threshold_) {} 
 
     double calculate_expected_total_transmission_time_for_all_tiers(const std::vector<int>& ms) {
         double E_Toverall = 0.0;
@@ -229,14 +237,16 @@ public:
     }
 
     std::pair<double, std::vector<int>> find_min_time_configuration() {
-        double min_time = std::numeric_limits<double>::infinity();
+        // double min_time = std::numeric_limits<double>::infinity();
+        double min_time = time_threshold;
         std::vector<int> best_m(4, 0);
 
         for (int i = 0; i < 17; i++) {
             std::vector<int> current_m(4, i);
             double E_Toverall = calculate_expected_total_transmission_time_for_all_tiers(current_m);
-
-            if (E_Toverall < min_time) {
+            std::cout << "m: " << i << ", E_Toverall: " << E_Toverall << std::endl;
+            double min_E = std::max(E_Toverall, 1000000.0);
+            if (E_Toverall < min_E) {
                 min_time = E_Toverall;
                 best_m = current_m;
             }
@@ -265,6 +275,7 @@ private:
     std::vector<int> current_ec_params_m_;  // vector of m values per tier
     std::mutex ec_params_mutex_;  // To ensure thread-safe updates
     std::vector<long long> tier_sizes;
+    double t_threshold = TIME_CONSTR;
   
 public:
     Sender(boost::asio::io_context& io_context, 
@@ -402,6 +413,7 @@ public:
                 
                 const size_t chunk_size = std::min(MAX_BUFFER_SIZE, 
                                                 state->current_serialized.size() - state->current_offset);
+                // busy(140000);  // Simulate processing time
 
                 udp_socket_.async_send_to(
                     boost::asio::buffer(state->current_serialized.data() + state->current_offset, chunk_size),
@@ -412,6 +424,8 @@ public:
                                 // std::cout << "Sent fragment: " << state->current_serialized.size() << " bytes" << std::endl;
                                 total_bytes_sent_ += chunk_size;
                                 state->current_offset += chunk_size;
+                                // Add sleep for 0.001 milliseconds (10 microsecond)
+                                std::this_thread::sleep_for(std::chrono::nanoseconds(10000));
                                 state->send_chunk();
                             } else {
                                 std::cerr << "Send error: " << ec.message() << std::endl;
@@ -671,10 +685,18 @@ private:
         // double lam = calculate_lambda(lost_fragments, static_cast<double>(time_window));
         // std::cout << "Lambda: " << lam  << " Lost fragments: " << lost_fragments << " Time window: " << time_window << std::endl;
         double lam = report.lambda();
+
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_transmission_time_);
         
-        // should I use real time?
+        double remaining_time = t_threshold - (duration.count() / 1000.0); // Convert milliseconds to seconds
+
+        // Call the calculator with the remaining time
         TransmissionTimeCalculator calculator(tier_sizes, FRAGMENT_SIZE, T_TRANSMISSION, 
-                                        T_RETRANS, lam, RATE_FRAG, N);
+                                              T_RETRANS, lam, RATE_FRAG, N, remaining_time);
+        for (auto& size: tier_sizes) {
+            std::cout << size << std::endl;
+        }
+        std::cout << "Remaining time: " << remaining_time << std::endl;
 
         auto [min_time, best_configuration] = calculator.find_min_time_configuration();
 
@@ -794,9 +816,9 @@ int main() {
     long long k = 32;
     std::vector<int> current_m = {16, 0, 0, 0}; 
     std::vector<long long> tier_sizes;
-
+    std::vector<long long> tier_sizes_tmp;
     for (long long size : tier_sizes_orig) {
-        tier_sizes.push_back(size * k);
+        tier_sizes_tmp.push_back(size * k);
     }
 
     
@@ -804,11 +826,11 @@ int main() {
     
     std::cout << "Calling generateFragments..." << std::endl;
     // FragmentStore fragments = generateFragments(tier_sizes, frag_size);
-    FragmentStore fragments = generateFragments(tier_sizes, 4096, current_m);
+    FragmentStore fragments = generateFragments(tier_sizes_tmp, 4096, current_m);
     std::cout << "Fragments generated!" << std::endl;
-    tier_sizes.clear();
-    for (size_t i = 0; i < tier_sizes.size(); i++) {
-        tier_sizes.push_back(static_cast<int>(std::ceil(tier_sizes[i] / static_cast<double>(frag_size))) * frag_size);
+    
+    for (size_t i = 0; i < tier_sizes_tmp.size(); i++) {
+        tier_sizes.push_back(static_cast<int>(std::ceil(tier_sizes_tmp[i] / static_cast<double>(frag_size))) * frag_size);
     }
     std::cout << "New tier sizes: ";
     for (long long size : tier_sizes) {

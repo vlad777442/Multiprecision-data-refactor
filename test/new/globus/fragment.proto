@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package DATA;
+
+message QueryTable {
+  int32 rows = 1;
+  int32 cols = 2;
+  repeated uint64 content = 3;
+}
+
+message SquaredErrorsTable {
+  int32 rows = 1;
+  int32 cols = 2;
+  repeated double content = 3;
+}
+
+message Variable {
+  string name = 1;
+  repeated uint32 dimensions = 2;
+  string type = 3;
+  uint32 levels = 4;
+  repeated double level_error_bounds = 5;
+  repeated uint32 stopping_indices = 6;
+  QueryTable table_content = 7;
+  SquaredErrorsTable squared_errors = 8;
+//  repeated uint32 squared_errors_shape = 8;
+  uint32 tiers = 9;
+  //repeated Tier tier = 10;
+}
+
+message Tier {
+  int32 id = 1;
+  int32 k = 2;
+  int32 m = 3;
+  int32 w = 4;
+  int32 hd = 5;
+  string ec_backend_name = 6;
+  uint64 encoded_fragment_length = 7;
+  //repeated Fragment fragment = 8;
+}
+
+message Fragment {
+  int32 k = 1;
+  int32 m = 2;
+  int32 w = 3;
+  int32 hd = 4;
+  bytes ec_backend_name = 5;
+  uint32 encoded_fragment_length = 6;
+  //delete
+  uint32 idx = 7;
+  uint32 size = 8;
+  uint64 orig_data_size = 9;
+  uint32 chksum_mismatch = 10;
+  uint32 backend_id = 11;
+  //
+  bytes frag = 12;
+  bool is_data = 13;
+  uint32 tier_id = 14;
+  uint32 chunk_id = 15;
+  uint32 fragment_id = 16;
+  
+  // Fields from Variable message included in Fragment
+  string var_name = 17;
+  repeated uint32 var_dimensions = 18;
+  string var_type = 19;
+  uint32 var_levels = 20;
+  repeated double var_level_error_bounds = 21;
+  repeated bytes var_stopping_indices = 22;
+  QueryTable var_table_content = 23;
+  SquaredErrorsTable var_squared_errors = 24;
+  uint32 var_tiers = 25;
+  uint64 timestamp = 26;
+  uint64 sequence_number = 27;
+}
+
+message VariableCollection {
+  repeated Variable variables = 1;
+}
+
+message RetransmissionRequest {
+    repeated VariableRequest variables = 1;
+
+    message VariableRequest {
+        string var_name = 1;
+        repeated TierRequest tiers = 2;
+
+        message TierRequest {
+            int32 tier_id = 1;
+            repeated int32 chunk_ids = 2; // IDs of missing chunks in this tier
+        }
+    }
+}
+
+message TierMetadata {
+    uint32 tier_id = 1;
+    uint32 k = 2;
+    repeated uint32 chunk_ids = 3;
+}
+
+message VariableMetadata {
+    string var_name = 1;
+    repeated TierMetadata tiers = 2;
+}
+
+message Metadata {
+    repeated VariableMetadata variables = 1;
+}
+
+message FragmentsReport {
+    bytes var_name = 1;
+    uint32 tier_id = 2;
+    uint32 chunks_processed = 3;
+    uint32 total_fragments = 4;
+    uint32 expected_fragments = 5;
+    uint64 time_window = 6; // Add this line to include the time window
+    double lambda = 7;
+}

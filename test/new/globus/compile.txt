@@ -1,0 +1,5 @@
+g++ generate_tiers.cpp fragment.pb.cc -o generate_tiers \
+    -std=c++17 \
+    -lprotobuf \
+    -lboost_system \
+    -lpthread
